@@ -79,28 +79,28 @@ function Translator({ className }: { className?: string }) {
             }
           ],
         });
+        let result = completion.data.choices[0].message.content
+        setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+        try {
+          result = JSON.parse(result).Input
+        } catch (e) {
+          try {
+            result = result.match(/"Input":"(.*?)"/)[1]
+          } catch (e) {
+            console.error(e)
+            console.error(result.red)
+          }
+        }
+        previousSubtitles.push({ role: "user", content: JSON.stringify(input) })
+        previousSubtitles.push({ role: 'assistant', content: JSON.stringify({ ...input, Input: result }) })
+
+        subtitle[i].data.translatedText = result
+        setProgress(i / subtitle.length)
       } catch (e) {
         alert(e.response.data.error.message || e.toString())
         setIsTranslating(false)
         return
       }
-      let result = completion.data.choices[0].message.content
-      setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
-      try {
-        result = JSON.parse(result).Input
-      } catch (e) {
-        try {
-          result = result.match(/"Input":"(.*?)"/)[1]
-        } catch (e) {
-          console.error(e)
-          console.error(result.red)
-        }
-      }
-      previousSubtitles.push({ role: "user", content: JSON.stringify(input) })
-      previousSubtitles.push({ role: 'assistant', content: JSON.stringify({ ...input, Input: result }) })
-
-      subtitle[i].data.translatedText = result
-      setProgress(i / subtitle.length)
     }
     setProgress(1)
     downloadSubtitle()
