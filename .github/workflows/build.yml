@@ -57,7 +57,7 @@ jobs:
             release/*.exe
           body: |
             ### 下載
-            - [Windows](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator-electron_${{ github.ref_name }}.exe)
-            - [macOS](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator-electron_${{ github.ref_name }}.dmg)
+            - [Windows](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.exe)
+            - [macOS](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.dmg)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

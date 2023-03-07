@@ -14,7 +14,7 @@
     "dist"
   ],
   "mac": {
-    "artifactName": "${productName}_${version}.${ext}",
+    "artifactName": "subtitle-translator_${version}.${ext}",
     "target": [
       "dmg"
     ]
@@ -29,7 +29,7 @@
         ]
       }
     ],
-    "artifactName": "${productName}_${version}.${ext}"
+    "artifactName": "subtitle-translator_${version}.${ext}"
   },
   "nsis": {
     "oneClick": true,
