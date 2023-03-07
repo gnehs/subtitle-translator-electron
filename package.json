@@ -38,6 +38,8 @@
     "node": "^14.18.0 || >=16.0.0"
   },
   "dependencies": {
-    "normalize.css": "^8.0.1"
+    "normalize.css": "^8.0.1",
+    "openai": "^3.2.1",
+    "subtitle": "^4.2.1"
   }
 }

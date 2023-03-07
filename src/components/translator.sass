@@ -3,18 +3,72 @@
   grid-template-areas: "left right" "bottom bottom"
   grid-template-columns: 300px 1fr
   grid-template-rows: 1fr auto
-  margin: 8px
-  gap: 8px
+  margin: 16px
+  gap: 16px
+  max-height: 100vh
   .left, .right, .bottom
-    padding: 8px
     border-radius: 4px
-    background-color: #f2f2f2
-  .left
+    // background-color: #f2f2f2
+  .sidebar
     grid-area: left
-  .right
+  .subtitle-preview-container
     grid-area: right
+    .subtitle-preview
+      max-height: calc(100vh - 32px - 54px - 34px - 16px * 5)
+      min-height: 405px
+      overflow-y: auto
+      .subtitle-preview__item
+        display: grid
+        grid-template-columns: 2em 1fr 1fr
+        background-color: #f2f2f2
+        padding: 8px
+        border-radius: 4px
+        &:not(:last-child)
+          margin-bottom: 8px
   .bottom
     grid-area: bottom
+    display: flex
+    align-items: center
+    gap: 8px
+    .progress-bar-container
+      flex: 1
+      .progress-bar
+        height: 16px
+        border-radius: 8px
+        background-color: #f2f2f2
+        overflow: hidden
+        .progress-bar__progress
+          height: 100%
+          background-color: #3f51b5
+      .progress-bar__text
+        text-align: right
+        font-size: 12px
+        opacity: .75
+    .btn
+      all: unset
+      padding: 8px 16px
+      border: none
+      border-radius: 4px
+      background-color: #3f51b5
+      color: #fff
+      font-size: 16px
+      font-weight: 500
+      cursor: pointer
+      transition: all .1s ease-in-out
+      display: flex
+      align-items: center
+      gap: 4px
+      &:hover
+        background-color: #303f9f
+      &:active
+        background-color: #1a237e
+      &:disabled
+        background-color: #c5cae9
+        color: #7986cb
+        cursor: not-allowed
+        &:hover
+          background-color: #c5cae9
+          color: #7986cb
   label
     font-size: 16px
     font-weight: 500
@@ -26,7 +80,7 @@
     padding: 8px
     border: none
     border-radius: 4px
-    background-color: #fff
+    background-color: #f2f2f2
     font-size: 16px
     font-family: 'Lato', sans-serif
     margin-bottom: 8px
