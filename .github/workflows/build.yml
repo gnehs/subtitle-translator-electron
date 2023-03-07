@@ -56,7 +56,7 @@ jobs:
             release/*.dmg
             release/*.exe
           body: |
-            ### 下載
+            ### Download
             - [Windows](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.exe)
             - [macOS](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.dmg)
         env:
