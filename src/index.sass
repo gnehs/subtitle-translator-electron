@@ -1,0 +1,63 @@
+body
+  color: #222
+.default-layout
+  display: flex
+  flex-direction: column
+  min-height: 100vh
+  >.navbar
+    height: 36px
+    display: flex
+    align-items: center
+    justify-content: space-between
+    padding: 16px
+    border-bottom: 1px solid #f2f2f2
+    .logo
+      font-size: 24px
+    .links
+      display: flex
+      align-items: center
+      a
+        margin-left: 16px
+        font-size: 24px
+        color: #3f51b5
+        text-decoration: none
+        width: 36px
+        height: 36px
+        display: flex
+        align-items: center
+        justify-content: center
+        border-radius: 50%
+        transition: all .2s ease-in-out
+        &:hover
+          background-color: #f2f2f2
+  >.content
+    flex: 1
+    display: flex
+    flex-direction: column
+    align-items: center
+    justify-content: center
+    .title
+      font-size: 48px
+      font-weight: 300
+      color: #3f51b5
+    .subtitle
+      font-size: 24px
+      font-weight: 300
+      color: #3f51b5
+  .footer
+    border-top: 1px solid #f2f2f2
+    height: 2em
+    line-height: 2em
+    font-size: 0.8em
+    display: flex
+    align-items: center
+    justify-content: space-between
+    padding: 0 16px
+    a
+      color: #3f51b5
+      text-decoration: none
+      border-radius: 4px
+      padding: 0 2px
+      transition: all .2s ease-in-out
+      &:hover
+        background-color: #f2f2f2

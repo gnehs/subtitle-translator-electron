@@ -1,12 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App'
+import DefaultLayout from './layouts/default'
 import './samples/node-api'
-import './index.scss'
+import 'normalize.css'
+import './index.sass'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <DefaultLayout />
   </React.StrictMode>,
 )
 
