@@ -96,6 +96,12 @@ function Translator({ className }: { className?: string }) {
 
         subtitle[i].data.translatedText = result
         setProgress(i / subtitle.length)
+
+        // scroll to item
+        let item = document.querySelector(`#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`)
+        if (item) {
+          item.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
       } catch (e) {
         // @ts-ignore
         alert(e.response.data.error.message || e.toString())
@@ -142,7 +148,7 @@ function Translator({ className }: { className?: string }) {
         <label><i className='bx bx-list-ul' ></i> Subtitle Preview</label>
         {!parsedSubtitle.length && <div className="subtitle-preview">No subtitle file selected.</div>}
         {parsedSubtitle.length != 0 &&
-          <div className="subtitle-preview">
+          <div className="subtitle-preview" id='subtitle-preview'>
             {parsedSubtitle.map((subtitle, index) =>
               <div key={index} className="subtitle-preview__item">
                 <div className="subtitle-preview__item__index">{index + 1}</div>

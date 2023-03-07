@@ -17,12 +17,24 @@
       max-height: calc(100vh - 32px - 54px - 34px - 16px * 5)
       min-height: 405px
       overflow-y: auto
+      border-radius: 4px
       .subtitle-preview__item
         display: grid
-        grid-template-columns: 2em 1fr 1fr
+        grid-template-columns: 2em 1fr
+        grid-template-rows: 1fr
+        grid-template-areas: "index text" "index text-translated"
         background-color: #f2f2f2
         padding: 8px
         border-radius: 4px
+        .subtitle-preview__item__index
+          grid-area: index
+          display: flex
+          align-items: center
+        .subtitle-preview__item__text
+          grid-area: text
+        .subtitle-preview__item__text--translated
+          grid-area: text-translated
+          color: #3f51b5
         &:not(:last-child)
           margin-bottom: 8px
   .bottom
