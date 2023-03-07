@@ -64,20 +64,26 @@ function Translator({ className }: { className?: string }) {
       if (subtitle[i + 1]) {
         input.Next = subtitle[i + 1].data.text
       }
-      const completion: any = await openai.createChatCompletion({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. You will receive the subtitles as array that needs to be translated, as well as the previous translation results and next subtitle. If you need to merge the subtitles with the following line, simply repeat the translation. Please transliterate the person's name into the local language. Target language: ${targetLanguage}\n\n${additionalNotes}`
-          },
-          ...previousSubtitles.slice(-4),
-          {
-            role: "user",
-            content: JSON.stringify(input)
-          }
-        ],
-      });
+      try {
+        const completion: any = await openai.createChatCompletion({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. You will receive the subtitles as array that needs to be translated, as well as the previous translation results and next subtitle. If you need to merge the subtitles with the following line, simply repeat the translation. Please transliterate the person's name into the local language. Target language: ${targetLanguage}\n\n${additionalNotes}`
+            },
+            ...previousSubtitles.slice(-4),
+            {
+              role: "user",
+              content: JSON.stringify(input)
+            }
+          ],
+        });
+      } catch (e) {
+        alert(e.response.data.error.message || e.toString())
+        setIsTranslating(false)
+        return
+      }
       let result = completion.data.choices[0].message.content
       setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
       try {
