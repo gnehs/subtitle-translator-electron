@@ -18,14 +18,14 @@
     flex-direction: column
     overflow-y: auto
     border-radius: 4px
-    max-height: calc(100vh - 45px - 32px - 26px - 16px - 8px)
+    max-height: calc(100vh - 32px - 26px - 16px - 8px)
     .subtitle-preview
       .subtitle-preview__item
         display: grid
         grid-template-columns: auto 1fr
         grid-template-rows: 1fr
         grid-template-areas: "index text" "index text-translated"
-        background-color: #f2f2f2
+        background-color: rgb(244, 245, 245)
         padding: 8px
         border-radius: 4px
         gap: 8px
@@ -56,7 +56,7 @@
       .progress-bar
         height: 4px
         border-radius: 8px
-        background-color: #f2f2f2
+        background-color: rgb(244, 245, 245)
         overflow: hidden
         .progress-bar__progress
           height: 100%
@@ -99,7 +99,7 @@
     padding: 8px
     border: none
     border-radius: 4px
-    background-color: #f2f2f2
+    background-color: rgb(244, 245, 245)
     font-size: 16px
     font-family: 'Lato', sans-serif
     margin-bottom: 8px
@@ -108,6 +108,7 @@
     transition: all .1s ease-in-out
     &:focus
       box-shadow: 0 0 0 2px #3f51b5
+      background-color: rgb(236, 229, 229)
   textarea
     min-height: 200px
     flex: 1

@@ -7,35 +7,6 @@ body
   display: flex
   flex-direction: column
   min-height: 100vh
-  >.navbar
-    display: flex
-    align-items: center
-    justify-content: space-between
-    padding: 4px 8px
-    border-bottom: 1px solid #f2f2f2
-    .logo
-      font-size: 24px
-      display: flex
-      align-items: center
-      gap: 4px
-      font-weight: 900
-    .links
-      display: flex
-      align-items: center
-      a
-        margin-left: 16px
-        font-size: 24px
-        color: #3f51b5
-        text-decoration: none
-        width: 36px
-        height: 36px
-        display: flex
-        align-items: center
-        justify-content: center
-        border-radius: 50%
-        transition: all .2s ease-in-out
-        &:hover
-          background-color: #f2f2f2
   >.content
     flex: 1
     .title
@@ -47,12 +18,19 @@ body
       font-weight: 300
       color: #3f51b5
   .footer
-    border-top: 1px solid #f2f2f2
+    background-color: rgb(250, 243, 241)
+    border-top: 1px solid rgb(213, 206, 204)
     font-size: 0.8em
     display: flex
     align-items: center
     justify-content: space-between
     padding: 8px
+    .links
+      display: flex
+      align-items: center
+      flex-direction: row
+      a
+        margin-left: 4px
     a
       color: #3f51b5
       text-decoration: none
@@ -61,5 +39,7 @@ body
       margin: 0 -2px
       transition: all .2s ease-in-out
       &:hover
-        background-color: #f2f2f2
+        background-color: rgba(0, 0, 0, 0.05)
+      &:active
+        background-color: rgba(0, 0, 0, 0.1)
 

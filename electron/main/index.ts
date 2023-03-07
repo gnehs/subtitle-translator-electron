@@ -66,7 +66,7 @@ async function createWindow() {
 
   // Test actively push message to the Electron-Renderer
   win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', new Date().toLocaleString())
+    win?.webContents.send('main-process-message', ['version', app.getVersion()])
   })
 
   // Make all links open with the browser, not with the application
