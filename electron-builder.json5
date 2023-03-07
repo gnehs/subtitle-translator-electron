@@ -15,9 +15,10 @@
   ],
   "mac": {
     "artifactName": "subtitle-translator_${version}.${ext}",
-    "target": [
-      "dmg"
-    ]
+    "target": {
+      "target": 'dmg',
+      "arch": "universal"
+    },
   },
   "win": {
     "icon": "build/icon.ico",
