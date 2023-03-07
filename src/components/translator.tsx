@@ -129,17 +129,17 @@ function Translator({ className }: { className?: string }) {
   return (
     <form className={`translator ${className}`} onSubmit={handleSubmit}>
       <div className="sidebar">
-        <label>Open AI API key</label>
+        <label><i className='bx bx-key' ></i> Open AI API key</label>
         <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required />
-        <label>Subtitle file</label>
+        <label><i className='bx bx-file-blank' ></i> Subtitle file</label>
         <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt" required />
-        <label>Target language</label>
+        <label><i className='bx bxs-right-arrow-square' ></i> Target language</label>
         <input type="text" placeholder="English, 繁體中文, 日本語, etc." value={targetLanguage} onChange={e => setTargetLanguage(e.target.value)} required />
-        <label>Additional notes</label>
+        <label><i className='bx bx-plus' ></i> Additional notes</label>
         <textarea placeholder="e.g. This is a Star Wars movie." value={additionalNotes} onChange={e => setAdditionalNotes(e.target.value)} />
       </div>
       <div className="subtitle-preview-container">
-        <label>Subtitle Preview</label>
+        <label><i className='bx bx-list-ul' ></i> Subtitle Preview</label>
         {!parsedSubtitle.length && <div className="subtitle-preview">No subtitle file selected.</div>}
         {parsedSubtitle.length != 0 &&
           <div className="subtitle-preview">
@@ -155,10 +155,10 @@ function Translator({ className }: { className?: string }) {
       </div>
       <div className="bottom">
         <div className="progress-bar-container">
+          <div className="progress-bar__text">{(progress * 100).toFixed(0)}% | {usedTokens.toLocaleString()} tokens used ≈ {(usedTokens / 1000 * 0.002).toFixed(4)} USD</div>
           <div className="progress-bar">
             <div className="progress-bar__progress" style={{ width: `${progress * 100}%` }}></div>
           </div>
-          <div className="progress-bar__text">{(progress * 100).toFixed(0)}% | {usedTokens.toLocaleString()} tokens used ≈ {(usedTokens / 1000 * 0.002).toFixed(4)} USD</div>
         </div>
         {progress === 1 &&
           <a className='btn' onClick={reset}><i className='bx bx-reset'></i> Reset</a>

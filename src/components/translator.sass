@@ -3,8 +3,8 @@
   grid-template-areas: "left right" "bottom bottom"
   grid-template-columns: 300px 1fr
   grid-template-rows: 1fr auto
-  margin: 16px
-  gap: 16px
+  margin: 8px
+  gap: 0 16px
   max-height: 100vh
   .left, .right, .bottom
     border-radius: 4px
@@ -33,7 +33,7 @@
     .progress-bar-container
       flex: 1
       .progress-bar
-        height: 16px
+        height: 4px
         border-radius: 8px
         background-color: #f2f2f2
         overflow: hidden
@@ -44,6 +44,7 @@
         text-align: right
         font-size: 12px
         opacity: .75
+        margin-bottom: 4px
     .btn
       all: unset
       padding: 8px 16px
@@ -75,6 +76,9 @@
     color: #3f51b5
     letter-spacing: 1px
     line-height: 24px
+    display: flex
+    align-items: center
+    gap: 4px
   input, textarea
     width: 100%
     padding: 8px
@@ -91,3 +95,29 @@
       box-shadow: 0 0 0 2px #3f51b5
   textarea
     height: 200px
+  input[type="file"]
+    font-size: 14px
+  input[type="file"]::file-selector-button
+    all: unset
+    padding: 4px 8px
+    border: none
+    border-radius: 4px
+    background-color: #3f51b5
+    color: #fff
+    margin-right: 8px
+    font-weight: 500
+    cursor: pointer
+    transition: all .1s ease-in-out
+    align-items: center
+    gap: 4px
+    &:hover
+      background-color: #303f9f
+    &:active
+      background-color: #1a237e
+    &:disabled
+      background-color: #c5cae9
+      color: #7986cb
+      cursor: not-allowed
+      &:hover
+        background-color: #c5cae9
+        color: #7986cb
