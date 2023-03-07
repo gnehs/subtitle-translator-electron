@@ -4,20 +4,22 @@
   grid-template-columns: 300px 1fr
   grid-template-rows: 1fr auto
   margin: 8px
-  gap: 0 16px
-  max-height: 100vh
+  gap: 8px
+  height: 100%
   .left, .right, .bottom
     border-radius: 4px
-    // background-color: #f2f2f2
   .sidebar
     grid-area: left
+    display: flex
+    flex-direction: column
   .subtitle-preview-container
     grid-area: right
+    display: flex
+    flex-direction: column
+    overflow-y: auto
+    border-radius: 4px
+    max-height: calc(100vh - 45px - 32px - 26px - 16px - 8px)
     .subtitle-preview
-      max-height: calc(100vh - 32px - 54px - 34px - 16px * 5)
-      min-height: 405px
-      overflow-y: auto
-      border-radius: 4px
       .subtitle-preview__item
         display: grid
         grid-template-columns: auto 1fr
@@ -45,6 +47,12 @@
     gap: 8px
     .progress-bar-container
       flex: 1
+      .progress-bar__text
+        text-align: right
+        font-size: 14px
+        margin-bottom: 4px
+        display: flex
+        justify-content: space-between
       .progress-bar
         height: 4px
         border-radius: 8px
@@ -53,36 +61,30 @@
         .progress-bar__progress
           height: 100%
           background-color: #3f51b5
-      .progress-bar__text
-        text-align: right
-        font-size: 12px
-        opacity: .75
-        margin-bottom: 4px
-    .btn
-      all: unset
-      padding: 8px 16px
-      border: none
-      border-radius: 4px
-      background-color: #3f51b5
-      color: #fff
-      font-size: 16px
-      font-weight: 500
-      cursor: pointer
-      transition: all .1s ease-in-out
-      display: flex
-      align-items: center
-      gap: 4px
+  .btn,,input[type="file"]::file-selector-button
+    all: unset
+    padding: 4px 8px
+    border: none
+    border-radius: 4px
+    background-color: #3f51b5
+    color: #fff
+    cursor: pointer
+    transition: all .1s ease-in-out
+    display: inline-flex
+    align-items: center
+    gap: 4px
+    &:hover
+      background-color: #303f9f
+    &:active
+      background-color: #1a237e
+  .btn
+    &:disabled
+      background-color: #c5cae9
+      color: #7986cb
+      cursor: not-allowed
       &:hover
-        background-color: #303f9f
-      &:active
-        background-color: #1a237e
-      &:disabled
         background-color: #c5cae9
         color: #7986cb
-        cursor: not-allowed
-        &:hover
-          background-color: #c5cae9
-          color: #7986cb
   label
     font-size: 16px
     font-weight: 500
@@ -107,30 +109,10 @@
     &:focus
       box-shadow: 0 0 0 2px #3f51b5
   textarea
-    height: 200px
+    min-height: 200px
+    flex: 1
+    margin-bottom: 0
   input[type="file"]
     font-size: 14px
   input[type="file"]::file-selector-button
-    all: unset
-    padding: 4px 8px
-    border: none
-    border-radius: 4px
-    background-color: #3f51b5
-    color: #fff
     margin-right: 8px
-    font-weight: 500
-    cursor: pointer
-    transition: all .1s ease-in-out
-    align-items: center
-    gap: 4px
-    &:hover
-      background-color: #303f9f
-    &:active
-      background-color: #1a237e
-    &:disabled
-      background-color: #c5cae9
-      color: #7986cb
-      cursor: not-allowed
-      &:hover
-        background-color: #c5cae9
-        color: #7986cb

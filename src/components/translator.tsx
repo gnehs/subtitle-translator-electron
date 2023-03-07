@@ -137,15 +137,18 @@ function Translator({ className }: { className?: string }) {
       <div className="sidebar">
         <label><i className='bx bx-key' ></i> Open AI API key</label>
         <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required />
+
         <label><i className='bx bx-file-blank' ></i> Subtitle file</label>
         <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt" required />
+
         <label><i className='bx bxs-right-arrow-square' ></i> Target language</label>
         <input type="text" placeholder="English, 繁體中文, 日本語, etc." value={targetLanguage} onChange={e => setTargetLanguage(e.target.value)} required />
+
         <label><i className='bx bx-plus' ></i> Additional notes</label>
         <textarea placeholder="e.g. This is a Star Wars movie." value={additionalNotes} onChange={e => setAdditionalNotes(e.target.value)} />
       </div>
       <div className="subtitle-preview-container">
-        <label><i className='bx bx-list-ul' ></i> Subtitle Preview</label>
+        {!parsedSubtitle.length && <label><i className='bx bx-list-ul' ></i> Subtitle Preview</label>}
         {!parsedSubtitle.length && <div className="subtitle-preview">No subtitle file selected.</div>}
         {parsedSubtitle.length != 0 &&
           <div className="subtitle-preview" id='subtitle-preview'>
@@ -153,7 +156,7 @@ function Translator({ className }: { className?: string }) {
               <div key={index} className="subtitle-preview__item">
                 <div className="subtitle-preview__item__index">{index + 1}</div>
                 <div className="subtitle-preview__item__text">{subtitle.data.text}</div>
-                <div className="subtitle-preview__item__text--translated">{subtitle.data?.translatedText || '...'}</div>
+                <div className="subtitle-preview__item__text--translated">{subtitle.data?.translatedText || '⋯'}</div>
               </div>
             )}
           </div>
@@ -161,7 +164,10 @@ function Translator({ className }: { className?: string }) {
       </div>
       <div className="bottom">
         <div className="progress-bar-container">
-          <div className="progress-bar__text">{(progress * 100).toFixed(0)}% | {usedTokens.toLocaleString()} tokens used ≈ {(usedTokens / 1000 * 0.002).toFixed(4)} USD</div>
+          <div className="progress-bar__text">
+            <span>{(progress * 100).toFixed(0)}%</span>
+            <span>{usedTokens.toLocaleString()} tokens used ≈ {(usedTokens / 1000 * 0.002).toFixed(4)} USD</span>
+          </div>
           <div className="progress-bar">
             <div className="progress-bar__progress" style={{ width: `${progress * 100}%` }}></div>
           </div>
@@ -173,7 +179,7 @@ function Translator({ className }: { className?: string }) {
           <a className='btn' onClick={downloadSubtitle}><i className='bx bx-save' ></i> Save</a>
         }
         {progress !== 1 &&
-          <button className='btn' type="submit" disabled={isTranslating}>
+          <button className="btn" type="submit" disabled={isTranslating}>
             {!isTranslating && <i className='bx bx-play'></i>}{isTranslating ? `Translating...` : `Translate`}
           </button>
         }
