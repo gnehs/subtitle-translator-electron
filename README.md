@@ -6,5 +6,22 @@
   Translate subtitle using ChatGPT
 </p>
 
-## [Download](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
+## Supported subtitle extensions
+- `.srt`
+- `.vtt` WebVTT
 
+## Features
+- Translate subtitle using ChatGPT `gpt-3.5-turbo`
+- Support multiple languages
+- Translation according to the preceding and following sentences
+## [Download](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
+Download the latest stable version from the
+[Releases](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
+page
+
+Download the latest test version from
+[Actions](https://github.com/gnehs/subtitle-translator-electron/actions)
+page
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
