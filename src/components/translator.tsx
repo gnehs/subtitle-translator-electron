@@ -97,6 +97,7 @@ function Translator({ className }: { className?: string }) {
         subtitle[i].data.translatedText = result
         setProgress(i / subtitle.length)
       } catch (e) {
+        // @ts-ignore
         alert(e.response.data.error.message || e.toString())
         setIsTranslating(false)
         return
