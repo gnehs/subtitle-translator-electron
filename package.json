@@ -1,9 +1,9 @@
 {
-  "name": "electron-vite-react",
-  "version": "2.1.0",
+  "name": "subtitle-translator-electron",
+  "version": "0.1.0",
   "main": "dist-electron/main/index.js",
-  "description": "Electron Vite React boilerplate.",
-  "author": "草鞋没号 <308487730@qq.com>",
+  "description": "Translate subtitle using ChatGPT",
+  "author": "gnehs",
   "license": "MIT",
   "private": true,
   "debug": {
