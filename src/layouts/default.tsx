@@ -1,9 +1,10 @@
+import Translator from "@/components/translator"
 function DefaultLayout() {
   return (
     <div className="default-layout">
       <div className="navbar">
         <div className="logo">
-          Subtitle translator
+          <i className='bx bx-transfer-alt'></i> Subtitle translator
         </div>
         <div className="links">
           <a href="https://github.com/gnehs/subtitle-translator-electron" target="_blank">
@@ -11,9 +12,7 @@ function DefaultLayout() {
           </a>
         </div>
       </div>
-      <div className="content">
-        hello!
-      </div>
+      <Translator className="content" />
       <div className="footer">
         <div className="content">
           Developed by <a href="https://gnehs.net/" target="_blank">gnehs</a> | Made with <a href="https://pancake.tw/" target="_blank">🥞</a> in Taiwan
