@@ -1,5 +1,9 @@
 *
   box-sizing: border-box
+\:root
+  --accent-color: #3f51b5
+  --accent-color-hover: color-mix(in srgb,var(--accent-color), #000 15%)
+  --accent-color-active: color-mix(in srgb,var(--accent-color), #000 25%)
 body
   color: #222
   font-family: 'Lato', sans-serif
@@ -9,17 +13,9 @@ body
   min-height: 100vh
   >.content
     flex: 1
-    .title
-      font-size: 48px
-      font-weight: 300
-      color: #3f51b5
-    .subtitle
-      font-size: 24px
-      font-weight: 300
-      color: #3f51b5
   .footer
-    background-color: rgb(250, 243, 241)
-    border-top: 1px solid rgb(213, 206, 204)
+    background-color: color-mix(in srgb,var(--accent-color), #fff 95%)
+    border-top: 1px solid color-mix(in srgb,var(--accent-color), #fff 80%)
     font-size: 0.8em
     display: flex
     align-items: center
@@ -32,14 +28,14 @@ body
       a
         margin-left: 4px
     a
-      color: #3f51b5
+      color: var(--accent-color)
       text-decoration: none
       border-radius: 4px
       padding: 2px 4px
       margin: 0 -2px
       transition: all .2s ease-in-out
       &:hover
-        background-color: rgba(0, 0, 0, 0.05)
+        background-color: color-mix(in srgb,var(--accent-color), #fff 80%)
       &:active
-        background-color: rgba(0, 0, 0, 0.1)
+        background-color: color-mix(in srgb,var(--accent-color), #fff 60%)
 

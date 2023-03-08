@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, systemPreferences } from 'electron'
 import { release } from 'node:os'
 import { join } from 'node:path'
 
@@ -67,6 +67,7 @@ async function createWindow() {
   // Test actively push message to the Electron-Renderer
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', ['version', app.getVersion()])
+    win?.webContents.send('main-process-message', ['accentColor', systemPreferences.getAccentColor()])
   })
 
   // Make all links open with the browser, not with the application

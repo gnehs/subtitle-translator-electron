@@ -9,6 +9,9 @@ function DefaultLayout() {
       if (args[0] == 'version') {
         setVersion(args[1])
       }
+      if (args[0] == 'accentColor') {
+        document.documentElement.style.setProperty('--accent-color', `#${args[1]}`)
+      }
     });
   }, [])
   return (

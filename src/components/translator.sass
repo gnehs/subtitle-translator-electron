@@ -37,7 +37,7 @@
           grid-area: text
         .subtitle-preview__item__text--translated
           grid-area: text-translated
-          color: #3f51b5
+          color: var(--accent-color)
         &:not(:last-child)
           margin-bottom: 8px
   .bottom
@@ -60,13 +60,13 @@
         overflow: hidden
         .progress-bar__progress
           height: 100%
-          background-color: #3f51b5
+          background-color: var(--accent-color)
   .btn,,input[type="file"]::file-selector-button
     all: unset
     padding: 4px 8px
     border: none
     border-radius: 4px
-    background-color: #3f51b5
+    background-color: var(--accent-color)
     color: #fff
     cursor: pointer
     transition: all .1s ease-in-out
@@ -74,21 +74,19 @@
     align-items: center
     gap: 4px
     &:hover
-      background-color: #303f9f
+      background-color: var(--accent-color-hover)
     &:active
-      background-color: #1a237e
+      background-color: var(--accent-color-active)
   .btn
     &:disabled
-      background-color: #c5cae9
-      color: #7986cb
+      background-color: color-mix(in srgb,var(--accent-color), #fff 70%)
+      color: color-mix(in srgb,var(--accent-color), #fff 10%)
       cursor: not-allowed
-      &:hover
-        background-color: #c5cae9
-        color: #7986cb
+      pointer-events: none
   label
     font-size: 16px
     font-weight: 500
-    color: #3f51b5
+    color: var(--accent-color)
     letter-spacing: 1px
     line-height: 24px
     display: flex
@@ -107,7 +105,7 @@
     resize: none
     transition: all .1s ease-in-out
     &:focus
-      box-shadow: 0 0 0 2px #3f51b5
+      box-shadow: 0 0 0 2px var(--accent-color)
       background-color: #fff
   textarea
     min-height: 200px
