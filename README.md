@@ -7,7 +7,9 @@
 </p>
 
 ## Supported subtitle extensions
+- `.ass`
 - `.srt`
+- `.ssa`
 - `.vtt` WebVTT
 
 ## Features
