@@ -3,16 +3,22 @@ import { useState, useEffect } from 'react';
 import { Configuration, OpenAIApi } from 'openai'
 import { parseSync, stringifySync } from 'subtitle'
 import { Tooltip } from 'react-tooltip'
+//@ts-ignore
+import assParser from 'ass-parser'
+//@ts-ignore
+import assStringify from 'ass-stringify'
 import './translator.sass'
 function Translator({ className }: { className?: string }) {
   const [isTranslating, setIsTranslating] = useState(false)
   const [progress, setProgress] = useState(0)
   const [usedTokens, setUsedTokens] = useState<number>(0)
   const [parsedSubtitle, setParsedSubtitle] = useState<any[]>([])
+  const [assTemp, setAssTemp] = useState<any[]>([])
   const [fileName, setFileName] = useState<string | null>(null)
   const [targetLanguage, setTargetLanguage] = useState('')
   const [additionalNotes, setAdditionalNotes] = useState('')
   const [apiKey, setApiKey] = useState('')
+
   useEffect(() => {
     if (localStorage.getItem('apiKey'))
       setApiKey(localStorage.getItem('apiKey') || '')
@@ -25,12 +31,33 @@ function Translator({ className }: { className?: string }) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
+      let fileExtension = file.name.split('.').pop()
       setFileName(file.name)
       const reader = new FileReader()
       reader.onload = function (e) {
         if (e.target?.result) {
-          const parsedSubtitle = parseSync(e.target.result as string)
-          setParsedSubtitle(parsedSubtitle)
+          if (['srt', 'vtt'].includes(fileExtension || '')) {
+            const parsedSrtSubtitle = parseSync(e.target.result as string)
+            setParsedSubtitle(parsedSrtSubtitle)
+          }
+          if (['ass', 'ssa'].includes(fileExtension || '')) {
+            const parsedAssSubtitle = assParser(e.target.result as string)
+            setAssTemp(parsedAssSubtitle)
+            setParsedSubtitle(parsedAssSubtitle.filter((x: any) => x.section === 'Events')[0].body
+              .filter(({ key }: any) => key === 'Dialogue')
+              .map((line: any) => {
+                return {
+                  type: `cue`,
+                  data: {
+                    text: line.value.Text,
+                    start: line.value.Start,
+                    end: line.value.End
+                  }
+                }
+              })
+            )
+          }
+
         }
       }
       reader.readAsText(file)
@@ -86,7 +113,7 @@ function Translator({ className }: { className?: string }) {
           result = JSON.parse(result).Input
         } catch (e) {
           try {
-            result = result.match(/"Input":"(.*?)"/)[1]
+            result = result.match(/"Input":"(.*?)"/)?.[1] || result
           } catch (e) {
             console.error(e)
             console.error(result.red)
@@ -115,16 +142,39 @@ function Translator({ className }: { className?: string }) {
     setIsTranslating(false)
   }
   function downloadSubtitle() {
-
-    let newSubtitle = stringifySync(parsedSubtitle.map(x => {
-      return {
-        type: x.type,
-        data: {
-          ...x.data,
-          text: x.data.translatedText
+    let fileExtension = fileName?.split('.').pop()
+    let newSubtitle
+    if (['srt', 'vtt'].includes(fileExtension || '')) {
+      newSubtitle = stringifySync(parsedSubtitle.map(x => {
+        return {
+          type: x.type,
+          data: {
+            ...x.data,
+            text: x.data.translatedText
+          }
         }
-      }
-    }), { format: 'SRT' })
+      }), { format: 'SRT' })
+    }
+    if (['ass', 'ssa'].includes(fileExtension || '')) {
+      newSubtitle = assStringify(assTemp.map(x => {
+        if (x.section === 'Events') {
+          x.body = x.body.map((line: any) => {
+            if (line.key === 'Dialogue') {
+              return {
+                key: 'Dialogue',
+                value: {
+                  ...line.value,
+                  Text: parsedSubtitle.find(y => y.data.text === line.value.Text)?.data.translatedText
+                }
+              }
+            }
+            return line
+          })
+        }
+        return x
+      }))
+    }
+
     const blob = new Blob([newSubtitle], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -141,7 +191,7 @@ function Translator({ className }: { className?: string }) {
         <Tooltip id="open-ai-tooltip" />
 
         <label><i className='bx bx-file-blank' ></i> Subtitle file</label>
-        <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt" required />
+        <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt,.ass,.ssa" required />
 
         <label><i className='bx bxs-right-arrow-square' ></i> Target language</label>
         <input type="text" placeholder="English, 繁體中文, 日本語, etc." value={targetLanguage} onChange={e => setTargetLanguage(e.target.value)} required />
