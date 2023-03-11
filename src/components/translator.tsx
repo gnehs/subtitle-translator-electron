@@ -86,7 +86,7 @@ function Translator({ className }: { className?: string }) {
     let previousSubtitles: any = []
 
     for (let i = 0; i < subtitle.length; i++) {
-      // for (let i = 0; i < 10; i++) {
+      if (subtitle[i].data?.translatedText) continue
       let text = subtitle[i].data.text
       let input: { Input: string; Next?: string; } = { Input: text }
       if (subtitle[i + 1]) {
@@ -132,7 +132,7 @@ function Translator({ className }: { className?: string }) {
         }
       } catch (e) {
         // @ts-ignore
-        alert(e.response.data.error.message || e.toString())
+        alert(e?.response?.data?.error?.message || e.toString())
         setIsTranslating(false)
         return
       }
