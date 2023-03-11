@@ -2,6 +2,7 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { Configuration, OpenAIApi } from 'openai'
 import { parseSync, stringifySync } from 'subtitle'
+import { Tooltip } from 'react-tooltip'
 import './translator.sass'
 function Translator({ className }: { className?: string }) {
   const [isTranslating, setIsTranslating] = useState(false)
@@ -136,7 +137,8 @@ function Translator({ className }: { className?: string }) {
     <form className={`translator ${className}`} onSubmit={handleSubmit}>
       <div className="sidebar">
         <label><i className='bx bx-key' ></i> Open AI API key</label>
-        <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required />
+        <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required data-tooltip-id="open-ai-tooltip" data-tooltip-content="You need to add a payment method to your account, otherwise you might reach the free rate limit (20 requests/min)." />
+        <Tooltip id="open-ai-tooltip" />
 
         <label><i className='bx bx-file-blank' ></i> Subtitle file</label>
         <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt" required />

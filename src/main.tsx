@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import DefaultLayout from './layouts/default'
+import 'react-tooltip/dist/react-tooltip.css'
 import './samples/node-api'
 import 'normalize.css'
 import './index.sass'
