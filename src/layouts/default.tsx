@@ -22,6 +22,9 @@ function DefaultLayout() {
           v{version} | Developed by <a href="https://gnehs.net/" target="_blank">gnehs</a> | Made with <a href="https://pancake.tw/" target="_blank">🥞</a> in Taiwan
         </div>
         <div className="links">
+          <a href="https://www.buymeacoffee.com/gnehs" target="_blank">
+            <i className='bx bx-coffee-togo' ></i> Buy me a coffee
+          </a>
           <a href="https://github.com/gnehs/subtitle-translator-electron" target="_blank">
             <i className='bx bxl-github'></i> GitHub
           </a>
