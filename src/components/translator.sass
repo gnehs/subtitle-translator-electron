@@ -22,13 +22,14 @@
     .subtitle-preview
       .subtitle-preview__item
         display: grid
-        grid-template-columns: auto 1fr
+        grid-template-columns: auto 1fr auto
         grid-template-rows: 1fr
-        grid-template-areas: "index text" "index text-translated"
+        grid-template-areas: "index text actions" "index text-translated actions"
+        align-items: center
         background-color: rgb(244, 245, 245)
         padding: 8px
         border-radius: 4px
-        gap: 8px
+        gap: 16px
         .subtitle-preview__item__index
           grid-area: index
           display: flex
@@ -38,6 +39,12 @@
         .subtitle-preview__item__text--translated
           grid-area: text-translated
           color: var(--accent-color)
+          input
+            background-color: #fff
+            margin: -8px
+            margin-bottom: 0
+        .subtitle-preview__item__actions
+          grid-area: actions
         &:not(:last-child)
           margin-bottom: 8px
   .bottom

@@ -68,12 +68,45 @@ function Translator({ className }: { className?: string }) {
     e.preventDefault()
     startTranslation()
   }
+
+  async function retry(index: number) {
+    parsedSubtitle[index].data.translatedText = '⋯'
+
+    const input = parsedSubtitle[index].data.text
+    const configuration = new Configuration({ apiKey });
+    const openai = new OpenAIApi(configuration);
+    const completion: any = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. You will receive the subtitles as array that needs to be translated, as well as the previous translation results and next subtitle. If you need to merge the subtitles with the following line, simply repeat the translation. Please transliterate the person's name into the local language. Target language: ${targetLanguage}\n\n${additionalNotes}`
+        },
+        {
+          role: "user",
+          content: JSON.stringify(input)
+        }
+      ],
+    });
+    let result = completion.data.choices[0].message.content
+    setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+    try {
+      result = JSON.parse(result).Input
+    }
+    catch (e) {
+      try {
+        result = result.match(/"Input":"(.*?)"/)?.[1] || result
+      }
+      catch (e) {
+        console.error(e)
+      }
+    }
+    parsedSubtitle[index].data.translatedText = result
+  }
   async function startTranslation() {
     localStorage.setItem('apiKey', apiKey)
     localStorage.setItem('targetLanguage', targetLanguage)
-    // alert('start')
     setIsTranslating(true)
-    // setProgress(0.5)
 
     const configuration = new Configuration({ apiKey });
     const openai = new OpenAIApi(configuration);
@@ -138,8 +171,8 @@ function Translator({ className }: { className?: string }) {
       }
     }
     setProgress(1)
-    downloadSubtitle()
     setIsTranslating(false)
+    alert('Done!')
   }
   function downloadSubtitle() {
     let fileExtension = fileName?.split('.').pop()
@@ -156,7 +189,8 @@ function Translator({ className }: { className?: string }) {
       }), { format: 'SRT' })
     }
     if (['ass', 'ssa'].includes(fileExtension || '')) {
-      newSubtitle = assStringify(assTemp.map(x => {
+      let temp = structuredClone(assTemp)
+      newSubtitle = assStringify(temp.map(x => {
         if (x.section === 'Events') {
           x.body = x.body.map((line: any) => {
             if (line.key === 'Dialogue') {
@@ -208,7 +242,21 @@ function Translator({ className }: { className?: string }) {
               <div key={index} className="subtitle-preview__item">
                 <div className="subtitle-preview__item__index">{index + 1}</div>
                 <div className="subtitle-preview__item__text">{subtitle.data.text}</div>
-                <div className="subtitle-preview__item__text--translated">{subtitle.data?.translatedText || '⋯'}</div>
+                <div className="subtitle-preview__item__text--translated">
+                  {subtitle.data?.translatedText ?
+                    <input key={index} type="text" value={subtitle.data.translatedText} onChange={e => {
+                      parsedSubtitle[index].data.translatedText = e.target.value
+                      setParsedSubtitle([...parsedSubtitle])
+                    }} />
+                    : '⋯'}
+                </div>
+                <div className="subtitle-preview__item__actions">
+                  {subtitle.data.translatedText &&
+                    <button className="btn" disabled={subtitle.data.translatedText == '⋯'} onClick={() => { retry(index) }}>
+                      <i className='bx bx-refresh' ></i>
+                    </button>
+                  }
+                </div>
               </div>
             )}
           </div>
