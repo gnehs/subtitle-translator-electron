@@ -70,7 +70,11 @@ function Translator({ className }: { className?: string }) {
   }
 
   async function retry(index: number) {
-    parsedSubtitle[index].data.translatedText = '⋯'
+    localStorage.setItem('apiKey', apiKey)
+    localStorage.setItem('targetLanguage', targetLanguage)
+
+    parsedSubtitle[index].data.translatedText = 'Loading...'
+    setParsedSubtitle([...parsedSubtitle])
 
     const input = parsedSubtitle[index].data.text
     const configuration = new Configuration({ apiKey });
@@ -89,19 +93,11 @@ function Translator({ className }: { className?: string }) {
       ],
     });
     let result = completion.data.choices[0].message.content
+    result = result.replace(/^("|「)|("|」)$/g, '')
     setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
-    try {
-      result = JSON.parse(result).Input
-    }
-    catch (e) {
-      try {
-        result = result.match(/"Input":"(.*?)"/)?.[1] || result
-      }
-      catch (e) {
-        console.error(e)
-      }
-    }
+
     parsedSubtitle[index].data.translatedText = result
+    setParsedSubtitle([...parsedSubtitle])
   }
   async function startTranslation() {
     localStorage.setItem('apiKey', apiKey)
@@ -243,16 +239,19 @@ function Translator({ className }: { className?: string }) {
                 <div className="subtitle-preview__item__index">{index + 1}</div>
                 <div className="subtitle-preview__item__text">{subtitle.data.text}</div>
                 <div className="subtitle-preview__item__text--translated">
-                  {subtitle.data?.translatedText ?
-                    <input key={index} type="text" value={subtitle.data.translatedText} onChange={e => {
+                  <input
+                    key={index}
+                    type="text"
+                    value={subtitle.data.translatedText || ''}
+                    disabled={subtitle.data.translatedText == 'Loading...'}
+                    onChange={e => {
                       parsedSubtitle[index].data.translatedText = e.target.value
                       setParsedSubtitle([...parsedSubtitle])
                     }} />
-                    : '⋯'}
                 </div>
                 <div className="subtitle-preview__item__actions">
                   {subtitle.data.translatedText &&
-                    <button className="btn" disabled={subtitle.data.translatedText == '⋯'} onClick={() => { retry(index) }}>
+                    <button className="btn" type="button" disabled={subtitle.data.translatedText == 'Loading...'} onClick={() => { retry(index) }}>
                       <i className='bx bx-refresh' ></i>
                     </button>
                   }
