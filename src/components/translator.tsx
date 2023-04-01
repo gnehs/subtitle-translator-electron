@@ -78,6 +78,8 @@ function Translator({ className }: { className?: string }) {
     setIsTranslating(true)
     if (translationMethod === "gpt-3.5-turbo")
       startTranslationGPT3()
+    if (translationMethod === "gpt-3.5-turbo-economy")
+      startTranslationGPT3Economy()
     if (translationMethod === "gpt-4-0314")
       startTranslationGPT4()
   }
@@ -226,6 +228,59 @@ function Translator({ className }: { className?: string }) {
         }
         previousSubtitles.push({ role: "user", content: JSON.stringify(input) })
         previousSubtitles.push({ role: 'assistant', content: JSON.stringify({ ...input, Input: result }) })
+
+        subtitle[i].data.translatedText = result
+        setProgress(i / subtitle.length)
+
+        // scroll to item
+        let item = document.querySelector(`#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`)
+        if (item) {
+          item.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      } catch (e) {
+        // @ts-ignore
+        alert(e?.response?.data?.error?.message || e.toString())
+        setIsTranslating(false)
+        return
+      }
+    }
+    setProgress(1)
+    setIsTranslating(false)
+    alert('Done!')
+  }
+  async function startTranslationGPT3Economy() {
+    const configuration = new Configuration({ apiKey });
+    const openai = new OpenAIApi(configuration);
+
+    let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
+    type Input = {
+      Input: string
+      Next?: string
+    }
+
+
+    for (let i = 0; i < subtitle.length; i++) {
+      if (subtitle[i].data?.translatedText) continue
+      let text = subtitle[i].data.text
+      try {
+        const completion: any = await openai.createChatCompletion({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Target language: ${targetLanguage}\n\n${additionalNotes}`
+            },
+            {
+              role: "user",
+              content: text
+            }
+          ],
+        });
+        let result = completion.data.choices[0].message.content
+        setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+        setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
+
+        result = result.replace(/^("|「)|("|」)$/g, '')
 
         subtitle[i].data.translatedText = result
         setProgress(i / subtitle.length)
