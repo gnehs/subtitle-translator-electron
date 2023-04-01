@@ -179,6 +179,7 @@ function Translator({ className }: { className?: string }) {
     }
     setProgress(1)
     setIsTranslating(false)
+    alert('Done!')
   }
   async function startTranslationGPT3() {
     const configuration = new Configuration({ apiKey });
