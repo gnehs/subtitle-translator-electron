@@ -99,7 +99,13 @@
     display: flex
     align-items: center
     gap: 4px
-  input, textarea
+  .translationMethod
+    cursor: pointer
+    display: flex
+    align-items: center
+    gap: 4px
+    justify-content: space-between
+  input, textarea, select,.translationMethod
     width: 100%
     padding: 8px
     border: none
@@ -115,10 +121,67 @@
       box-shadow: 0 0 0 2px var(--accent-color)
       background-color: #fff
   textarea
-    min-height: 200px
+    min-height: 180px
     flex: 1
     margin-bottom: 0
   input[type="file"]
     font-size: 14px
   input[type="file"]::file-selector-button
     margin-right: 8px
+dialog
+  background-color: #fff
+  border: none
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .1), 0 4px 11px rgba(0, 0, 0, .1)
+  border-radius: 4px
+  padding: 8px
+  width: 400px
+  .translation-method-option
+    all: unset
+    display: block
+    padding: 8px
+    background-color: rgb(244, 245, 245)
+    width: calc(100% - 20px)
+    margin-bottom: 8px
+    border: 2px solid transparent
+    border-radius: 4px
+
+    display: flex
+    flex-direction: column
+    gap: 4px
+
+    cursor: pointer
+
+    font-size: 14px
+    color: #333
+    transition: all .1s ease-in-out
+    .title
+      font-size: 16px
+      font-weight: 500
+      color: var(--accent-color)
+      letter-spacing: 1px
+      line-height: 24px
+      display: flex
+      align-items: center
+      gap: 4px
+    &:hover
+      border: 2px solid var(--accent-color)
+      background: #fff
+  &::backdrop
+    background-color: rgba(0, 0, 0, .15)
+    animation: fadeIn .2s ease-in-out
+  &[open]
+    animation: fadeInSlideDown .2s ease-in-out
+  &:not([open])
+    animation: fadeIn .2s ease-in-out reverse
+@keyframes fadeInSlideDown
+  0%
+    opacity: 0
+    transform: translateY(-40px)
+  100%
+    opacity: 1
+    transform: translateY(0)
+@keyframes fadeIn
+  0%
+    opacity: 0
+  100%
+    opacity: 1

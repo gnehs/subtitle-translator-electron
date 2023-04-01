@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Configuration, OpenAIApi } from 'openai'
 import { parseSync, stringifySync } from 'subtitle'
 import { Tooltip } from 'react-tooltip'
@@ -12,18 +12,23 @@ function Translator({ className }: { className?: string }) {
   const [isTranslating, setIsTranslating] = useState(false)
   const [progress, setProgress] = useState(0)
   const [usedTokens, setUsedTokens] = useState<number>(0)
+  const [usedDollars, setUsedDollars] = useState<number>(0)
   const [parsedSubtitle, setParsedSubtitle] = useState<any[]>([])
   const [assTemp, setAssTemp] = useState<any[]>([])
   const [fileName, setFileName] = useState<string | null>(null)
   const [targetLanguage, setTargetLanguage] = useState('')
   const [additionalNotes, setAdditionalNotes] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [translationMethod, setTranslationMethod] = useState('gpt-3.5-turbo')
+  const translationMethodDialog: any = useRef(null)
 
   useEffect(() => {
     if (localStorage.getItem('apiKey'))
       setApiKey(localStorage.getItem('apiKey') || '')
     if (localStorage.getItem('targetLanguage'))
       setTargetLanguage(localStorage.getItem('targetLanguage') || '')
+    if (localStorage.getItem('translationMethod'))
+      setTargetLanguage(localStorage.getItem('translationMethod') || '')
   }, [])
   function reset() {
     location.reload()
@@ -66,7 +71,15 @@ function Translator({ className }: { className?: string }) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    startTranslation()
+
+    localStorage.setItem('apiKey', apiKey)
+    localStorage.setItem('targetLanguage', targetLanguage)
+    localStorage.setItem('translationMethod', translationMethod)
+    setIsTranslating(true)
+    if (translationMethod === "gpt-3.5-turbo")
+      startTranslationGPT3()
+    if (translationMethod === "gpt-4-0314")
+      startTranslationGPT4()
   }
 
   async function retry(index: number) {
@@ -95,15 +108,77 @@ function Translator({ className }: { className?: string }) {
     let result = completion.data.choices[0].message.content
     result = result.replace(/^("|「)|("|」)$/g, '')
     setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+    setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
 
     parsedSubtitle[index].data.translatedText = result
     setParsedSubtitle([...parsedSubtitle])
   }
-  async function startTranslation() {
-    localStorage.setItem('apiKey', apiKey)
-    localStorage.setItem('targetLanguage', targetLanguage)
-    setIsTranslating(true)
+  async function startTranslationGPT4() {
+    const configuration = new Configuration({ apiKey });
+    const openai = new OpenAIApi(configuration);
 
+    let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
+    const splitEvery = 10
+    let chunks = []
+    let chunk = []
+    for (let i = 0; i < subtitle.length; i++) {
+      if (subtitle[i].data?.translatedText) continue
+      chunk.push(subtitle[i])
+      if (chunk.length === splitEvery) {
+        chunks.push(chunk)
+        chunk = []
+      }
+    }
+    if (chunk.length > 0) {
+      chunks.push(chunk)
+    }
+    for (let i = 0; i < chunks.length; i++) {
+      let chunk = chunks[i]
+      let input = chunk.map((line: any) => line.data.text)
+      console.log(input)
+    }
+    for (let i = 0; i < chunks.length; i++) {
+      let chunk = chunks[i]
+      let input = chunk
+        .map((line: any) => line.data.text)
+        .filter((x: any) => !x.data.translatedText)
+      if (input.length === 0) continue
+      const completion: any = await openai.createChatCompletion({
+        model: "gpt-4-0314",
+        messages: [
+          {
+            role: "system",
+            content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please only output the translation and reply in the same format as the original array. Target language: ${targetLanguage}\n\n${additionalNotes}`
+          },
+          {
+            role: "user",
+            content: JSON.stringify(input)
+          }
+        ],
+      });
+      let result = completion.data.choices[0].message.content
+      try {
+        result = JSON.parse(result)
+        for (let i = 0; i < result.length; i++) {
+          chunk[i].data.translatedText = result[i]
+        }
+      }
+      catch (e) {
+        console.error(e)
+        // @ts-ignore
+        alert(e?.response?.data?.error?.message || e.toString())
+        setIsTranslating(false)
+      }
+      setParsedSubtitle([...parsedSubtitle])
+      setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+      setUsedDollars(usedDollars => usedDollars + (completion.data.usage.prompt_tokens / 1000 * 0.03))
+      setUsedDollars(usedDollars => usedDollars + (completion.data.usage.completion_tokens / 1000 * 0.06))
+      setProgress(i / chunks.length)
+    }
+    setProgress(1)
+    setIsTranslating(false)
+  }
+  async function startTranslationGPT3() {
     const configuration = new Configuration({ apiKey });
     const openai = new OpenAIApi(configuration);
 
@@ -138,6 +213,7 @@ function Translator({ className }: { className?: string }) {
         });
         let result = completion.data.choices[0].message.content
         setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+        setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
         try {
           result = JSON.parse(result).Input
         } catch (e) {
@@ -220,6 +296,17 @@ function Translator({ className }: { className?: string }) {
         <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required data-tooltip-id="open-ai-tooltip" data-tooltip-content="You need to add a payment method to your account, otherwise you might reach the free rate limit (20 requests/min)." />
         <Tooltip id="open-ai-tooltip" />
 
+
+        <label><i className='bx bx-bot'></i> Translation method</label>
+        <div onClick={e => translationMethodDialog.current?.showModal()} className="translationMethod">
+          <div className="value">
+            {translationMethod}
+          </div>
+          <div className="icon">
+            <i className='bx bx-chevron-down' ></i>
+          </div>
+        </div>
+
         <label><i className='bx bx-file-blank' ></i> Subtitle file</label>
         <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt,.ass,.ssa" required />
 
@@ -265,7 +352,7 @@ function Translator({ className }: { className?: string }) {
         <div className="progress-bar-container">
           <div className="progress-bar__text">
             <span>{(progress * 100).toFixed(0)}%</span>
-            <span>{usedTokens.toLocaleString()} tokens used ≈ {(usedTokens / 1000 * 0.002).toFixed(4)} USD</span>
+            <span>{usedTokens.toLocaleString()} tokens used ≈ {usedDollars.toFixed(4)} USD</span>
           </div>
           <div className="progress-bar">
             <div className="progress-bar__progress" style={{ width: `${progress * 100}%` }}></div>
@@ -283,6 +370,36 @@ function Translator({ className }: { className?: string }) {
           </button>
         }
       </div>
+      <dialog ref={translationMethodDialog}>
+        <div className="dialog__content">
+          <label><i className='bx bx-bot'></i>Translation method</label>
+          <form method="dialog">
+            <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-4-0314')}>
+              <div className='title'>gpt-4-0314 (Recommended)</div>
+              <div className='description'>
+                The best quality, but the cost is higher.<br />
+              </div>
+              <div className='pricing'>
+                $0.03/1k prompt tokens
+                <br />
+                $0.06/1k sampled tokens
+              </div>
+              <div className='description'>
+                To use the GPT-4-0314 translation method, you need to join the waitlist and receive an invitation to access the GPT-4-0314 model.
+              </div>
+            </button>
+            <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo')}>
+              <div className='title'>gpt-3.5-turbo</div>
+              <div className='description'>
+                Less cost, but the quality is not as good as GPT-4-0314.
+              </div>
+              <div className='pricing'>
+                $0.002 / 1K tokens
+              </div>
+            </button>
+          </form>
+        </div>
+      </dialog>
     </form>
   )
 }
