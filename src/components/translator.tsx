@@ -28,7 +28,7 @@ function Translator({ className }: { className?: string }) {
     if (localStorage.getItem('targetLanguage'))
       setTargetLanguage(localStorage.getItem('targetLanguage') || '')
     if (localStorage.getItem('translationMethod'))
-      setTargetLanguage(localStorage.getItem('translationMethod') || '')
+      setTranslationMethod(localStorage.getItem('translationMethod') || '')
   }, [])
   function reset() {
     location.reload()
@@ -141,7 +141,7 @@ function Translator({ className }: { className?: string }) {
       let chunk = chunks[i]
       let input = chunk
         .map((line: any) => line.data.text)
-        .filter((x: any) => !x.data.translatedText)
+        .filter((x: any) => !x.data?.translatedText)
       if (input.length === 0) continue
       const completion: any = await openai.createChatCompletion({
         model: "gpt-4-0314",
@@ -377,7 +377,7 @@ function Translator({ className }: { className?: string }) {
             <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-4-0314')}>
               <div className='title'>gpt-4-0314 (Recommended)</div>
               <div className='description'>
-                The best quality, but the cost is higher.<br />
+                The best quality, but the cost is higher.
               </div>
               <div className='pricing'>
                 $0.03/1k prompt tokens
@@ -389,9 +389,18 @@ function Translator({ className }: { className?: string }) {
               </div>
             </button>
             <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo')}>
-              <div className='title'>gpt-3.5-turbo</div>
+              <div className='title'>gpt-3.5-turbo (Default)</div>
               <div className='description'>
                 Less cost, but the quality is not as good as GPT-4-0314.
+              </div>
+              <div className='pricing'>
+                $0.002 / 1K tokens
+              </div>
+            </button>
+            <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo-economy')}>
+              <div className='title'>gpt-3.5-turbo (Economy)</div>
+              <div className='description'>
+                This mode uses the minimum number of tokens, but it may result in translation errors and issues such as extra punctuation, which you may need to correct on your own.
               </div>
               <div className='pricing'>
                 $0.002 / 1K tokens
