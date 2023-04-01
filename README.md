@@ -13,7 +13,7 @@
 - `.vtt` WebVTT
 
 ## Features
-- Translate subtitle using ChatGPT `gpt-3.5-turbo`
+- Translate subtitle using ChatGPT `gpt-3.5-turbo` & `gpt-4-0314`
 - Support multiple languages
 - Translation according to the preceding and following sentences
 ## [Download](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
