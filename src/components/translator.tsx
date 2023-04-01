@@ -236,7 +236,7 @@ function Translator({ className }: { className?: string }) {
         messages: [
           {
             role: "system",
-            content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Target language: ${targetLanguage}\n\n${additionalNotes}`
+            content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. Target language:  ${targetLanguage}\n\n${additionalNotes}`
           },
           {
             role: "user",
