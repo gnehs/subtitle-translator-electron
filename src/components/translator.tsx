@@ -236,9 +236,9 @@ function Translator({ className }: { className?: string }) {
   }
   async function startTranslationGPT3Economy({ openai }: { openai: OpenAIApi }) {
     let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
-    for (let i = 0; i < subtitle.length; i++) {
-      if (subtitle[i].data?.translatedText) continue
-      let text = subtitle[i].data.text
+    await Promise.all(subtitle.map(async (item: any) => {
+      if (item.data?.translatedText) return
+      let text = item.data.text
       const completion: any = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
         messages: [
@@ -255,18 +255,9 @@ function Translator({ className }: { className?: string }) {
       let result = completion.data.choices[0].message.content
       setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
       setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
-
-      result = result.replace(/^("|「)|("|」)$/g, '')
-
-      subtitle[i].data.translatedText = result
-      setProgress(i / subtitle.length)
-
-      // scroll to item
-      let item = document.querySelector(`#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`)
-      if (item) {
-        item.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }
-    }
+      item.data.translatedText = result
+      setProgress(x => x + 1 / subtitle.length)
+    }))
   }
   function downloadSubtitle() {
     let fileExtension = fileName?.split('.').pop()
