@@ -144,17 +144,12 @@ function Translator({ className }: { className?: string }) {
     if (chunk.length > 0) {
       chunks.push(chunk)
     }
-    for (let i = 0; i < chunks.length; i++) {
-      let chunk = chunks[i]
-      let input = chunk.map((line: any) => line.data.text)
-      console.log(input)
-    }
-    for (let i = 0; i < chunks.length; i++) {
-      let chunk = chunks[i]
+    console.log(`Splited into ${chunks.length} chunks`)
+    await Promise.all(chunks.map(async (chunk, i) => {
       let input = chunk
         .map((line: any) => line.data.text)
         .filter((x: any) => !x.data?.translatedText)
-      if (input.length === 0) continue
+      if (input.length === 0) return
       const completion: any = await openai.createChatCompletion({
         model: "gpt-4-0314",
         messages: [
@@ -177,11 +172,8 @@ function Translator({ className }: { className?: string }) {
       setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
       setUsedDollars(usedDollars => usedDollars + (completion.data.usage.prompt_tokens / 1000 * 0.03))
       setUsedDollars(usedDollars => usedDollars + (completion.data.usage.completion_tokens / 1000 * 0.06))
-      setProgress(i / chunks.length)
-    }
-    setProgress(1)
-    setIsTranslating(false)
-    alert('Done!')
+      setProgress(x => x + 1 / chunks.length)
+    }))
   }
   async function startTranslationGPT3({ openai }: { openai: OpenAIApi }) {
     let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
