@@ -69,19 +69,32 @@ function Translator({ className }: { className?: string }) {
     }
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
 
     localStorage.setItem('apiKey', apiKey)
     localStorage.setItem('targetLanguage', targetLanguage)
     localStorage.setItem('translationMethod', translationMethod)
     setIsTranslating(true)
-    if (translationMethod === "gpt-3.5-turbo")
-      startTranslationGPT3()
-    if (translationMethod === "gpt-3.5-turbo-economy")
-      startTranslationGPT3Economy()
-    if (translationMethod === "gpt-4-0314")
-      startTranslationGPT4()
+    try {
+      const configuration = new Configuration({ apiKey });
+      const openai = new OpenAIApi(configuration);
+      if (translationMethod === "gpt-3.5-turbo")
+        await startTranslationGPT3({ openai })
+      if (translationMethod === "gpt-3.5-turbo-economy")
+        await startTranslationGPT3Economy({ openai })
+      if (translationMethod === "gpt-4-0314")
+        await startTranslationGPT4({ openai })
+      // done
+      setProgress(1)
+      setIsTranslating(false)
+      alert('Done!')
+    } catch (e) {
+      console.error(e)
+      // @ts-ignore
+      alert(e?.response?.data?.error?.message || e.toString())
+      setIsTranslating(false)
+    }
   }
 
   async function retry(index: number) {
@@ -115,10 +128,7 @@ function Translator({ className }: { className?: string }) {
     parsedSubtitle[index].data.translatedText = result
     setParsedSubtitle([...parsedSubtitle])
   }
-  async function startTranslationGPT4() {
-    const configuration = new Configuration({ apiKey });
-    const openai = new OpenAIApi(configuration);
-
+  async function startTranslationGPT4({ openai }: { openai: OpenAIApi }) {
     let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
     const splitEvery = 10
     let chunks = []
@@ -159,17 +169,9 @@ function Translator({ className }: { className?: string }) {
         ],
       });
       let result = completion.data.choices[0].message.content
-      try {
-        result = JSON.parse(result)
-        for (let i = 0; i < result.length; i++) {
-          chunk[i].data.translatedText = result[i]
-        }
-      }
-      catch (e) {
-        console.error(e)
-        // @ts-ignore
-        alert(e?.response?.data?.error?.message || e.toString())
-        setIsTranslating(false)
+      result = JSON.parse(result)
+      for (let i = 0; i < result.length; i++) {
+        chunk[i].data.translatedText = result[i]
       }
       setParsedSubtitle([...parsedSubtitle])
       setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
@@ -181,15 +183,8 @@ function Translator({ className }: { className?: string }) {
     setIsTranslating(false)
     alert('Done!')
   }
-  async function startTranslationGPT3() {
-    const configuration = new Configuration({ apiKey });
-    const openai = new OpenAIApi(configuration);
-
+  async function startTranslationGPT3({ openai }: { openai: OpenAIApi }) {
     let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
-    type Input = {
-      Input: string
-      Next?: string
-    }
     let previousSubtitles: any = []
 
     for (let i = 0; i < subtitle.length; i++) {
@@ -199,108 +194,79 @@ function Translator({ className }: { className?: string }) {
       if (subtitle[i + 1]) {
         input.Next = subtitle[i + 1].data.text
       }
-      try {
-        const completion: any = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. You will receive the subtitles as array that needs to be translated, as well as the previous translation results and next subtitle. If you need to merge the subtitles with the following line, simply repeat the translation. Please transliterate the person's name into the local language. Target language: ${targetLanguage}\n\n${additionalNotes}`
-            },
-            ...previousSubtitles.slice(-4),
-            {
-              role: "user",
-              content: JSON.stringify(input)
-            }
-          ],
-        });
-        let result = completion.data.choices[0].message.content
-        setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
-        setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
-        try {
-          result = JSON.parse(result).Input
-        } catch (e) {
-          try {
-            result = result.match(/"Input":"(.*?)"/)?.[1] || result
-          } catch (e) {
-            console.error(e)
-            console.error(result.red)
+      const completion: any = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. You will receive the subtitles as array that needs to be translated, as well as the previous translation results and next subtitle. If you need to merge the subtitles with the following line, simply repeat the translation. Please transliterate the person's name into the local language. Target language: ${targetLanguage}\n\n${additionalNotes}`
+          },
+          ...previousSubtitles.slice(-4),
+          {
+            role: "user",
+            content: JSON.stringify(input)
           }
-        }
-        previousSubtitles.push({ role: "user", content: JSON.stringify(input) })
-        previousSubtitles.push({ role: 'assistant', content: JSON.stringify({ ...input, Input: result }) })
-
-        subtitle[i].data.translatedText = result
-        setProgress(i / subtitle.length)
-
-        // scroll to item
-        let item = document.querySelector(`#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`)
-        if (item) {
-          item.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
+        ],
+      });
+      let result = completion.data.choices[0].message.content
+      setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+      setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
+      try {
+        result = JSON.parse(result).Input
       } catch (e) {
-        // @ts-ignore
-        alert(e?.response?.data?.error?.message || e.toString())
-        setIsTranslating(false)
-        return
+        try {
+          result = result.match(/"Input":"(.*?)"/)?.[1] || result
+        } catch (e) {
+          console.error(e)
+          console.error(result.red)
+        }
+      }
+      previousSubtitles.push({ role: "user", content: JSON.stringify(input) })
+      previousSubtitles.push({ role: 'assistant', content: JSON.stringify({ ...input, Input: result }) })
+
+      subtitle[i].data.translatedText = result
+      setProgress(i / subtitle.length)
+
+      // scroll to item
+      let item = document.querySelector(`#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`)
+      if (item) {
+        item.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     }
-    setProgress(1)
-    setIsTranslating(false)
-    alert('Done!')
   }
-  async function startTranslationGPT3Economy() {
-    const configuration = new Configuration({ apiKey });
-    const openai = new OpenAIApi(configuration);
-
+  async function startTranslationGPT3Economy({ openai }: { openai: OpenAIApi }) {
     let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
-    type Input = {
-      Input: string
-      Next?: string
-    }
-
-
     for (let i = 0; i < subtitle.length; i++) {
       if (subtitle[i].data?.translatedText) continue
       let text = subtitle[i].data.text
-      try {
-        const completion: any = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Target language: ${targetLanguage}\n\n${additionalNotes}`
-            },
-            {
-              role: "user",
-              content: text
-            }
-          ],
-        });
-        let result = completion.data.choices[0].message.content
-        setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
-        setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
+      const completion: any = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Target language: ${targetLanguage}\n\n${additionalNotes}`
+          },
+          {
+            role: "user",
+            content: text
+          }
+        ],
+      });
+      let result = completion.data.choices[0].message.content
+      setUsedTokens(usedTokens => usedTokens + completion.data.usage.total_tokens)
+      setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
 
-        result = result.replace(/^("|「)|("|」)$/g, '')
+      result = result.replace(/^("|「)|("|」)$/g, '')
 
-        subtitle[i].data.translatedText = result
-        setProgress(i / subtitle.length)
+      subtitle[i].data.translatedText = result
+      setProgress(i / subtitle.length)
 
-        // scroll to item
-        let item = document.querySelector(`#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`)
-        if (item) {
-          item.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-      } catch (e) {
-        // @ts-ignore
-        alert(e?.response?.data?.error?.message || e.toString())
-        setIsTranslating(false)
-        return
+      // scroll to item
+      let item = document.querySelector(`#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`)
+      if (item) {
+        item.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
     }
-    setProgress(1)
-    setIsTranslating(false)
-    alert('Done!')
   }
   function downloadSubtitle() {
     let fileExtension = fileName?.split('.').pop()
