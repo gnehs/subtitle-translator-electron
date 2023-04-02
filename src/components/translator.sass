@@ -90,15 +90,6 @@
       color: color-mix(in srgb,var(--accent-color), #fff 10%)
       cursor: not-allowed
       pointer-events: none
-  label
-    font-size: 16px
-    font-weight: 500
-    color: var(--accent-color)
-    letter-spacing: 1px
-    line-height: 24px
-    display: flex
-    align-items: center
-    gap: 4px
   .translationMethod
     cursor: pointer
     display: flex
@@ -128,6 +119,16 @@
     font-size: 14px
   input[type="file"]::file-selector-button
     margin-right: 8px
+
+label
+  font-size: 16px
+  font-weight: 500
+  color: var(--accent-color)
+  letter-spacing: 1px
+  line-height: 24px
+  display: flex
+  align-items: center
+  gap: 4px
 dialog
   background-color: #fff
   border: none
@@ -137,7 +138,7 @@ dialog
   width: 600px
   label
     margin-bottom: 4px
-  .translation-method-option
+  .dialog-option
     all: unset
     padding: 8px
     background-color: rgb(244, 245, 245)

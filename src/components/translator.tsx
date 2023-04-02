@@ -21,6 +21,7 @@ function Translator({ className }: { className?: string }) {
   const [apiKey, setApiKey] = useState('')
   const [translationMethod, setTranslationMethod] = useState('gpt-3.5-turbo')
   const translationMethodDialog: any = useRef(null)
+  const downloadDialog: any = useRef(null)
 
   useEffect(() => {
     if (localStorage.getItem('apiKey'))
@@ -252,7 +253,7 @@ function Translator({ className }: { className?: string }) {
       setProgress(x => x + 1 / subtitle.length)
     }))
   }
-  function downloadSubtitle() {
+  function downloadSubtitle({ originalSubtitle = false }) {
     let fileExtension = fileName?.split('.').pop()
     let newSubtitle
     if (['srt', 'vtt'].includes(fileExtension || '')) {
@@ -261,7 +262,9 @@ function Translator({ className }: { className?: string }) {
           type: x.type,
           data: {
             ...x.data,
-            text: x.data.translatedText
+            text:
+              x.data.translatedText
+              + (originalSubtitle ? '\n' + x.data.text : '')
           }
         }
       }), { format: 'SRT' })
@@ -276,7 +279,9 @@ function Translator({ className }: { className?: string }) {
                 key: 'Dialogue',
                 value: {
                   ...line.value,
-                  Text: parsedSubtitle.find(y => y.data.text === line.value.Text)?.data.translatedText
+                  Text:
+                    parsedSubtitle.find(y => y.data.text === line.value.Text)?.data.translatedText
+                    + (originalSubtitle ? '\\N' + line.value.Text : '')
                 }
               }
             }
@@ -296,91 +301,92 @@ function Translator({ className }: { className?: string }) {
   }
 
   return (
-    <form className={`translator ${className}`} onSubmit={handleSubmit}>
-      <div className="sidebar">
-        <label><i className='bx bx-key' ></i> Open AI API key</label>
-        <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required data-tooltip-id="open-ai-tooltip" data-tooltip-content="You need to add a payment method to your account, otherwise you might reach the free rate limit (20 requests/min)." />
-        <Tooltip id="open-ai-tooltip" />
+    <>
+      <form className={`translator ${className}`} onSubmit={handleSubmit}>
+        <div className="sidebar">
+          <label><i className='bx bx-key' ></i> Open AI API key</label>
+          <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required data-tooltip-id="open-ai-tooltip" data-tooltip-content="You need to add a payment method to your account, otherwise you might reach the free rate limit (20 requests/min)." />
+          <Tooltip id="open-ai-tooltip" />
 
+          <label><i className='bx bx-bot'></i> Translation method</label>
+          <div onClick={e => translationMethodDialog.current?.showModal()} className="translationMethod">
+            <div className="value">
+              {translationMethod}
+            </div>
+            <div className="icon">
+              <i className='bx bx-chevron-down' ></i>
+            </div>
+          </div>
 
-        <label><i className='bx bx-bot'></i> Translation method</label>
-        <div onClick={e => translationMethodDialog.current?.showModal()} className="translationMethod">
-          <div className="value">
-            {translationMethod}
-          </div>
-          <div className="icon">
-            <i className='bx bx-chevron-down' ></i>
-          </div>
+          <label><i className='bx bx-file-blank' ></i> Subtitle file</label>
+          <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt,.ass,.ssa" required />
+
+          <label><i className='bx bxs-right-arrow-square' ></i> Target language</label>
+          <input type="text" placeholder="English, 繁體中文, 日本語, etc." value={targetLanguage} onChange={e => setTargetLanguage(e.target.value)} required />
+
+          <label><i className='bx bx-plus' ></i> Additional notes</label>
+          <textarea placeholder="e.g. This is a Star Wars movie." value={additionalNotes} onChange={e => setAdditionalNotes(e.target.value)} />
         </div>
-
-        <label><i className='bx bx-file-blank' ></i> Subtitle file</label>
-        <input type="file" placeholder="Subtitle file" onChange={handleFileChange} accept=".srt,.vtt,.ass,.ssa" required />
-
-        <label><i className='bx bxs-right-arrow-square' ></i> Target language</label>
-        <input type="text" placeholder="English, 繁體中文, 日本語, etc." value={targetLanguage} onChange={e => setTargetLanguage(e.target.value)} required />
-
-        <label><i className='bx bx-plus' ></i> Additional notes</label>
-        <textarea placeholder="e.g. This is a Star Wars movie." value={additionalNotes} onChange={e => setAdditionalNotes(e.target.value)} />
-      </div>
-      <div className="subtitle-preview-container">
-        {!parsedSubtitle.length && <label><i className='bx bx-list-ul' ></i> Subtitle Preview</label>}
-        {!parsedSubtitle.length && <div className="subtitle-preview">No subtitle file selected.</div>}
-        {parsedSubtitle.length != 0 &&
-          <div className="subtitle-preview" id='subtitle-preview'>
-            {parsedSubtitle.map((subtitle, index) =>
-              <div key={index} className="subtitle-preview__item">
-                <div className="subtitle-preview__item__index">{index + 1}</div>
-                <div className="subtitle-preview__item__text">{subtitle.data.text}</div>
-                <div className="subtitle-preview__item__text--translated">
-                  <input
-                    key={index}
-                    type="text"
-                    value={subtitle.data.translatedText || ''}
-                    disabled={subtitle.data.translatedText == 'Loading...'}
-                    onChange={e => {
-                      parsedSubtitle[index].data.translatedText = e.target.value
-                      setParsedSubtitle([...parsedSubtitle])
-                    }} />
+        <div className="subtitle-preview-container">
+          {!parsedSubtitle.length && <label><i className='bx bx-list-ul' ></i> Subtitle Preview</label>}
+          {!parsedSubtitle.length && <div className="subtitle-preview">No subtitle file selected.</div>}
+          {parsedSubtitle.length != 0 &&
+            <div className="subtitle-preview" id='subtitle-preview'>
+              {parsedSubtitle.map((subtitle, index) =>
+                <div key={index} className="subtitle-preview__item">
+                  <div className="subtitle-preview__item__index">{index + 1}</div>
+                  <div className="subtitle-preview__item__text">{subtitle.data.text}</div>
+                  <div className="subtitle-preview__item__text--translated">
+                    <input
+                      key={index}
+                      type="text"
+                      value={subtitle.data.translatedText || ''}
+                      disabled={subtitle.data.translatedText == 'Loading...'}
+                      onChange={e => {
+                        parsedSubtitle[index].data.translatedText = e.target.value
+                        setParsedSubtitle([...parsedSubtitle])
+                      }} />
+                  </div>
+                  <div className="subtitle-preview__item__actions">
+                    {subtitle.data.translatedText &&
+                      <button className="btn" type="button" disabled={subtitle.data.translatedText == 'Loading...'} onClick={() => { retry(index) }}>
+                        <i className='bx bx-refresh' ></i>
+                      </button>
+                    }
+                  </div>
                 </div>
-                <div className="subtitle-preview__item__actions">
-                  {subtitle.data.translatedText &&
-                    <button className="btn" type="button" disabled={subtitle.data.translatedText == 'Loading...'} onClick={() => { retry(index) }}>
-                      <i className='bx bx-refresh' ></i>
-                    </button>
-                  }
-                </div>
-              </div>
-            )}
-          </div>
-        }
-      </div>
-      <div className="bottom">
-        <div className="progress-bar-container">
-          <div className="progress-bar__text">
-            <span>{(progress * 100).toFixed(0)}%</span>
-            <span>{usedTokens.toLocaleString()} tokens used ≈ {usedDollars.toFixed(4)} USD</span>
-          </div>
-          <div className="progress-bar">
-            <div className="progress-bar__progress" style={{ width: `${progress * 100}%` }}></div>
-          </div>
+              )}
+            </div>
+          }
         </div>
-        {progress === 1 &&
-          <a className='btn' onClick={reset}><i className='bx bx-reset'></i> Reset</a>
-        }
-        {progress === 1 &&
-          <a className='btn' onClick={downloadSubtitle}><i className='bx bx-save' ></i> Save</a>
-        }
-        {progress !== 1 &&
-          <button className="btn" type="submit" disabled={isTranslating}>
-            {!isTranslating && <i className='bx bx-play'></i>}{isTranslating ? `Translating...` : `Translate`}
-          </button>
-        }
-      </div>
+        <div className="bottom">
+          <div className="progress-bar-container">
+            <div className="progress-bar__text">
+              <span>{(progress * 100).toFixed(0)}%</span>
+              <span>{usedTokens.toLocaleString()} tokens used ≈ {usedDollars.toFixed(4)} USD</span>
+            </div>
+            <div className="progress-bar">
+              <div className="progress-bar__progress" style={{ width: `${progress * 100}%` }}></div>
+            </div>
+          </div>
+          {progress === 1 &&
+            <a className='btn' onClick={reset}><i className='bx bx-reset'></i> Reset</a>
+          }
+          {progress === 1 &&
+            <a className='btn' onClick={e => downloadDialog.current?.showModal()}><i className='bx bx-save' ></i> Save</a>
+          }
+          {progress !== 1 &&
+            <button className="btn" type="submit" disabled={isTranslating}>
+              {!isTranslating && <i className='bx bx-play'></i>}{isTranslating ? `Translating...` : `Translate`}
+            </button>
+          }
+        </div>
+      </form>
       <dialog ref={translationMethodDialog}>
         <div className="dialog__content">
           <label><i className='bx bx-bot'></i>Translation method</label>
           <form method="dialog">
-            <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-4-0314')}>
+            <button className='dialog-option' onClick={e => setTranslationMethod('gpt-4-0314')}>
               <div className='tag'>
                 <i className='bx bx-like'></i>
                 Recommended
@@ -401,7 +407,7 @@ function Translator({ className }: { className?: string }) {
                 $0.06/1k sampled tokens
               </div>
             </button>
-            <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo')}>
+            <button className='dialog-option' onClick={e => setTranslationMethod('gpt-3.5-turbo')}>
               <div className='tag'>
                 <i className='bx bx-bot'></i>
                 Default
@@ -417,7 +423,7 @@ function Translator({ className }: { className?: string }) {
                 $0.002 / 1K tokens
               </div>
             </button>
-            <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo-economy')}>
+            <button className='dialog-option' onClick={e => setTranslationMethod('gpt-3.5-turbo-economy')}>
               <div className='tag'>
                 <i className='bx bx-dollar-circle'></i>
                 Economy
@@ -436,7 +442,29 @@ function Translator({ className }: { className?: string }) {
           </form>
         </div>
       </dialog>
-    </form>
+      <dialog ref={downloadDialog}>
+        <div className="dialog__content">
+          <label><i className='bx bxs-download'></i> Save options</label>
+          <form method="dialog">
+            <button className='dialog-option' onClick={e => downloadSubtitle({ originalSubtitle: false })}>
+              <div className='title'>
+                Translated subtitle only
+              </div>
+              <div className='description'>
+                Export the translated subtitle only.
+              </div>
+            </button>
+            <button className='dialog-option' onClick={e => downloadSubtitle({ originalSubtitle: true })}>
+              <div className='title'>
+                Translated subtitle + original subtitle
+              </div>
+              <div className='description'>
+                Merge the translated subtitle with the original subtitle.
+              </div>
+            </button>
+          </form>
+        </div>
+      </dialog></>
   )
 }
 export default Translator
