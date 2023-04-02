@@ -112,7 +112,7 @@ function Translator({ className }: { className?: string }) {
       messages: [
         {
           role: "system",
-          content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. You will receive the subtitles as array that needs to be translated, as well as the previous translation results and next subtitle. If you need to merge the subtitles with the following line, simply repeat the translation. Please transliterate the person's name into the local language. Target language: ${targetLanguage}\n\n${additionalNotes}`
+          content: `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please do not output any text other than the translation. You will receive the subtitles as array that needs to be translated, as well as the previous translation results and next subtitle. Please transliterate the person's name into the local language. Target language: ${targetLanguage}\n\n${additionalNotes}`
         },
         {
           role: "user",
@@ -405,7 +405,7 @@ function Translator({ className }: { className?: string }) {
             <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo-economy')}>
               <div className='title'>gpt-3.5-turbo (Economy)</div>
               <div className='description'>
-                This mode uses the minimum number of tokens, but it may result in translation errors and issues such as extra punctuation, which you may need to correct on your own.
+                This method minimizes token consumption by not sending preceding and following sentences, but it may result in issues such as GPT generating its own text that you will need to fix on your own.
               </div>
               <div className='pricing'>
                 $0.002 / 1K tokens
