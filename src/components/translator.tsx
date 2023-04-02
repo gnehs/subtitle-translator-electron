@@ -41,6 +41,7 @@ function Translator({ className }: { className?: string }) {
       const reader = new FileReader()
       reader.onload = function (e) {
         if (e.target?.result) {
+          setProgress(0)
           if (['srt', 'vtt'].includes(fileExtension || '')) {
             const parsedSrtSubtitle = parseSync(e.target.result as string)
             setParsedSubtitle(parsedSrtSubtitle)
