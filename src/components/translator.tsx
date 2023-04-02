@@ -380,21 +380,35 @@ function Translator({ className }: { className?: string }) {
           <label><i className='bx bx-bot'></i>Translation method</label>
           <form method="dialog">
             <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-4-0314')}>
-              <div className='title'>gpt-4-0314 (Recommended)</div>
+              <div className='tag'>
+                <i className='bx bx-like'></i>
+                Recommended
+              </div>
+              <div className='title'>
+                <i className={translationMethod === 'gpt-4-0314' ? 'bx bx-check-circle' : 'bx bx-circle'}></i>
+                gpt-4-0314
+              </div>
               <div className='description'>
-                The best quality, but the cost is higher.
+                By dividing the subtitles into chunks and sending requests simultaneously, translation can be completed with guaranteed subtitle quality and improved translation speed.
+              </div>
+              <div className='note'>
+                To use the GPT-4-0314 translation method, you need to join the waitlist and receive an invitation to access the GPT-4-0314 model.
               </div>
               <div className='pricing'>
                 $0.03/1k prompt tokens
                 <br />
                 $0.06/1k sampled tokens
               </div>
-              <div className='description'>
-                To use the GPT-4-0314 translation method, you need to join the waitlist and receive an invitation to access the GPT-4-0314 model.
-              </div>
             </button>
             <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo')}>
-              <div className='title'>gpt-3.5-turbo (Default)</div>
+              <div className='tag'>
+                <i className='bx bx-bot'></i>
+                Default
+              </div>
+              <div className='title'>
+                <i className={translationMethod === 'gpt-3.5-turbo' ? 'bx bx-check-circle' : 'bx bx-circle'}></i>
+                gpt-3.5-turbo
+              </div>
               <div className='description'>
                 Less cost, but the quality is not as good as GPT-4-0314.
               </div>
@@ -403,7 +417,14 @@ function Translator({ className }: { className?: string }) {
               </div>
             </button>
             <button className='translation-method-option' onClick={e => setTranslationMethod('gpt-3.5-turbo-economy')}>
-              <div className='title'>gpt-3.5-turbo (Economy)</div>
+              <div className='tag'>
+                <i className='bx bx-dollar-circle'></i>
+                Economy
+              </div>
+              <div className='title'>
+                <i className={translationMethod === 'gpt-3.5-turbo-economy' ? 'bx bx-check-circle' : 'bx bx-circle'}></i>
+                gpt-3.5-turbo-economy
+              </div>
               <div className='description'>
                 This method minimizes token consumption by not sending preceding and following sentences, but it may result in issues such as GPT generating its own text that you will need to fix on your own.
               </div>
