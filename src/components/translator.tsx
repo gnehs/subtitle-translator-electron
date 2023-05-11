@@ -29,13 +29,17 @@ function Translator({ className }: { className?: string }) {
   const [targetLanguage, setTargetLanguage] = useState('')
   const [additionalNotes, setAdditionalNotes] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [apiHost, setApiHost] = useState('')
   const [translationMethod, setTranslationMethod] = useState('gpt-3.5-turbo')
   const translationMethodDialog: any = useRef(null)
   const downloadDialog: any = useRef(null)
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem('apiKey'))
       setApiKey(localStorage.getItem('apiKey') || '')
+    if (localStorage.getItem('apiHost'))
+      setApiHost(localStorage.getItem('apiHost') || 'https://api.openai.com/')
     if (localStorage.getItem('targetLanguage'))
       setTargetLanguage(localStorage.getItem('targetLanguage') || '')
     if (localStorage.getItem('translationMethod'))
@@ -85,11 +89,12 @@ function Translator({ className }: { className?: string }) {
     e.preventDefault()
 
     localStorage.setItem('apiKey', apiKey)
+    localStorage.setItem('apiHost', apiHost)
     localStorage.setItem('targetLanguage', targetLanguage)
     localStorage.setItem('translationMethod', translationMethod)
     setIsTranslating(true)
     try {
-      const configuration = new Configuration({ apiKey });
+      const configuration = new Configuration({ apiKey,basePath:apiHost });
       const openai = new OpenAIApi(configuration);
       if (translationMethod === "gpt-3.5-turbo")
         await startTranslationGPT3({ openai })
@@ -111,13 +116,14 @@ function Translator({ className }: { className?: string }) {
 
   async function retry(index: number) {
     localStorage.setItem('apiKey', apiKey)
+    localStorage.setItem('apiHost', apiHost)
     localStorage.setItem('targetLanguage', targetLanguage)
 
     parsedSubtitle[index].data.translatedText = 'Loading...'
     setParsedSubtitle([...parsedSubtitle])
 
     const input = parsedSubtitle[index].data.text
-    const configuration = new Configuration({ apiKey });
+    const configuration = new Configuration({ apiKey,basePath:apiHost });
     const openai = new OpenAIApi(configuration);
     const completion: any = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
@@ -317,6 +323,15 @@ function Translator({ className }: { className?: string }) {
           <label><i className='bx bx-key' ></i> Open AI API key</label>
           <input type="password" placeholder="sk-abcd1234" value={apiKey} onChange={e => setApiKey(e.target.value)} required data-tooltip-id="open-ai-tooltip" data-tooltip-content="You need to add a payment method to your account, otherwise you might reach the free rate limit (20 requests/min)." />
           <Tooltip id="open-ai-tooltip" />
+
+          <label><i className={`bx ${showAdvanced ? 'bx-chevron-down' : 'bx-chevron-right'}`} onClick={() => setShowAdvanced(!showAdvanced)}></i>Advanced Settings</label>
+
+          {showAdvanced && (
+            <div>
+              <label><i className='bx bx-home-alt' ></i> Open AI API host</label>
+              <input  placeholder="Default: https://api.openai.com/" value={apiHost} onChange={e => setApiHost(e.target.value)}  />
+            </div>
+          )}
 
           <label><i className='bx bx-bot'></i> Translation method</label>
           <div onClick={e => translationMethodDialog.current?.showModal()} className="translationMethod">
