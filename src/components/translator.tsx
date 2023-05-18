@@ -3,7 +3,6 @@ import asyncPool from "tiny-async-pool";
 import { useState, useEffect, useRef } from 'react';
 import { Configuration, OpenAIApi } from 'openai'
 import { parseSync, stringifySync } from 'subtitle'
-import { Tooltip } from 'react-tooltip'
 //@ts-ignore
 import assParser from 'ass-parser'
 //@ts-ignore
