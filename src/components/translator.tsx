@@ -9,8 +9,10 @@ import assParser from 'ass-parser'
 //@ts-ignore
 import assStringify from 'ass-stringify'
 import './translator.sass'
+//@ts-ignore
 async function asyncPoolAll(...args) {
   const results = [];
+  //@ts-ignore
   for await (const result of asyncPool(...args)) {
     results.push(result);
   }
