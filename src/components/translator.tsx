@@ -1,4 +1,5 @@
 import React from 'react';
+import asyncPool from "tiny-async-pool";
 import { useState, useEffect, useRef } from 'react';
 import { Configuration, OpenAIApi } from 'openai'
 import { parseSync, stringifySync } from 'subtitle'
@@ -8,6 +9,13 @@ import assParser from 'ass-parser'
 //@ts-ignore
 import assStringify from 'ass-stringify'
 import './translator.sass'
+async function asyncPoolAll(...args) {
+  const results = [];
+  for await (const result of asyncPool(...args)) {
+    results.push(result);
+  }
+  return results;
+}
 function Translator({ className }: { className?: string }) {
   const [isTranslating, setIsTranslating] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -147,7 +155,7 @@ function Translator({ className }: { className?: string }) {
       chunks.push(chunk)
     }
     console.log(`Splited into ${chunks.length} chunks`)
-    await Promise.all(chunks.map(async (chunk, i) => {
+    await asyncPoolAll(5, chunks, async (chunk: any, i: number) => {
       let input = chunk
         .map((line: any) => line.data.text)
         .filter((x: any) => !x.data?.translatedText)
@@ -175,7 +183,7 @@ function Translator({ className }: { className?: string }) {
       setUsedDollars(usedDollars => usedDollars + (completion.data.usage.prompt_tokens / 1000 * 0.03))
       setUsedDollars(usedDollars => usedDollars + (completion.data.usage.completion_tokens / 1000 * 0.06))
       setProgress(x => x + 1 / chunks.length)
-    }))
+    })
   }
   async function startTranslationGPT3({ openai }: { openai: OpenAIApi }) {
     let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
@@ -230,7 +238,7 @@ function Translator({ className }: { className?: string }) {
   }
   async function startTranslationGPT3Economy({ openai }: { openai: OpenAIApi }) {
     let subtitle = parsedSubtitle.filter(line => line.type === 'cue')
-    await Promise.all(subtitle.map(async (item: any) => {
+    await asyncPoolAll(5, subtitle, async (item: any) => {
       if (item.data?.translatedText) return
       let text = item.data.text
       const completion: any = await openai.createChatCompletion({
@@ -251,7 +259,7 @@ function Translator({ className }: { className?: string }) {
       setUsedDollars(usedDollars => usedDollars + (completion.data.usage.total_tokens / 1000 * 0.002))
       item.data.translatedText = result
       setProgress(x => x + 1 / subtitle.length)
-    }))
+    })
   }
   function downloadSubtitle({ originalSubtitle = false }) {
     let fileExtension = fileName?.split('.').pop()
