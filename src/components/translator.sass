@@ -90,35 +90,35 @@
       color: color-mix(in srgb,var(--accent-color), #fff 10%)
       cursor: not-allowed
       pointer-events: none
-  .translationMethod
+  .input
     cursor: pointer
     display: flex
     align-items: center
     gap: 4px
     justify-content: space-between
-  input, textarea, select,.translationMethod
-    width: 100%
-    padding: 8px
-    border: none
-    border-radius: 4px
-    background-color: rgb(244, 245, 245)
-    font-size: 16px
-    font-family: 'Lato', sans-serif
-    margin-bottom: 8px
-    outline: none
-    resize: none
-    transition: all .1s ease-in-out
-    &:focus
-      box-shadow: 0 0 0 2px var(--accent-color)
-      background-color: #fff
-  textarea
-    min-height: 180px
-    flex: 1
-    margin-bottom: 0
-  input[type="file"]
-    font-size: 14px
-  input[type="file"]::file-selector-button
-    margin-right: 8px
+input, textarea, select,.input
+  width: 100%
+  padding: 8px
+  border: none
+  border-radius: 4px
+  background-color: rgb(244, 245, 245)
+  font-size: 16px
+  font-family: 'Lato', sans-serif
+  margin-bottom: 8px
+  outline: none
+  resize: none
+  transition: all .1s ease-in-out
+  &:focus
+    box-shadow: 0 0 0 2px var(--accent-color)
+    background-color: #fff
+textarea
+  min-height: 180px
+  flex: 1
+  margin-bottom: 0
+input[type="file"]
+  font-size: 14px
+input[type="file"]::file-selector-button
+  margin-right: 8px
 
 label
   font-size: 16px
@@ -129,6 +129,9 @@ label
   display: flex
   align-items: center
   gap: 4px
+  &.dialog-title
+    font-weight: 700
+    margin-bottom: 8px
 dialog
   background-color: #fff
   border: none
@@ -138,6 +141,23 @@ dialog
   width: 600px
   label
     margin-bottom: 4px
+  .close-btn-container
+    display: flex
+    justify-content: flex-end
+    margin-top: 8px
+  .close-btn
+    all: unset
+    cursor: pointer
+    display: flex
+    align-items: center
+    justify-content: center
+    padding: 4px 8px
+    background-color: #f2f2f2
+    border-radius: 4px
+    &:hover
+      background-color: #e6e6e6
+    &:active
+      background-color: #d9d9d9
   .dialog-option
     all: unset
     padding: 8px
@@ -197,6 +217,8 @@ dialog
     animation: fadeInSlideDown .2s ease-in-out
   &:not([open])
     animation: fadeIn .2s ease-in-out reverse
+.cursor-pointer
+  cursor: pointer
 @keyframes fadeInSlideDown
   0%
     opacity: 0
