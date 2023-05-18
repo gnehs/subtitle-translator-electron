@@ -42,7 +42,7 @@ function Translator({ className }: { className?: string }) {
     if (localStorage.getItem('apiHost'))
       setApiHost(localStorage.getItem('apiHost') || '')
     else
-      setApiHost('https://api.openai.com/')
+      setApiHost('https://api.openai.com/v1')
     if (localStorage.getItem('targetLanguage'))
       setTargetLanguage(localStorage.getItem('targetLanguage') || '')
     if (localStorage.getItem('translationMethod'))
