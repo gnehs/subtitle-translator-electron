@@ -28,7 +28,7 @@ function Translator({ className }: { className?: string }) {
   const [targetLanguage, setTargetLanguage] = useState('')
   const [additionalNotes, setAdditionalNotes] = useState('')
   const [apiKey, setApiKey] = useState('')
-  const [apiHost, setApiHost] = useState('')
+  const [apiHost, setApiHost] = useState('https://api.openai.com/v1')
   const [translationMethod, setTranslationMethod] = useState('gpt-3.5-turbo')
   const translationMethodDialog: any = useRef(null)
   const APIDialog: any = useRef(null)
@@ -40,8 +40,6 @@ function Translator({ className }: { className?: string }) {
       setApiKey(localStorage.getItem('apiKey') || '')
     if (localStorage.getItem('apiHost'))
       setApiHost(localStorage.getItem('apiHost') || '')
-    else
-      setApiHost('https://api.openai.com/v1')
     if (localStorage.getItem('targetLanguage'))
       setTargetLanguage(localStorage.getItem('targetLanguage') || '')
     if (localStorage.getItem('translationMethod'))
