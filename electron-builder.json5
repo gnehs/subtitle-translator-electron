@@ -36,5 +36,15 @@
     "oneClick": true,
     "perMachine": false,
     "deleteAppDataOnUninstall": false
+  },
+  "linux":{
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
   }
 }

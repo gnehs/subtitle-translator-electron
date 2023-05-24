@@ -21,7 +21,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
 
     steps:
       - name: Checkout Code
@@ -47,6 +47,7 @@ jobs:
           path: |
             release/*.dmg
             release/*.exe
+            release/*.AppImage
           retention-days: 5
       - name: Upload Release
         uses: softprops/action-gh-release@v1
@@ -55,9 +56,11 @@ jobs:
           files: |
             release/*.dmg
             release/*.exe
+            release/*.AppImage
           body: |
             ### Download
             - [Windows](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.exe)
             - [macOS](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.dmg)
+            - [Linux](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.AppImage)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
