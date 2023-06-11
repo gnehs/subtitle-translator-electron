@@ -1,12 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+
+import "./i18n";
 import DefaultLayout from "./layouts/default";
 import About from "./pages/about";
 import Translator from "./pages/translator";
 import Settings from "./pages/settings";
 import "./samples/node-api";
-import "normalize.css";
 import "./index.css";
 import "./index.sass";
 const router = createBrowserRouter([
