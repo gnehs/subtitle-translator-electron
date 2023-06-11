@@ -1,4 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocalStorage } from "usehooks-ts";
+import { useEffect } from "react";
 function NavItem({ to, icon }: { to: string; icon: string }) {
   const isActive = useLocation().pathname === to;
   return (
@@ -15,6 +18,13 @@ function NavItem({ to, icon }: { to: string; icon: string }) {
   );
 }
 function DefaultLayout() {
+  // change language
+  const [language] = useLocalStorage("language", "en-US");
+  const { i18n } = useTranslation();
+  useEffect(() => {
+    if (language != i18n.language) i18n.changeLanguage(language);
+  }, []);
+
   return (
     <div className="flex h-[100vh]">
       <div className="flex flex-col w-[52px] h-full bg-slate-100 p-1 gap-[2px] border-r border-slate-200">

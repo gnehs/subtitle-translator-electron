@@ -1,9 +1,10 @@
 import Title from "../Title";
 import { useTranslation } from "react-i18next";
 import resources from "../../locales/index";
+import { useLocalStorage } from "usehooks-ts";
 export default function Language() {
+  const [language, setLanguage] = useLocalStorage("language", "en-US");
   const { t, i18n } = useTranslation();
-  console.log(i18n);
   return (
     <>
       <Title>{t("language")}</Title>
@@ -15,8 +16,11 @@ export default function Language() {
               i18n.language == language
                 ? `bg-slate-300 font-bold`
                 : `bg-slate-100 hover:bg-slate-200 active:bg-slate-300`
-            }}`}
-            onClick={() => i18n.changeLanguage(language)}
+            }`}
+            onClick={() => {
+              i18n.changeLanguage(language);
+              setLanguage(language);
+            }}
           >
             {t(`name`, { lng: language })}
           </button>

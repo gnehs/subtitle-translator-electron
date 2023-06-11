@@ -2,6 +2,21 @@
   "translation": {
     "name": "中文（台灣）",
     "settings": "設定",
-    "language": "語言"
+    "language": "語言",
+    "model": "模型",
+    "models": {
+      "gpt-4-0314": {
+        "name": "優",
+        "description": "使用 gpt-4-0314 進行翻譯，較為精準，但速度較慢且費用較高。（該模型為邀請制，需要加入 GPT-4 邀請名單）"
+      },
+      "gpt-3.5-turbo": {
+        "name": "佳",
+        "description": "使用 gpt-3.5-turbo 進行翻譯，平衡價格與品質的好選擇。"
+      },
+      "gpt-3.5-turbo-economy": {
+        "name": "經濟",
+        "description": "使用 gpt-3.5-turbo 進行翻譯，但不會發送前後文，因此費用最低，且翻譯品質較差，可能會有一些需要人工修正的句子。"
+      }
+    }
   }
 }
