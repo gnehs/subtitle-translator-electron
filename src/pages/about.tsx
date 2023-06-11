@@ -50,7 +50,7 @@ export default function About() {
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="p-4 bg-slate-100 flex gap-2 items-center border-t border-slate-200"
+        className="p-4 bg-slate-100 flex gap-4 items-center border-t border-slate-200"
       >
         <div className="flex flex-col gap-1 flex-1">
           <h2 className="text-xl font-bold">{t("about.buy_me_a_coffee")}</h2>
