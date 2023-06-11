@@ -3,6 +3,7 @@ import Language from "@/components/settings/Language";
 import Model from "@/components/settings/Model";
 import API from "@/components/settings/API";
 import Prompt from "@/components/settings/Prompt";
+import Reset from "@/components/settings/Reset";
 import { useTranslation } from "react-i18next";
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -14,6 +15,7 @@ export default function Settings() {
         <API />
         <Model />
         <Prompt />
+        <Reset />
       </div>
     </>
   );
