@@ -29,9 +29,7 @@ function DefaultLayout() {
     <div className="flex h-[100vh]">
       <div className="flex flex-col w-[52px] h-full bg-slate-100 p-1 gap-[2px] border-r border-slate-200">
         <NavItem to="/" icon="bx-transfer-alt" />
-        <NavItem to="/" icon="bx-terminal" />
         <div className="flex-1"></div>
-        <NavItem to="/" icon="bxs-cloud-upload" />
         <NavItem to="/settings" icon="bx-cog" />
         <NavItem to="/about" icon="bx-info-circle" />
       </div>
