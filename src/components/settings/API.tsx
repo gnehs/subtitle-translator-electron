@@ -1,5 +1,4 @@
 import Title from "../Title";
-import SubTitle from "../SubTitle";
 import InputField from "../InputField";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "usehooks-ts";
@@ -26,7 +25,6 @@ export default function API() {
     newKeys.splice(i, 1);
     setKeys(newKeys);
   }
-  const model_list = [`gpt-4-0314`, `gpt-3.5-turbo`, `gpt-3.5-turbo-economy`];
   return (
     <div className="flex flex-col gap-2">
       <Title>{t("api.title")}</Title>
