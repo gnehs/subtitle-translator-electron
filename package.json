@@ -51,6 +51,7 @@
     "react-i18next": "^12.3.1",
     "react-router-dom": "^6.11.2",
     "subtitle": "^4.2.1",
-    "tiny-async-pool": "^2.1.0"
+    "tiny-async-pool": "^2.1.0",
+    "usehooks-ts": "^2.9.1"
   }
 }
