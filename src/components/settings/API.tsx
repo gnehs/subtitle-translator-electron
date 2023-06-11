@@ -31,6 +31,7 @@ export default function API() {
       {keys.map((key, i) => (
         <InputField
           label={i === 0 ? t("api.key.name") : ``}
+          type="password"
           value={keys[i]}
           onChange={(e: any) => setKey(i, e.target.value)}
         >
