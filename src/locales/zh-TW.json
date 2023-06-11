@@ -17,6 +17,17 @@
         "name": "經濟",
         "description": "使用 gpt-3.5-turbo 進行翻譯，但不會發送前後文，因此費用最低，且翻譯品質較差，可能會有一些需要人工修正的句子。"
       }
+    },
+    "api": {
+      "title": "API 與主機",
+      "key": {
+        "name": "API 金鑰",
+        "description": "您可以在 https://platform.openai.com/account/api-keys 中取得金鑰，你可以新增多把金鑰來提升翻譯速度。"
+      },
+      "host": {
+        "name": "API 主機",
+        "description": "這通常用於突破封鎖，如果你不知道這是什麼，請保持預設值。"
+      }
     }
   }
 }

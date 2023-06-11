@@ -17,6 +17,17 @@
         "name": "Economy",
         "description": "Translation performed using gpt-3.5-turbo without sending context, resulting in lower cost but lower translation quality. Some sentences may require manual correction."
       }
+    },
+    "api": {
+      "title": "API & Host",
+      "key": {
+        "name": "API Key",
+        "description": "You can obtain your API key at https://platform.openai.com/account/api-keys. You can add multiple keys to enhance translation speed."
+      },
+      "host": {
+        "name": "API Host",
+        "description": "This is typically used for bypassing restrictions. If you're unsure about this, please keep the default value."
+      }
     }
   }
 }

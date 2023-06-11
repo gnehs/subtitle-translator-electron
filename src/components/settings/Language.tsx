@@ -6,7 +6,7 @@ export default function Language() {
   const [language, setLanguage] = useLocalStorage("language", "en-US");
   const { t, i18n } = useTranslation();
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <Title>{t("language")}</Title>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
         {Object.keys(resources).map((language) => (
@@ -26,6 +26,6 @@ export default function Language() {
           </button>
         ))}
       </div>
-    </>
+    </div>
   );
 }
