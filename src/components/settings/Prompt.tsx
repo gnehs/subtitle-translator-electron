@@ -23,7 +23,8 @@ export default function Prompt() {
     <div className="flex flex-col gap-2">
       <Title>{t(`prompt.title`)}</Title>
       {modelList.map(
-        (modelId) => model === modelId && <PromptField model={modelId} />
+        (modelId) =>
+          model === modelId && <PromptField model={modelId} key={modelId} />
       )}
     </div>
   );
