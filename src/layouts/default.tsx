@@ -17,16 +17,17 @@ function NavItem({ to, icon }: { to: string; icon: string }) {
 function DefaultLayout() {
   return (
     <div className="flex h-[100vh]">
-      <div className="flex flex-col w-[52px] h-full bg-slate-50 p-1">
+      <div className="flex flex-col w-[52px] h-full bg-slate-100 p-1 gap-[2px] border-r border-slate-200">
         <NavItem to="/" icon="bx-transfer-alt" />
+        <NavItem to="/" icon="bx-terminal" />
         <div className="flex-1"></div>
         <NavItem to="/" icon="bxs-cloud-upload" />
         <NavItem to="/settings" icon="bx-cog" />
         <NavItem to="/about" icon="bx-info-circle" />
       </div>
-      <div className="flex-1">
+      <main className="flex-1 h-[100vh] overflow-scroll">
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 }
