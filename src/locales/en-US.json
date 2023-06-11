@@ -34,6 +34,18 @@
       "name": "Edit prompt for \"{{name}}\"",
       "description": "The prompt used with ChatGPT. You can modify the prompt here. Additionally, <code>{{lang}}</code> is used to specify the language, and <code>{{additional}}</code> is used for additional notes. These fields will be automatically filled in during translation. When modifying the prompt, please make sure to keep these fields intact."
     },
+    "save": {
+      "title": "Save",
+      "multi-language": {
+        "name": "Bilingual Subtitles",
+        "description": "When saving, store both the original and translated texts.",
+        "options": {
+          "none": "Original Only",
+          "translate+original": "Translated + Original",
+          "original+translate": "Original + Translated"
+        }
+      }
+    },
     "reset": {
       "title": "Reset",
       "name": "Reset all settings",

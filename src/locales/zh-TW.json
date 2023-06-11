@@ -39,6 +39,18 @@
       "name": "重設所有設定",
       "prompt": "這將會清空所有設定，包含咒語、API 金鑰及語言等設定，確定要重設嗎？"
     },
+    "save": {
+      "title": "儲存",
+      "multi-language": {
+        "name": "雙語字幕",
+        "description": "在儲存時，同時儲存原文與翻譯文本。",
+        "options": {
+          "none": "僅儲存原文字幕",
+          "translate+original": "翻譯字幕+原文字幕",
+          "original+translate": "原文字幕+翻譯字幕"
+        }
+      }
+    },
     "about": {
       "title": "關於",
       "author": "開發者",
