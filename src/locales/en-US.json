@@ -38,6 +38,14 @@
       "title": "Reset",
       "name": "Reset all settings",
       "prompt": "This will clear all settings, including the prompt, API keys, and language settings. Are you sure you want to reset?"
+    },
+    "about": {
+      "title": "About",
+      "author": "Developer",
+      "buy_me_a_coffee": "Buy Me a Coffee",
+      "buy_me_a_coffee_description": "If this project has been helpful to you, please consider buying me a cup of coffee. It will motivate me to continue the development further.",
+      "report_issue": "Report an Issue",
+      "special_thanks": "Special Thanks"
     }
   }
 }

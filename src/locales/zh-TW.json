@@ -38,6 +38,14 @@
       "title": "重設",
       "name": "重設所有設定",
       "prompt": "這將會清空所有設定，包含咒語、API 金鑰及語言等設定，確定要重設嗎？"
+    },
+    "about": {
+      "title": "關於",
+      "author": "開發者",
+      "buy_me_a_coffee": "請我喝杯咖啡",
+      "buy_me_a_coffee_description": "如果這個專案對你有幫助，請考慮請我喝杯咖啡，這將會讓我更有動力繼續開發下去。",
+      "report_issue": "回報問題",
+      "special_thanks": "特別感謝"
     }
   }
 }
