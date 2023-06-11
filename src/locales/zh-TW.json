@@ -28,6 +28,11 @@
         "name": "API 主機",
         "description": "這通常用於突破封鎖，如果你不知道這是什麼，請保持預設值。"
       }
+    },
+    "prompt": {
+      "title": "咒語",
+      "name": "編輯「{{name}}」的咒語",
+      "description": "使用 ChatGPT 時所使用的咒語，你可以在此更改咒語，另外 <code>{{lang}}</code> 用於指定語言，<code>{{additional}}</code> 用於附加備註，上述欄位將於翻譯時自動帶入內容，修改咒語時請務必保留這些欄位。"
     }
   }
 }

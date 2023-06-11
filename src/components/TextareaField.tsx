@@ -1,4 +1,4 @@
-export default function InputField({
+export default function TextareaField({
   value,
   label,
   placeholder,
@@ -20,10 +20,9 @@ export default function InputField({
     <div className="flex flex-col gap-1">
       {label && <label htmlFor={randomString}>{label}</label>}
       <div className="flex flex-row gap-2">
-        <input
-          type={type}
+        <textarea
           value={value}
-          className="p-2 flex-1 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+          className="p-2 flex-1 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 max-w-full min-h-[350px]"
           placeholder={placeholder}
           onChange={onChange}
           id={randomString}

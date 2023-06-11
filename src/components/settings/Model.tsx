@@ -1,15 +1,15 @@
 import Title from "../Title";
 import { useTranslation } from "react-i18next";
-import { useLocalStorage } from "usehooks-ts";
+import useModel from "../../hooks/useModel";
+import modelList from "../../model/list";
 export default function Language() {
-  const { t, i18n } = useTranslation();
-  const [model, setModel] = useLocalStorage("model", "gpt-3.5-turbo");
-  const model_list = [`gpt-4-0314`, `gpt-3.5-turbo`, `gpt-3.5-turbo-economy`];
+  const { t } = useTranslation();
+  const [model, setModel] = useModel();
   return (
     <div className="flex flex-col gap-2">
       <Title>{t("model")}</Title>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
-        {model_list.map((id) => (
+        {modelList.map((id) => (
           <button
             key={id}
             className={`p-2 rounded cursor-pointer text-left flex flex-col ${
