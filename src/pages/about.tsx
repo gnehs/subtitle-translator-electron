@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import Button from "@/components/Button";
 import { useVersion } from "@/hooks/useVersion";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -19,21 +20,20 @@ export default function About() {
           </h1>
           <h1 className="text-xl text-center">{version}</h1>
           <div className="flex gap-2 items-center justify-center mt-4">
-            <a
+            <Button
               href="https://github.com/gnehs/subtitle-translator-electron"
               target="_blank"
-              className={`px-3 py-2 rounded cursor-pointer bg-slate-100 hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center gap-1`}
+              icon="bxl-github"
             >
-              <i className="bx bxl-github"></i> GitHub
-            </a>
-            <a
+              GitHub
+            </Button>
+            <Button
               href="https://github.com/gnehs/subtitle-translator-electron/issues"
               target="_blank"
-              className={`px-3 py-2 rounded cursor-pointer bg-slate-100 hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center gap-1`}
+              icon="bx-bug"
             >
-              <i className="bx bx-bug"></i>
               {t("about.report_issue")}
-            </a>
+            </Button>
           </div>
         </div>
         <div className="border-b border-slate-200"></div>

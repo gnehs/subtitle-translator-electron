@@ -1,4 +1,5 @@
 import Title from "../Title";
+import Button from "../Button";
 import { useTranslation } from "react-i18next";
 import useModel from "../../hooks/useModel";
 import modelList from "../../model/list";
@@ -10,20 +11,17 @@ export default function Language() {
       <Title>{t("model")}</Title>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
         {modelList.map((id) => (
-          <button
+          <Button
             key={id}
-            className={`p-2 rounded cursor-pointer text-left flex flex-col ${
-              id == model
-                ? `bg-slate-300 font-bold`
-                : `bg-slate-100 hover:bg-slate-200 active:bg-slate-300`
-            }}`}
+            active={id == model}
             onClick={() => setModel(id)}
+            className="text-left flex flex-col"
           >
-            <div className={id == model ? `font-bold` : ``}>
-              {t(`models.${id}.name`)}
+            <div>{t(`models.${id}.name`)}</div>
+            <div className="opacity-80 font-normal">
+              {t(`models.${id}.description`)}
             </div>
-            <div className="opacity-80">{t(`models.${id}.description`)}</div>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

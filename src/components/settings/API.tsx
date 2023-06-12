@@ -1,4 +1,5 @@
 import Title from "../Title";
+import Button from "../Button";
 import InputField from "../InputField";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "usehooks-ts";
@@ -36,21 +37,11 @@ export default function API() {
           onChange={(e: any) => setKey(i, e.target.value)}
         >
           {keys.length > 1 && (
-            <button
-              className={`p-2 rounded cursor-pointer bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-xl flex items-center justify-center`}
-              onClick={() => removeKey(i)}
-            >
-              <i className="bx bx-x"></i>
-            </button>
+            <Button onClick={() => removeKey(i)} icon="bx-x"></Button>
           )}
         </InputField>
       ))}
-      <button
-        className={`p-2 rounded cursor-pointer bg-slate-100 hover:bg-slate-200 active:bg-slate-300  text-xl flex items-center justify-center`}
-        onClick={() => addKey()}
-      >
-        <i className="bx bx-plus"></i>
-      </button>{" "}
+      <Button onClick={() => addKey()} icon="bx-plus"></Button>
       <div className="text-sm opacity-80">{t("api.key.description")}</div>
       <InputField
         label={t("api.host.name")}
