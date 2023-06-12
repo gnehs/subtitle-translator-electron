@@ -58,6 +58,12 @@
       "buy_me_a_coffee_description": "如果這個專案對你有幫助，請考慮請我喝杯咖啡，這將會讓我更有動力繼續開發下去。",
       "report_issue": "回報問題",
       "special_thanks": "特別感謝"
+    },
+    "translate": {
+      "target": "目標語言",
+      "target_description": "英文，繁體中文，日本語，等等。",
+      "additional": "附加註記",
+      "additional_description": "例如：這是一部星際大戰電影。"
     }
   }
 }

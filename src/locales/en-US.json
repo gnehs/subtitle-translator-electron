@@ -58,6 +58,12 @@
       "buy_me_a_coffee_description": "If this project has been helpful to you, please consider buying me a cup of coffee. It will motivate me to continue the development further.",
       "report_issue": "Report an Issue",
       "special_thanks": "Special Thanks"
+    },
+    "translate": {
+      "target": "Target language",
+      "target_description": "English, 繁體中文, 日本語, etc.",
+      "additional": "Additional notes",
+      "additional_placeholder": "e.g. This is a Star Wars movie."
     }
   }
 }

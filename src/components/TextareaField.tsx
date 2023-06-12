@@ -2,10 +2,10 @@ export default function TextareaField({
   value,
   label,
   placeholder,
-  type = "text",
   onChange,
   description,
   children,
+  minHeight = "350px",
 }: {
   value: string;
   label: string;
@@ -14,6 +14,7 @@ export default function TextareaField({
   onChange: any;
   description?: string;
   children?: React.ReactNode;
+  minHeight?: string;
 }) {
   const randomString = Math.random().toString(36).substring(7);
   return (
@@ -22,10 +23,11 @@ export default function TextareaField({
       <div className="flex flex-row gap-2">
         <textarea
           value={value}
-          className="p-2 flex-1 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 max-w-full min-h-[350px]"
+          className="p-2 flex-1 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500 max-w-full"
           placeholder={placeholder}
           onChange={onChange}
           id={randomString}
+          style={{ resize: "none", minHeight: minHeight }}
         />
         {children}
       </div>
