@@ -22,11 +22,11 @@
       "title": "API 與主機",
       "key": {
         "name": "API 金鑰",
-        "description": "您可以在 https://platform.openai.com/account/api-keys 中取得金鑰，你可以新增多把金鑰來提升翻譯速度。"
+        "description": "您可以在 <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a> 中取得金鑰，新增多把金鑰可以提升翻譯速度。"
       },
       "host": {
         "name": "API 主機",
-        "description": "這通常用於突破封鎖，如果你不知道這是什麼，請保持預設值。"
+        "description": "這通常用於繞過防火牆封鎖，若這個應用程式可以正常運作，則不需要更改此設定。"
       }
     },
     "prompt": {
@@ -43,7 +43,7 @@
       "title": "儲存",
       "multi-language": {
         "name": "雙語字幕",
-        "description": "在儲存時，同時儲存原文與翻譯文本。",
+        "description": "請選擇是否同時儲存原文與翻譯文本。",
         "options": {
           "none": "僅儲存原文字幕",
           "translate+original": "翻譯字幕+原文字幕",

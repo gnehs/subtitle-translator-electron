@@ -22,11 +22,11 @@
       "title": "API & Host",
       "key": {
         "name": "API Key",
-        "description": "You can obtain your API key at https://platform.openai.com/account/api-keys. You can add multiple keys to enhance translation speed."
+        "description": "You can obtain API keys at <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a>. Adding multiple keys can enhance translation speed."
       },
       "host": {
         "name": "API Host",
-        "description": "This is typically used for bypassing restrictions. If you're unsure about this, please keep the default value."
+        "description": "This is typically used to bypass firewall blocking. If this application is functioning properly, there is no need to modify this setting."
       }
     },
     "prompt": {
@@ -38,7 +38,7 @@
       "title": "Save",
       "multi-language": {
         "name": "Bilingual Subtitles",
-        "description": "When saving, store both the original and translated texts.",
+        "description": "Please select whether to save the original text and the translated text simultaneously.",
         "options": {
           "none": "Original Only",
           "translate+original": "Translated + Original",
