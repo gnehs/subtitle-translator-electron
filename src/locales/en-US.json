@@ -49,7 +49,7 @@
     "reset": {
       "title": "Reset",
       "name": "Reset all settings",
-      "prompt": "This will clear all settings, including the prompt, API keys, and language settings. Are you sure you want to reset?"
+      "prompt": "This will clear all settings and restore all settings to their default values. Are you sure you want to reset?"
     },
     "about": {
       "title": "About",
