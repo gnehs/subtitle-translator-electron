@@ -26,6 +26,10 @@ export default function Button({
     variantClass = `bg-red-100 hover:bg-red-200 active:bg-red-300 text-red-500 font-bold`;
     variantActiveClass = `bg-red-300 font-bold`;
   }
+  if (variant === "primary") {
+    variantClass = `bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white font-bold`;
+    variantActiveClass = `bg-slate-700 font-bold`;
+  }
   return createElement(
     href ? "a" : "button",
     {

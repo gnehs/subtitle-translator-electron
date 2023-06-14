@@ -26,11 +26,11 @@ export default function TranslatorContainer({
       <div className="p-2 w-full flex gap-2">
         {step == 2 && (
           <Button className="w-full shadow" onClick={() => previousStep()}>
-            Previous
+            {t(`translate.back`)}
           </Button>
         )}
-        <Button submit className="w-full shadow">
-          Next
+        <Button submit className="w-full shadow" variant="primary">
+          {t(`translate.next`)}
         </Button>
       </div>
     </form>
