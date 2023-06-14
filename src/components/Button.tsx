@@ -8,6 +8,7 @@ export default function Button({
   icon,
   href,
   target = "_blank",
+  submit = false,
 }: {
   children?: React.ReactNode;
   active?: Boolean;
@@ -17,6 +18,7 @@ export default function Button({
   icon?: string;
   href?: string;
   target?: string;
+  submit?: boolean;
 }) {
   let variantClass = `bg-slate-100 hover:bg-slate-200 active:bg-slate-300`;
   let variantActiveClass = `bg-slate-300 font-bold`;
@@ -33,6 +35,7 @@ export default function Button({
       onClick,
       href,
       target,
+      type: submit ? "submit" : null,
     },
     <>
       {icon && <i className={`text-xl bx ${icon}`}></i>}
