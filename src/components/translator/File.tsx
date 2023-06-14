@@ -27,7 +27,7 @@ export default function File() {
             console.log(e.target.files);
             if (e.target.files) setFile(e.target.files[0]);
           }}
-          required
+          required={!file}
           accept=".ass,.srt,.vtt,.saa"
         />
       </div>
