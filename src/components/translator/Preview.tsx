@@ -149,10 +149,11 @@ export default function File() {
         if (block.every((line) => line.data.translatedText)) return;
         let text = block.map((line) => line.data.text);
         let res = await translate(text);
+        updateCost(res);
         let { result: translatedText } = JSON.parse(
           res.data.choices[0].message?.function_call?.arguments!
         );
-        if (translatedText.length !== block.length) {
+        if (translatedText.length !== text.length) {
           throw new Error("Translated text length not match");
         }
         for (let i = 0; i < translatedText.length; i++) {
@@ -167,15 +168,20 @@ export default function File() {
               parsedSubtitle.length) *
             100
         );
-        updateCost(res);
       } catch (e) {
-        console.error(`Retry ${retryTimes} times`, e);
-        if (retryTimes < 10) {
+        console.groupCollapsed(`Retry ${retryTimes} times`);
+        console.error(e);
+        //@ts-ignore
+        console.error(e?.response);
+        console.groupEnd();
+        if (retryTimes < 4) {
           const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           await sleep((1000 * retryTimes) ^ 2);
-          await translateChunk(block, retryTimes + 1);
-          //@ts-ignore
-          updateCost(e?.response!);
+          let by = Math.max(Math.round((4 - retryTimes) ^ 2), 1);
+          for (let b of splitIntoChunk(block, by)) {
+            console.log(`split into ${by} blocks`);
+            await translateChunk(b, retryTimes + 1);
+          }
         } else {
           // @ts-ignore
           alert(e?.response?.data?.error?.message || e.toString());
