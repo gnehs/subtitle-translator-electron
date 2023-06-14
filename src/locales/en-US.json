@@ -60,6 +60,8 @@
       "special_thanks": "Special Thanks"
     },
     "translate": {
+      "next": "Next",
+      "back": "Back",
       "language": "Language",
       "target": "Target language",
       "target_description": "English, 繁體中文, 日本語, etc.",
