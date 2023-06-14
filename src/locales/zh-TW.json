@@ -64,7 +64,9 @@
       "target": "目標語言",
       "target_description": "英文，繁體中文，日本語，等等。",
       "additional": "附加註記",
-      "additional_description": "例如：這是一部星際大戰電影。"
+      "additional_description": "例如：這是一部星際大戰電影。",
+      "file": "檔案",
+      "file_description": "拖入字幕檔案，或點擊此處選擇檔案。"
     }
   }
 }
