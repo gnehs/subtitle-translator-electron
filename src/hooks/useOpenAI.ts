@@ -14,6 +14,7 @@ export function useTranslate() {
   let openAIInstance = [] as OpenAIApi[];
   for (let apiKey of apiKeys) {
     let configuration = new Configuration({ apiKey, basePath: apiHost });
+    delete configuration.baseOptions.headers["User-Agent"];
     let openai = new OpenAIApi(configuration);
     openAIInstance.push(openai);
   }
