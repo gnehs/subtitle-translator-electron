@@ -60,6 +60,7 @@
       "special_thanks": "特別感謝"
     },
     "translate": {
+      "language": "語言",
       "target": "目標語言",
       "target_description": "英文，繁體中文，日本語，等等。",
       "additional": "附加註記",
