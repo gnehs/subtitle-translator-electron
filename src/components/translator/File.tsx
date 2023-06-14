@@ -9,7 +9,7 @@ export default function File() {
   if (step !== 2) return null;
   return (
     <TranslatorContainer title={t(`translate.file`)}>
-      <div className="flex flex-col gap-1 h-[256px] border-2 border-dashed rounded items-center justify-center relative">
+      <div className="flex flex-col gap-1 h-[256px] border-2 border-dashed rounded items-center justify-center relative p-4">
         <i
           className={`bx ${file ? `bxs-file-blank` : `bx-file-blank`} text-4xl`}
         ></i>
