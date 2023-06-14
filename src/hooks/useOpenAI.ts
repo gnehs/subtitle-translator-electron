@@ -2,7 +2,7 @@ import { Configuration, OpenAIApi } from "openai";
 import { useLocalStorage } from "usehooks-ts";
 import usePrompt from "./usePrompt";
 import useModel from "./useModel";
-export function translate() {
+export function useTranslate() {
   const [apiKeys] = useAPIKeys();
   const [apiHost] = useAPIHost();
   const [model] = useModel();
@@ -11,27 +11,26 @@ export function translate() {
   const [additional] = useLocalStorage("translate_additional", "");
 
   //@ts-ignore
-  let openAIInstance = [];
+  let openAIInstance = [] as OpenAIApi[];
   for (let apiKey of apiKeys) {
-    const configuration = new Configuration({ apiKey, basePath: apiHost });
-    const openai = new OpenAIApi(configuration);
+    let configuration = new Configuration({ apiKey, basePath: apiHost });
+    let openai = new OpenAIApi(configuration);
     openAIInstance.push(openai);
   }
-  const getRandomInstance = () => {
-    //@ts-ignore
-    return openAIInstance[
-      Math.floor(Math.random() * openAIInstance.length)
-    ] as OpenAIApi;
-  };
 
   //@ts-ignore
-  return async function translate(i: number, subtitles: array[string]) {
-    let { createChatCompletion } = getRandomInstance();
+  return async function translate(subtitles: array[]) {
+    let ai = openAIInstance[Math.floor(Math.random() * openAIInstance.length)];
     let presedPrompt = prompt
       .replace("{{lang}}", lang)
       .replace("{{additional}}", additional);
-    return await createChatCompletion({
-      model: "gpt-3.5-turbo",
+    let modelName = {
+      "gpt-4": "gpt-4-0613",
+      "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
+      "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
+    }[model]!;
+    return await ai.createChatCompletion({
+      model: modelName,
       messages: [
         {
           role: "system",
@@ -40,6 +39,26 @@ export function translate() {
         {
           role: "user",
           content: JSON.stringify(subtitles),
+        },
+      ],
+      functions: [
+        {
+          name: "setResult",
+          description: "Sets the result of the translation",
+          parameters: {
+            type: "object",
+            properties: {
+              result: {
+                type: "array",
+                description: "The translated subtitles",
+                items: {
+                  type: "string",
+                  description: "A subtitle",
+                },
+              },
+            },
+            required: ["result"],
+          },
         },
       ],
     });
