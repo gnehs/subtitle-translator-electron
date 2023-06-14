@@ -1,7 +1,6 @@
-import Button from "../Button";
-import useFile from "@/hooks/useFile";
 import { useTranslation } from "react-i18next";
 import TranslatorContainer from "../TranslatorContainer";
+import useFile from "@/hooks/useFile";
 import useStep from "@/hooks/useStep";
 export default function File() {
   const { t } = useTranslation();
@@ -24,12 +23,11 @@ export default function File() {
           type="file"
           className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
           onChange={(e) => {
-            console.log(e.target.files);
-            if (e.target.files) setFile!(e.target.files[0]);
+            if (e.target.files) setFile(e.target.files[0]);
           }}
-          required={!file}
           accept=".ass,.srt,.vtt,.saa"
         />
+        <input className="hidden" value={file?.path} required />
       </div>
     </TranslatorContainer>
   );
