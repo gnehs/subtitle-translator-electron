@@ -5,9 +5,9 @@
     "language": "Language",
     "model": "Model",
     "models": {
-      "gpt-4-0314": {
+      "gpt-4": {
         "name": "Excellent",
-        "description": "Translation performed using gpt-4-0314, which provides higher accuracy but slower speed and higher cost. (This model is invitation-only and requires being added to the GPT-4 waitlist)."
+        "description": "Translation performed using gpt-4, which provides higher accuracy but slower speed and higher cost. (This model is invitation-only and requires being added to the GPT-4 waitlist)."
       },
       "gpt-3.5-turbo": {
         "name": "Optimal",

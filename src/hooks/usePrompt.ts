@@ -1,7 +1,7 @@
 import { useLocalStorage } from "usehooks-ts";
 export default function usePrompt(name: string) {
   let defaultPrompt = `Error`;
-  if (name === "gpt-4-0314") {
+  if (name === "gpt-4") {
     defaultPrompt = `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please only output the translation and reply in the same format as the original array. Target language: {{lang}}\n\n{{additional}}`;
   }
   if (name === "gpt-3.5-turbo") {
