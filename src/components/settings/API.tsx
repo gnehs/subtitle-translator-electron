@@ -2,14 +2,11 @@ import Title from "../Title";
 import Button from "../Button";
 import InputField from "../InputField";
 import { useTranslation } from "react-i18next";
-import { useLocalStorage } from "usehooks-ts";
+import { useAPIHost, useAPIKeys } from "@/hooks/useOpenAI";
 export default function API() {
-  const { t, i18n } = useTranslation();
-  const [keys, setKeys] = useLocalStorage("api_keys", [""]);
-  const [host, setHost] = useLocalStorage(
-    "api_host",
-    "https://api.openai.com/v1"
-  );
+  const { t } = useTranslation();
+  const [keys, setKeys] = useAPIKeys();
+  const [host, setHost] = useAPIHost();
   function setKey(index: number, value: string) {
     const newKeys = structuredClone(keys);
     //@ts-ignore
@@ -35,6 +32,7 @@ export default function API() {
           type="password"
           value={keys[i]}
           onChange={(e: any) => setKey(i, e.target.value)}
+          key={i}
         >
           {keys.length > 1 && (
             <Button onClick={() => removeKey(i)} icon="bx-x"></Button>

@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import useStep from "../../hooks/useStep";
 import useFile from "@/hooks/useFile";
 import fs from "node:fs";
-import { Configuration, OpenAIApi } from "openai";
+import { motion } from "framer-motion";
+import { createChatCompletion } from "@/hooks/useOpenAI";
 import { parseSync, stringifySync } from "subtitle";
 //@ts-ignore
 import assParser from "ass-parser";
