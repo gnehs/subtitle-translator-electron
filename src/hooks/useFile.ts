@@ -23,11 +23,11 @@ export default function useStep() {
 
   // Set
   const dispatch = useDispatch();
-  const _setFile = (file: any) => {
+  const _setFile = (file: File) => {
     let fileURL = URL.createObjectURL(file);
     dispatch(setFile({ url: fileURL, type: file.type, name: file.name }));
   };
 
   // Return
-  return [file, _setFile];
+  return [file, _setFile!];
 }
