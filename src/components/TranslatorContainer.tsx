@@ -13,7 +13,7 @@ export default function TranslatorContainer({
   const [step, nextStep, previousStep] = useStep();
   return (
     <form
-      className="flex flex-col gap-2 items-center justify-center w-full max-w-[368px] mx-auto bg-slate-50 border border-slate-300 rounded"
+      className="flex flex-col gap-2 items-center justify-center w-full max-w-[368px] mx-auto bg-slate-50 border border-slate-200 rounded"
       onSubmit={(e) => {
         e.preventDefault();
         nextStep();
