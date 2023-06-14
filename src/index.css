@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+code {
+  @apply text-gray-800 bg-gray-200 p-1 rounded-sm;
+}
+.text-inject a {
+  @apply text-blue-500 underline;
+}
