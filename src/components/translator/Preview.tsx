@@ -108,15 +108,13 @@ export default function File() {
     }
     loadFile();
   }, [file]);
-  async function startTranslation() {
-    let subtitle = parsedSubtitle.filter((line) => line.type === "cue");
-    const splitEvery = 15;
+  function splitIntoChunk(array: any, by = 5) {
     let chunks = [];
     let chunk = [];
-    for (let i = 0; i < subtitle.length; i++) {
-      if (subtitle[i].data?.translatedText) continue;
-      chunk.push(subtitle[i]);
-      if (chunk.length === splitEvery) {
+    for (let i = 0; i < array.length; i++) {
+      if (array[i].data?.translatedText) continue;
+      chunk.push(array[i]);
+      if (chunk.length === by) {
         chunks.push(chunk);
         chunk = [];
       }
@@ -124,6 +122,11 @@ export default function File() {
     if (chunk.length > 0) {
       chunks.push(chunk);
     }
+    return chunks;
+  }
+  async function startTranslation() {
+    let subtitle = parsedSubtitle.filter((line) => line.type === "cue");
+    let chunks = splitIntoChunk(subtitle, 16);
     console.log(`Splited into ${chunks.length} chunks`);
     function updateCost(res: any) {
       let inputToken = res.data?.usage?.prompt_tokens!;
@@ -199,15 +202,16 @@ export default function File() {
   function downloadSubtitle() {
     function parseTranslatedText(
       originalSubtitle: string = "",
-      translatedText: string = ""
+      translatedText: string = "",
+      splitText: string = "\n"
     ) {
       switch (multiLangSave) {
         case "none":
           return translatedText;
         case "translate+original":
-          return `${translatedText}\\n${originalSubtitle}`;
+          return `${translatedText}${splitText}${originalSubtitle}`;
         case "original+translate":
-          return `${originalSubtitle}\\n${translatedText}`;
+          return `${originalSubtitle}${splitText}${translatedText}`;
       }
     }
     let fileName = file?.path?.split("/").pop();
@@ -243,7 +247,8 @@ export default function File() {
                       line.value.Text,
                       parsedSubtitle.find(
                         (y) => y.data.text === line.value.Text
-                      )?.data.translatedText
+                      )?.data.translatedText,
+                      "\\n"
                     ),
                   },
                 };
