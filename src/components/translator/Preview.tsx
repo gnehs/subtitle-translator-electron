@@ -1,6 +1,6 @@
 import Button from "../Button";
 import { useState, useEffect } from "react";
-
+import { useTranslation } from "react-i18next";
 import asyncPool from "tiny-async-pool";
 import useStep from "@/hooks/useStep";
 import useFile from "@/hooks/useFile";
@@ -72,6 +72,7 @@ export default function File() {
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [model] = useModel();
   const translate = useTranslate();
+  const { t } = useTranslation();
   useEffect(() => {
     async function loadFile() {
       if (file?.path) {
@@ -124,7 +125,25 @@ export default function File() {
       chunks.push(chunk);
     }
     console.log(`Splited into ${chunks.length} chunks`);
-    async function translateChunk(block: any[], retry = 0) {
+    function updateCost(res: any) {
+      let inputToken = res.data?.usage?.prompt_tokens!;
+      let inputCost = 0.0015;
+      let outputToken = res.data?.usage?.completion_tokens!;
+      let outputCost = 0.002;
+      if (model === "gpt-4") {
+        inputCost = 0.03;
+        outputCost = 0.06;
+      }
+      setUsedInputTokens((usedInputTokens) => usedInputTokens + inputToken);
+      setUsedOutputTokens((usedOutputTokens) => usedOutputTokens + outputToken);
+      setUsedDollars(
+        (usedDollars) =>
+          usedDollars +
+          (inputToken / 1000) * inputCost +
+          (outputToken / 1000) * outputCost
+      );
+    }
+    async function translateChunk(block: any[], retryTimes = 0) {
       try {
         if (block.length === 0) return;
         if (block.every((line) => line.data.translatedText)) return;
@@ -133,6 +152,9 @@ export default function File() {
         let { result: translatedText } = JSON.parse(
           res.data.choices[0].message?.function_call?.arguments!
         );
+        if (translatedText.length !== block.length) {
+          throw new Error("Translated text length not match");
+        }
         for (let i = 0; i < translatedText.length; i++) {
           block[i].data.translatedText = translatedText[i];
         }
@@ -145,40 +167,28 @@ export default function File() {
               parsedSubtitle.length) *
             100
         );
-        let inputToken = res.data?.usage?.prompt_tokens!;
-        let inputCost = 0.0015;
-        let outputToken = res.data?.usage?.completion_tokens!;
-        let outputCost = 0.002;
-        if (model === "gpt-4") {
-          inputCost = 0.03;
-          outputCost = 0.06;
-        }
-        setUsedInputTokens((usedInputTokens) => usedInputTokens + inputToken);
-        setUsedOutputTokens(
-          (usedOutputTokens) => usedOutputTokens + outputToken
-        );
-        setUsedDollars(
-          (usedDollars) =>
-            usedDollars +
-            (inputToken / 1000) * inputCost +
-            (outputToken / 1000) * outputCost
-        );
+        updateCost(res);
       } catch (e) {
-        if (retry < 10) {
+        console.error(`Retry ${retryTimes} times`, e);
+        if (retryTimes < 10) {
           const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-          await sleep((1000 * retry) ^ 2);
-          await translateChunk(block, retry + 1);
-          console.error(`Retry ${retry} times`);
-          console.error(e);
+          await sleep((1000 * retryTimes) ^ 2);
+          await translateChunk(block, retryTimes + 1);
+          //@ts-ignore
+          updateCost(e?.response!);
         } else {
-          console.error(e);
           // @ts-ignore
           alert(e?.response?.data?.error?.message || e.toString());
         }
       }
     }
     setIsTranslating(true);
-    await asyncPoolAll(keys.length * 1.5, chunks, translateChunk);
+    await asyncPoolAll(
+      keys.length * 1.5,
+      chunks,
+      async (x: any) => await translateChunk(x, 0)
+    );
+    setIsTranslating(false);
   }
   function downloadSubtitle() {
     function parseTranslatedText(
@@ -299,10 +309,18 @@ export default function File() {
           ))}
         </div>
         <div className="flex items-center gap-2 p-2">
-          <Button onClick={() => previousStep()}>previousStep</Button>
-          <Button onClick={() => nextStep()}>Next</Button>
+          {!isTranslating && (
+            <>
+              <Button onClick={() => previousStep()}>
+                {t(`translate.back`)}
+              </Button>
+            </>
+          )}
+          <div className="flex-1" />
           <Button onClick={() => startTranslation()}>Start</Button>
-          <Button onClick={() => downloadSubtitle()}>Save</Button>
+          {progress > 0 && (
+            <Button onClick={() => downloadSubtitle()}>Save</Button>
+          )}
         </div>
       </div>
     </>
