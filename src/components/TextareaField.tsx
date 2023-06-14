@@ -6,6 +6,7 @@ export default function TextareaField({
   description,
   children,
   minHeight = "350px",
+  required = false,
 }: {
   value: string;
   label: string;
@@ -15,6 +16,7 @@ export default function TextareaField({
   description?: string;
   children?: React.ReactNode;
   minHeight?: string;
+  required?: boolean;
 }) {
   const randomString = Math.random().toString(36).substring(7);
   return (
@@ -28,6 +30,7 @@ export default function TextareaField({
           onChange={onChange}
           id={randomString}
           style={{ resize: "none", minHeight: minHeight }}
+          required={required}
         />
         {children}
       </div>

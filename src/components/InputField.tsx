@@ -6,6 +6,7 @@ export default function InputField({
   onChange,
   description,
   children,
+  required = false,
 }: {
   value: string;
   label: string;
@@ -14,6 +15,7 @@ export default function InputField({
   onChange: any;
   description?: string;
   children?: React.ReactNode;
+  required?: boolean;
 }) {
   const randomString = Math.random().toString(36).substring(7);
   return (
@@ -27,6 +29,7 @@ export default function InputField({
           placeholder={placeholder}
           onChange={onChange}
           id={randomString}
+          required={required}
         />
         {children}
       </div>
