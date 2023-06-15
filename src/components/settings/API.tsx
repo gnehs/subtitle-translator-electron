@@ -42,7 +42,7 @@ export default function API() {
       <Button onClick={() => addKey()} icon="bx-plus"></Button>
       <div
         className="text-sm opacity-80 text-inject"
-        dangerouslySetInnerHTML={{ __html: t("api.key.description") }}
+        dangerouslySetInnerHTML={{ __html: t("api.key.description")! }}
       />
       <InputField
         label={t("api.host.name")}
