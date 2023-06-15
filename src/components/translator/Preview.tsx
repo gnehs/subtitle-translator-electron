@@ -453,10 +453,10 @@ export default function File() {
               {t(`translate.reset`)}
             </Button>
           )}
-          {!isTranslating && progress >= 100 && (
+          {!isTranslating && progress >= 90 && (
             <Button
               onClick={() => downloadSubtitle()}
-              variant="primary"
+              variant={progress >= 100 ? `primary` : ``}
               icon="bx-save"
             >
               {t(`translate.save`)}
