@@ -7,3 +7,6 @@ code {
 .text-inject a {
   @apply text-blue-500 underline;
 }
+body {
+  font-family: "Lato", sans-serif;
+}
