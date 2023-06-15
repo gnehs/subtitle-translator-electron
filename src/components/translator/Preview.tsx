@@ -286,7 +286,9 @@ export default function File() {
       >
         <div
           className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
-            subtitleFilter === "all" ? "bg-slate-300" : "bg-slate-200 "
+            subtitleFilter === "all"
+              ? "bg-slate-500 text-white"
+              : "bg-slate-200"
           }`}
           onClick={() => {
             setSubtitleFilter("all");
@@ -297,8 +299,8 @@ export default function File() {
         <div
           className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
             subtitleFilter === "not_translated"
-              ? "bg-slate-300"
-              : "bg-slate-200 "
+              ? "bg-slate-500 text-white"
+              : "bg-slate-200"
           }`}
           onClick={() => {
             setSubtitleFilter("not_translated");
@@ -308,7 +310,9 @@ export default function File() {
         </div>
         <div
           className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
-            subtitleFilter === "translated" ? "bg-slate-300" : "bg-slate-200 "
+            subtitleFilter === "translated"
+              ? "bg-slate-500 text-white"
+              : "bg-slate-200"
           }`}
           onClick={() => {
             setSubtitleFilter("translated");
