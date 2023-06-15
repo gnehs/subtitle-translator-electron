@@ -29,18 +29,20 @@ function SubtitlePreview({
   index,
   parsedSubtitle,
   setParsedSubtitle,
+  translateSingle,
 }: {
   subtitle: any;
   index: number;
   parsedSubtitle: any;
   setParsedSubtitle: any;
+  translateSingle: any;
 }) {
   return (
-    <div className="flex items-center rounded-sm border border-slate-100">
+    <div className="flex items-center rounded-sm border border-slate-100 bg-slate-50">
       <div className="text-sm min-w-[3em] p-1 rounded-l-sm bg-slate-100 h-full flex items-center justify-center">
         {index + 1}
       </div>
-      <div className="flex-1 flex flex-col gap-1 rounded-r-sm bg-slate-50 p-1 text-sm">
+      <div className="flex-1 flex flex-col gap-1 p-1 text-sm">
         <div>{subtitle.data.text}</div>
         <input
           key={index}
@@ -54,6 +56,14 @@ function SubtitlePreview({
           }}
         />
       </div>
+      <Button
+        className="rounded-r-sm h-full"
+        onClick={() => {
+          translateSingle(subtitle);
+        }}
+      >
+        <i className="bx bx-play"></i>
+      </Button>
     </div>
   );
 }
@@ -68,13 +78,16 @@ export default function File() {
   const [subtitleFilter, setSubtitleFilter] = useState<
     "all" | "translated" | "not_translated"
   >("all");
-  const [usedInputTokens, setUsedInputTokens] = useState<number>(0);
-  const [usedOutputTokens, setUsedOutputTokens] = useState<number>(0);
-  const [usedDollars, setUsedDollars] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [model] = useModel();
-  const { translateSubtitleChunk } = useTranslate();
+  const {
+    translateSubtitleChunk,
+    translateSubtitleSingle,
+    usedInputTokens,
+    usedOutputTokens,
+    usedDollars,
+  } = useTranslate();
   const { t } = useTranslation();
   useEffect(() => {
     async function loadFile() {
@@ -134,24 +147,6 @@ export default function File() {
     }
     let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 10 + 5));
     console.log(`Splited into ${chunks.length} chunks`);
-    function updateCost(res: any) {
-      let inputToken = res.data?.usage?.prompt_tokens!;
-      let inputCost = 0.0015;
-      let outputToken = res.data?.usage?.completion_tokens!;
-      let outputCost = 0.002;
-      if (model === "gpt-4") {
-        inputCost = 0.03;
-        outputCost = 0.06;
-      }
-      setUsedInputTokens((usedInputTokens) => usedInputTokens + inputToken);
-      setUsedOutputTokens((usedOutputTokens) => usedOutputTokens + outputToken);
-      setUsedDollars(
-        (usedDollars) =>
-          usedDollars +
-          (inputToken / 1000) * inputCost +
-          (outputToken / 1000) * outputCost
-      );
-    }
     async function translateChunk(block: any[], retryTimes = 0) {
       if (block.length === 0) return;
       if (block.every((line) => line.data.translatedText)) return;
@@ -159,7 +154,6 @@ export default function File() {
       let res;
       try {
         res = await translateSubtitleChunk(text);
-        updateCost(res);
         let { result: translatedText } = JSON.parse(
           res.data.choices[0].message?.function_call?.arguments!
         );
@@ -201,11 +195,26 @@ export default function File() {
       if (retryTimes < 3) {
         await startTranslation(retryTimes + 1);
       } else {
-        toast.error("Retry failed");
-        alert("Retry failed");
+        for (let cue of parsedSubtitle.filter(
+          (line) => !line.data.translatedText
+        )) {
+          await translateSingle(cue);
+        }
       }
     }
     setIsTranslating(false);
+  }
+  async function translateSingle(line: any) {
+    try {
+      let res = await translateSubtitleSingle(line.data.text);
+      let { result: translatedText } = JSON.parse(
+        res.data.choices[0].message?.function_call?.arguments!
+      );
+      line.data.translatedText = translatedText;
+    } catch (e) {
+      toast.error(`Failed to translate line: ${line.data.text}`);
+      console.error(e);
+    }
   }
   function downloadSubtitle() {
     function parseTranslatedText(
@@ -402,6 +411,7 @@ export default function File() {
                 index={i}
                 parsedSubtitle={parsedSubtitle}
                 setParsedSubtitle={setParsedSubtitle}
+                translateSingle={translateSingle}
                 key={i}
               />
             ))}

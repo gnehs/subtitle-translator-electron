@@ -1,4 +1,5 @@
 import { Configuration, OpenAIApi } from "openai";
+import { useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
 import usePrompt from "./usePrompt";
 import useModel from "./useModel";
@@ -9,6 +10,28 @@ export function useTranslate() {
   const [prompt] = usePrompt(model);
   const [lang] = useLocalStorage("translate_lang", "");
   const [additional] = useLocalStorage("translate_additional", "");
+
+  const [usedInputTokens, setUsedInputTokens] = useState<number>(0);
+  const [usedOutputTokens, setUsedOutputTokens] = useState<number>(0);
+  const [usedDollars, setUsedDollars] = useState<number>(0);
+  function updateCost(res: any) {
+    let inputToken = res.data?.usage?.prompt_tokens!;
+    let inputCost = 0.0015;
+    let outputToken = res.data?.usage?.completion_tokens!;
+    let outputCost = 0.002;
+    if (model === "gpt-4") {
+      inputCost = 0.03;
+      outputCost = 0.06;
+    }
+    setUsedInputTokens((usedInputTokens) => usedInputTokens + inputToken);
+    setUsedOutputTokens((usedOutputTokens) => usedOutputTokens + outputToken);
+    setUsedDollars(
+      (usedDollars) =>
+        usedDollars +
+        (inputToken / 1000) * inputCost +
+        (outputToken / 1000) * outputCost
+    );
+  }
 
   //@ts-ignore
   let openAIInstance = [] as OpenAIApi[];
@@ -21,6 +44,9 @@ export function useTranslate() {
 
   //@ts-ignore
   return {
+    usedInputTokens,
+    usedOutputTokens,
+    usedDollars,
     translateSubtitleChunk: async function (subtitles: Array<any>) {
       let ai =
         openAIInstance[Math.floor(Math.random() * openAIInstance.length)];
@@ -32,7 +58,7 @@ export function useTranslate() {
         "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
         "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
       }[model]!;
-      return await ai.createChatCompletion({
+      let res = await ai.createChatCompletion({
         model: modelName,
         messages: [
           {
@@ -65,6 +91,8 @@ export function useTranslate() {
           },
         ],
       });
+      updateCost(res);
+      return res;
     },
     translateSubtitleSingle: async function (subtitle: string) {
       let ai =
@@ -78,7 +106,7 @@ export function useTranslate() {
         "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
         "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
       }[model]!;
-      return await ai.createChatCompletion({
+      let res = await ai.createChatCompletion({
         model: modelName,
         messages: [
           {
@@ -107,6 +135,8 @@ export function useTranslate() {
           },
         ],
       });
+      updateCost(res);
+      return res;
     },
   };
 }
