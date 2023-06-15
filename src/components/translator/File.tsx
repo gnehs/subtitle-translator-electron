@@ -27,7 +27,7 @@ export default function File() {
           }}
           accept=".ass,.srt,.vtt,.saa"
         />
-        <input className="hidden" value={file?.path} required />
+        <input className="hidden" value={file?.path} required readOnly />
       </div>
     </TranslatorContainer>
   );
