@@ -236,10 +236,25 @@ export default function File() {
   async function translateSingle(line: any) {
     try {
       let res = await translateSubtitleSingle(line.data.text);
-      let { result: translatedText } = JSON.parse(
-        res.data.choices[0].message?.function_call?.arguments!
-      );
+      let translatedText;
+      try {
+        translatedText = JSON.parse(
+          res.data.choices[0].message?.function_call?.arguments!
+        ).result;
+      } catch (e) {
+        translatedText =
+          res.data.choices[0].message?.function_call?.arguments ||
+          res.data.choices[0].message?.content;
+      }
       line.data.translatedText = translatedText;
+      setProgress(
+        (progress) =>
+          (parsedSubtitle
+            .map((line) => line.data.translatedText)
+            .filter((x) => x).length /
+            parsedSubtitle.length) *
+          100
+      );
     } catch (e) {
       toast.error(t("translate.failed_to_translate", { text: line.data.text }));
       console.error(e);
