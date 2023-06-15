@@ -436,14 +436,18 @@ export default function File() {
               </Button>
             </>
           )}
-          <div className="flex-1 w-full h-4">
-            <div className="h-full bg-slate-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-slate-500"
-                style={{ width: `${progress}%` }}
-              ></div>
+          {isTranslating ? (
+            <div className="flex-1 w-full h-2">
+              <div className="h-full bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-slate-500"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-1" />
+          )}
           {!isTranslating && progress < 100 && (
             <Button
               onClick={() => startTranslation()}
