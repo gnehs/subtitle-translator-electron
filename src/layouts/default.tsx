@@ -53,7 +53,7 @@ function CheckUpdate() {
       <a
         href="https://github.com/gnehs/subtitle-translator-electron/releases/latest"
         target="_blank"
-        className={`flex items-center justify-center text-[24px] bg-slate-700 text-white hover:bg-slate-800 group p-2 rounded-lg transition-colors duration-200`}
+        className={`flex items-center justify-center text-[24px] text-white group p-2 rounded-lg bg-gradient-to-b from-slate-700 to-slate-500 hover:from-slate-900 hover:to-slate-700`}
       >
         <i
           className={`bx bx-up-arrow-alt group-active:scale-95 transition-all duration-200`}
