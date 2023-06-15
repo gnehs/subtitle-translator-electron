@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 
 import store from "./store";
 import { Provider } from "react-redux";
@@ -12,7 +12,7 @@ import Translator from "./pages/translator";
 import Settings from "./pages/settings";
 import "./index.css";
 import "./index.sass";
-const router = createBrowserRouter([
+const router = createHashRouter([
   {
     path: "/",
     element: <DefaultLayout />,
