@@ -158,7 +158,7 @@ export default function File() {
     if (progress >= 100) {
       setTimeout(() => {
         alert(t("translate.translation_completed"));
-      }, 100);
+      }, 500);
     }
   }, [progress]);
   function splitIntoChunk(array: any, by = 5) {
