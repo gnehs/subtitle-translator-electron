@@ -9,7 +9,7 @@ export default function Language() {
   return (
     <div className="flex flex-col gap-2">
       <Title>{t("model")}</Title>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2">
         {modelList.map((id) => (
           <Button
             key={id}
