@@ -351,11 +351,6 @@ export default function File() {
         </div>
         <div className="flex-1" />
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
-          xx:xx
-          <br />
-          <span className="opacity-50 text-xs">left</span>
-        </div>
-        <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           <span className="opacity-50 text-xs">tokens</span>
           <br />
           {usedOutputTokens.toLocaleString()}
@@ -415,24 +410,51 @@ export default function File() {
                 key={i}
               />
             ))}
+          <div className="mt-16 w-full"></div>
         </div>
-
-        <div className="flex items-center gap-2 p-2">
-          {!isTranslating && (
+        <div
+          className="h-16 w-[calc(100%-52px)] ml-[52px] absolute bottom-0 left-0 bg-opacity-40 backdrop-blur-xl bg-white"
+          style={{
+            mask: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)",
+            WebkitMask: `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)`,
+          }}
+        ></div>
+        <div className="flex items-center gap-2 px-2 py-1 absolute bottom-0 left-0 w-[calc(100%-52px)] ml-[52px] ">
+          {!isTranslating && progress <= 0 && (
             <>
               <Button onClick={() => previousStep()}>
                 {t(`translate.back`)}
               </Button>
             </>
           )}
-          <div className="flex-1" />
+          <div className="flex-1 w-full h-4">
+            <div className="h-full bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-slate-500"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
           {!isTranslating && progress < 100 && (
-            <Button onClick={() => startTranslation()} variant="primary">
+            <Button
+              onClick={() => startTranslation()}
+              variant="primary"
+              icon="bx-play"
+            >
               Start
             </Button>
           )}
-          {!isTranslating && progress > 0 && (
-            <Button onClick={() => downloadSubtitle()} variant="primary">
+          {!isTranslating && progress >= 100 && (
+            <Button onClick={() => location.reload()} icon="bx-refresh">
+              Reset
+            </Button>
+          )}
+          {!isTranslating && progress >= 100 && (
+            <Button
+              onClick={() => downloadSubtitle()}
+              variant="primary"
+              icon="bx-save"
+            >
               Save
             </Button>
           )}
