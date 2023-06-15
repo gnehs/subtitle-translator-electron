@@ -11,7 +11,6 @@ import About from "./pages/about";
 import Translator from "./pages/translator";
 import Settings from "./pages/settings";
 import "./index.css";
-import "./index.sass";
 const router = createHashRouter([
   {
     path: "/",
