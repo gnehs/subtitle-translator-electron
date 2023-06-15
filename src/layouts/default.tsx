@@ -1,9 +1,11 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "usehooks-ts";
-import { useEffect } from "react";
-import { ToastContainer } from "react-toastify";
+import { useState, useEffect } from "react";
+import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useVersion } from "@/hooks/useVersion";
+import { shell } from "electron";
 function NavItem({ to, icon }: { to: string; icon: string }) {
   const isActive = useLocation().pathname === to;
   return (
@@ -19,6 +21,51 @@ function NavItem({ to, icon }: { to: string; icon: string }) {
     </Link>
   );
 }
+function CheckUpdate() {
+  const version = useVersion();
+  const [newVersion, setNewVersion] = useState<string | null>(null);
+  useEffect(() => {
+    fetch(
+      "https://api.github.com/repos/gnehs/subtitle-translator-electron/releases/latest"
+    )
+      .then((res) => res.json())
+      .then((res) => {
+        setNewVersion(res.tag_name);
+      });
+  }, []);
+  useEffect(() => {
+    if (version && newVersion && version != newVersion) {
+      toast.info(`New version (${newVersion})`, {
+        onClick: () => {
+          shell.openExternal(
+            "https://github.com/gnehs/subtitle-translator-electron/releases/latest"
+          );
+        },
+        autoClose: false,
+        position: "bottom-center",
+        hideProgressBar: true,
+        closeButton: false,
+        className: "bg-slate-700 text-white cursor-pointer",
+      });
+    }
+  }, [version, newVersion]);
+
+  if (version && newVersion && version != newVersion) {
+    return (
+      <a
+        href="https://github.com/gnehs/subtitle-translator-electron/releases/latest"
+        target="_blank"
+        className={`flex items-center justify-center text-[24px] bg-slate-700 text-white hover:bg-slate-800 group p-2 rounded-lg transition-colors duration-200`}
+      >
+        <i
+          className={`bx bx-up-arrow-alt group-active:scale-95 transition-all duration-200`}
+        ></i>
+      </a>
+    );
+  } else {
+    return <></>;
+  }
+}
 function DefaultLayout() {
   // change language
   const [language] = useLocalStorage("language", "en-US");
@@ -32,6 +79,7 @@ function DefaultLayout() {
       <div className="flex flex-col w-[52px] h-full bg-slate-100 p-1 gap-[2px] border-r border-slate-200">
         <NavItem to="/" icon="bx-transfer-alt" />
         <div className="flex-1"></div>
+        <CheckUpdate />
         <NavItem to="/settings" icon="bx-cog" />
         <NavItem to="/about" icon="bx-info-circle" />
       </div>
