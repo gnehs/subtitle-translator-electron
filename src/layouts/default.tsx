@@ -41,9 +41,7 @@ function CheckUpdate() {
             "https://github.com/gnehs/subtitle-translator-electron/releases/latest"
           );
         },
-        autoClose: false,
         position: "bottom-center",
-        hideProgressBar: true,
         closeButton: false,
         className: "bg-slate-700 text-white cursor-pointer",
       });
