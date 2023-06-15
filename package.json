@@ -1,6 +1,6 @@
 {
   "name": "subtitle-translator-electron",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "main": "dist-electron/main/index.js",
   "description": "Translate subtitle using ChatGPT",
   "author": "gnehs",
