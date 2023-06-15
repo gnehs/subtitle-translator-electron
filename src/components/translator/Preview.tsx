@@ -227,14 +227,37 @@ export default function File() {
         //@ts-ignore
         console.error(e?.response);
         console.groupEnd();
+        //@ts-ignore
+        let msg = e?.response?.data?.error?.message;
+
+        if (msg.startsWith("You didn't provide an API key.")) {
+          throw new Error("No API key");
+        }
+        if (msg.startsWith("You have exceeded your")) {
+          throw new Error("Exceeded");
+        }
       }
     }
     setIsTranslating(true);
-    await asyncPoolAll(
-      keys.length * 1.5,
-      chunks,
-      async (x: any) => await translateChunk(x, 0)
-    );
+    try {
+      await asyncPoolAll(keys.length * 1.5, chunks, (x: any) =>
+        translateChunk(x, 0)
+      );
+    } catch (e) {
+      console.log(e);
+      //@ts-ignore
+      if (e.toString() === "Error: No API key") {
+        setIsTranslating(false);
+        alert(t("translate.no_api_key"));
+        location.reload();
+      }
+      //@ts-ignore
+      if (e.toString() === "Error: Exceeded") {
+        setIsTranslating(false);
+        alert(t("translate.exceeded"));
+        location.reload();
+      }
+    }
     if (parsedSubtitle.filter((line) => !line.data.translatedText).length > 0) {
       if (retryTimes < 3) {
         await startTranslation(retryTimes + 1);
