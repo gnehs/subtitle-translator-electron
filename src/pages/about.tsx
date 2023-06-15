@@ -3,6 +3,7 @@ import Button from "@/components/Button";
 import { useVersion } from "@/hooks/useVersion";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import icon from "@/assets/icon.png";
 export default function About() {
   const { t } = useTranslation();
   const version = useVersion();
@@ -11,10 +12,7 @@ export default function About() {
       <Header>{t("about.title")}</Header>
       <div className="p-2 flex flex-col gap-4">
         <div>
-          <img
-            src="/icon.png"
-            className="w-32 h-32 mx-auto drop-shadow-lg mt-4"
-          />
+          <img src={icon} className="w-32 h-32 mx-auto drop-shadow-lg mt-4" />
           <h1 className="text-3xl font-bold text-center">
             Subtitle Translator
           </h1>
