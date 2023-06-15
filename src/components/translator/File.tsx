@@ -27,7 +27,12 @@ export default function File() {
           }}
           accept=".ass,.srt,.vtt,.saa"
         />
-        <input className="hidden" value={file?.path} required readOnly />
+        <input
+          className="hidden"
+          value={file?.path}
+          required
+          onChange={() => {}}
+        />
       </div>
     </TranslatorContainer>
   );
