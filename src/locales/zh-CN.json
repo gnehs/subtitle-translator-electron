@@ -1,0 +1,90 @@
+{
+  "translation": {
+    "name": "中文（中国）",
+    "settings": "设定",
+    "language": "语言",
+    "model": "模型",
+    "models": {
+      "gpt-4": {
+        "name": "进阶",
+        "description": "使用 GPT-4 进行翻译，较为精准，但速度较慢且费用较高。（该模型为邀请制，需要加入 GPT-4 邀请名单）"
+      },
+      "gpt-3.5-turbo": {
+        "name": "标准",
+        "description": "使用 GPT-3 进行翻译，平衡价格与质量的好选择。"
+      },
+      "gpt-3.5-turbo-economy": {
+        "name": "经济",
+        "description": "使用 GPT-3 进行翻译，不会发送前后文，因此费用最低，且翻译质量较差，可能会有大量需要人工修正的句子。"
+      }
+    },
+    "api": {
+      "title": "API 与主机",
+      "key": {
+        "name": "API 密钥",
+        "description": "您可以在 <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a> 中取得密钥，新增多把密钥可以提升翻译速度。"
+      },
+      "host": {
+        "name": "API 主机",
+        "description": "这通常用于绕过防火墙封锁，若这个应用程序可以正常运作，则不需要更改此设定。"
+      }
+    },
+    "prompt": {
+      "title": "咒语",
+      "name": "编辑「{{name}}」的咒语",
+      "description": "使用 ChatGPT 时所使用的咒语，你可以在此更改咒语，另外 <code>{{lang}}</code> 用于指定语言，<code>{{additional}}</code> 用于附加备注，上述字段将于翻译时自动带入内容，修改咒语时请务必保留这些字段。"
+    },
+    "reset": {
+      "title": "重设",
+      "name": "重设所有设定",
+      "prompt": "这将会清空所有设定，并将所有设定恢复为默认值，确定要重设吗？"
+    },
+    "save": {
+      "title": "储存",
+      "multi-language": {
+        "name": "双语字幕",
+        "description": "请选择是否同时储存原文与翻译文本。",
+        "options": {
+          "none": "仅储存原文字幕",
+          "translate+original": "翻译字幕+原文字幕",
+          "original+translate": "原文字幕+翻译字幕"
+        }
+      }
+    },
+    "about": {
+      "title": "关于",
+      "author": "开发者",
+      "buy_me_a_coffee": "请我喝杯咖啡",
+      "buy_me_a_coffee_description": "如果这个项目对你有帮助，请考虑请我喝杯咖啡，这将会让我更有动力继续开发下去。",
+      "report_issue": "回报问题",
+      "special_thanks": "特别感谢"
+    },
+    "translate": {
+      "next": "下一步",
+      "back": "返回",
+      "language": "语言",
+      "target": "目标语言",
+      "target_description": "英文，繁体中文，日本语，等等。",
+      "additional": "附加注记",
+      "additional_description": "例如：这是一部星际大战电影。",
+      "file": "档案",
+      "file_description": "拖入字幕档案，或点击此处选择档案。",
+      "subtitleFilter": {
+        "all": "所有",
+        "translated": "已翻译",
+        "not_translated": "未翻译"
+      },
+      "failed_to_translate": "无法翻译该行字幕：{{text}}",
+      "tokens": "词元",
+      "input": "输入",
+      "output": "输出",
+      "USD": "美金",
+      "start": "开始翻译",
+      "reset": "重设",
+      "save": "储存",
+      "translation_completed": "翻译完成",
+      "no_api_key": "请先设定 API 密钥",
+      "exceeded": "API 额度已用罄"
+    }
+  }
+}
