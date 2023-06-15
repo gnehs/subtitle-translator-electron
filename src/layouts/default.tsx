@@ -2,6 +2,8 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "usehooks-ts";
 import { useEffect } from "react";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 function NavItem({ to, icon }: { to: string; icon: string }) {
   const isActive = useLocation().pathname === to;
   return (
@@ -36,6 +38,7 @@ function DefaultLayout() {
       <main className="flex-1 h-[100vh] overflow-scroll">
         <Outlet />
       </main>
+      <ToastContainer position="bottom-center" newestOnTop />
     </div>
   );
 }

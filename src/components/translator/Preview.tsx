@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { useTranslate, useAPIKeys } from "@/hooks/useOpenAI";
 import { parseSync, stringifySync } from "subtitle";
 import { useLocalStorage } from "usehooks-ts";
+import { toast } from "react-toastify";
 //@ts-ignore
 import assParser from "ass-parser";
 //@ts-ignore
@@ -200,7 +201,7 @@ export default function File() {
       if (retryTimes < 3) {
         await startTranslation(retryTimes + 1);
       } else {
-        console.error("Retry failed");
+        toast.error("Retry failed");
         alert("Retry failed");
       }
     }
