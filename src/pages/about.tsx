@@ -2,7 +2,6 @@ import Header from "@/components/Header";
 import Button from "@/components/Button";
 import { useVersion } from "@/hooks/useVersion";
 import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
 import icon from "@/assets/icon.png";
 import BuyMeACoffee from "@/components/BuyMeACoffee";
 export default function About() {
