@@ -1,5 +1,5 @@
 import { useState } from "react";
 export const useVersion = () => {
-  const [version, setVersion] = useState<string>("1.0.1");
+  const [version, setVersion] = useState<string>("0.0.0");
   return version;
 };
