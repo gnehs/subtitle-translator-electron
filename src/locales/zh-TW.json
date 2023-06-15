@@ -83,7 +83,8 @@
       "reset": "重設",
       "save": "儲存",
       "translation_completed": "翻譯完成",
-      "no_api_key": "請先設定 API 金鑰"
+      "no_api_key": "請先設定 API 金鑰",
+      "exceeded": "API 額度已用罄"
     }
   }
 }
