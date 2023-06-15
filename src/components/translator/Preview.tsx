@@ -71,7 +71,7 @@ export default function File() {
   const [progress, setProgress] = useState<number>(0);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [model] = useModel();
-  const translate = useTranslate();
+  const { translateSubtitleChunk } = useTranslate();
   const { t } = useTranslation();
   useEffect(() => {
     async function loadFile() {
@@ -124,9 +124,12 @@ export default function File() {
     }
     return chunks;
   }
-  async function startTranslation() {
+  async function startTranslation(retryTimes: number = 0) {
     let subtitle = parsedSubtitle.filter((line) => line.type === "cue");
-    let chunks = splitIntoChunk(subtitle, 16);
+    if (retryTimes > 0) {
+      subtitle.sort(() => Math.random() - 0.5);
+    }
+    let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 10 + 5));
     console.log(`Splited into ${chunks.length} chunks`);
     function updateCost(res: any) {
       let inputToken = res.data?.usage?.prompt_tokens!;
@@ -147,11 +150,12 @@ export default function File() {
       );
     }
     async function translateChunk(block: any[], retryTimes = 0) {
+      if (block.length === 0) return;
+      if (block.every((line) => line.data.translatedText)) return;
+      let text = block.map((line) => line.data.text);
+      let res;
       try {
-        if (block.length === 0) return;
-        if (block.every((line) => line.data.translatedText)) return;
-        let text = block.map((line) => line.data.text);
-        let res = await translate(text);
+        res = await translateSubtitleChunk(text);
         updateCost(res);
         let { result: translatedText } = JSON.parse(
           res.data.choices[0].message?.function_call?.arguments!
@@ -172,23 +176,16 @@ export default function File() {
             100
         );
       } catch (e) {
-        console.groupCollapsed(`Retry ${retryTimes} times`);
+        console.groupCollapsed(
+          //@ts-ignore
+          e?.response?.data?.error?.message || e.toString()
+        );
+        console.log(text);
+        console.log(res);
         console.error(e);
         //@ts-ignore
         console.error(e?.response);
         console.groupEnd();
-        if (retryTimes < 4) {
-          const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-          await sleep((1000 * retryTimes) ^ 2);
-          let by = Math.max(Math.round((4 - retryTimes) ^ 2), 1);
-          for (let b of splitIntoChunk(block, by)) {
-            console.log(`split into ${by} blocks`);
-            await translateChunk(b, retryTimes + 1);
-          }
-        } else {
-          // @ts-ignore
-          alert(e?.response?.data?.error?.message || e.toString());
-        }
       }
     }
     setIsTranslating(true);
@@ -197,6 +194,14 @@ export default function File() {
       chunks,
       async (x: any) => await translateChunk(x, 0)
     );
+    if (parsedSubtitle.filter((line) => !line.data.translatedText).length > 0) {
+      if (retryTimes < 3) {
+        await startTranslation(retryTimes + 1);
+      } else {
+        console.error("Retry failed");
+        alert("Retry failed");
+      }
+    }
     setIsTranslating(false);
   }
   function downloadSubtitle() {
@@ -276,6 +281,16 @@ export default function File() {
         animate={{ opacity: 1 }}
         className="backdrop-blur-md bg-slate-100 bg-opacity-50 fixed w-[51px] h-full top-0 left-0 flex flex-col"
       >
+        {isTranslating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex justify-center items-center p-2"
+          >
+            <i className="bx bx-loader-alt animate-spin text-3xl"></i>
+          </motion.div>
+        )}
         <div className="flex-1" />
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           xx:xx
@@ -328,9 +343,15 @@ export default function File() {
             </>
           )}
           <div className="flex-1" />
-          <Button onClick={() => startTranslation()}>Start</Button>
-          {progress > 0 && (
-            <Button onClick={() => downloadSubtitle()}>Save</Button>
+          {!isTranslating && progress < 100 && (
+            <Button onClick={() => startTranslation()} variant="primary">
+              Start
+            </Button>
+          )}
+          {!isTranslating && progress > 0 && (
+            <Button onClick={() => downloadSubtitle()} variant="primary">
+              Save
+            </Button>
           )}
         </div>
       </div>
