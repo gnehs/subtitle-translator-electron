@@ -458,18 +458,18 @@ export default function File() {
             ))}
           <div
             className={`${
-              !isTranslating && progress >= 100 ? `mt-[178px]` : `mt-16`
+              !isTranslating && progress >= 100 ? `mt-[160px]` : `mt-16`
             } w-full`}
           />
         </div>
         <div
           className={`${
             !isTranslating && progress >= 100 ? `h-[200px]` : `h-16`
-          } w-[calc(100%-52px)] ml-[52px] absolute bottom-0 left-0 bg-opacity-40 backdrop-blur-xl bg-white`}
+          } w-[calc(100%-52px)] ml-[52px] absolute bottom-0 left-0 bg-opacity-40 backdrop-blur-xl bg-white select-none pointer-events-none`}
           style={{
             WebkitMask:
               !isTranslating && progress >= 100
-                ? `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 30%)`
+                ? `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 45%)`
                 : `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)`,
           }}
         ></div>
