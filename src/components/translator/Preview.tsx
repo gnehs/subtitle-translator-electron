@@ -155,7 +155,9 @@ export default function File() {
   }, [file]);
   useEffect(() => {
     if (progress >= 100) {
-      alert(t("translate.translation_completed"));
+      setTimeout(() => {
+        alert(t("translate.translation_completed"));
+      }, 100);
     }
   }, [progress]);
   function splitIntoChunk(array: any, by = 5) {
