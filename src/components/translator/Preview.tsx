@@ -64,7 +64,9 @@ export default function File() {
   const [assTemp, setAssTemp] = useState<any[]>([]);
 
   const [multiLangSave] = useLocalStorage("multi_language_save", "none");
-
+  const [subtitleFilter, setSubtitleFilter] = useState<
+    "all" | "translated" | "not_translated"
+  >("all");
   const [usedInputTokens, setUsedInputTokens] = useState<number>(0);
   const [usedOutputTokens, setUsedOutputTokens] = useState<number>(0);
   const [usedDollars, setUsedDollars] = useState<number>(0);
@@ -281,16 +283,38 @@ export default function File() {
         animate={{ opacity: 1 }}
         className="backdrop-blur-md bg-slate-100 bg-opacity-50 fixed w-[51px] h-full top-0 left-0 flex flex-col"
       >
-        {isTranslating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex justify-center items-center p-2"
-          >
-            <i className="bx bx-loader-alt animate-spin text-3xl"></i>
-          </motion.div>
-        )}
+        <div
+          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
+            subtitleFilter === "all" ? "bg-slate-300" : "bg-slate-200 "
+          }`}
+          onClick={() => {
+            setSubtitleFilter("all");
+          }}
+        >
+          All
+        </div>
+        <div
+          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
+            subtitleFilter === "not_translated"
+              ? "bg-slate-300"
+              : "bg-slate-200 "
+          }`}
+          onClick={() => {
+            setSubtitleFilter("not_translated");
+          }}
+        >
+          Remain
+        </div>
+        <div
+          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
+            subtitleFilter === "translated" ? "bg-slate-300" : "bg-slate-200 "
+          }`}
+          onClick={() => {
+            setSubtitleFilter("translated");
+          }}
+        >
+          Done
+        </div>
         <div className="flex-1" />
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           xx:xx
@@ -322,18 +346,42 @@ export default function File() {
           <span className="opacity-50 text-xs">%</span>
         </div>
       </motion.div>
+      {isTranslating && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, height: 0 }}
+          className="flex justify-center items-center p-2 absolute top-1.5 right-1.5 rounded-md bg-slate-200 bg-opacity-50 w-10 h-10 backdrop-blur z-10"
+        >
+          <i className="bx bx-loader-alt animate-spin text-2xl"></i>
+        </motion.div>
+      )}
       <div className="flex flex-col w-full h-full">
         <div className="flex-1 overflow-y-scroll h-full flex flex-col gap-1 p-1">
-          {parsedSubtitle.map((x, i) => (
-            <SubtitlePreview
-              subtitle={x}
-              index={i}
-              parsedSubtitle={parsedSubtitle}
-              setParsedSubtitle={setParsedSubtitle}
-              key={i}
-            />
-          ))}
+          {parsedSubtitle
+            .filter((x) => {
+              switch (subtitleFilter) {
+                case "all":
+                  return true;
+                case "not_translated":
+                  return !x.data.translatedText;
+                case "translated":
+                  return x.data.translatedText;
+                default:
+                  return true;
+              }
+            })
+            .map((x, i) => (
+              <SubtitlePreview
+                subtitle={x}
+                index={i}
+                parsedSubtitle={parsedSubtitle}
+                setParsedSubtitle={setParsedSubtitle}
+                key={i}
+              />
+            ))}
         </div>
+
         <div className="flex items-center gap-2 p-2">
           {!isTranslating && (
             <>
