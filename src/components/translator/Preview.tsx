@@ -153,6 +153,11 @@ export default function File() {
     }
     loadFile();
   }, [file]);
+  useEffect(() => {
+    if (progress >= 100) {
+      alert(t("translate.translation_completed"));
+    }
+  }, [progress]);
   function splitIntoChunk(array: any, by = 5) {
     let chunks = [];
     let chunk = [];

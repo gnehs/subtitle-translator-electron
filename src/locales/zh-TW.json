@@ -81,7 +81,8 @@
       "USD": "美金",
       "start": "開始翻譯",
       "reset": "重設",
-      "save": "儲存"
+      "save": "儲存",
+      "translation_completed": "翻譯完成"
     }
   }
 }

@@ -81,7 +81,8 @@
       "USD": "USD",
       "start": "Start",
       "reset": "Reset",
-      "save": "Save"
+      "save": "Save",
+      "translation_completed": "Translation completed"
     }
   }
 }
