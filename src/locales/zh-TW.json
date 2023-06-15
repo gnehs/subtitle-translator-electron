@@ -68,7 +68,20 @@
       "additional": "附加註記",
       "additional_description": "例如：這是一部星際大戰電影。",
       "file": "檔案",
-      "file_description": "拖入字幕檔案，或點擊此處選擇檔案。"
+      "file_description": "拖入字幕檔案，或點擊此處選擇檔案。",
+      "subtitleFilter": {
+        "all": "所有",
+        "translated": "已翻譯",
+        "not_translated": "未翻譯"
+      },
+      "failed_to_translate": "無法翻譯該行字幕：{{text}}",
+      "tokens": "詞元",
+      "input": "輸入",
+      "output": "輸出",
+      "USD": "美金",
+      "start": "開始翻譯",
+      "reset": "重設",
+      "save": "儲存"
     }
   }
 }

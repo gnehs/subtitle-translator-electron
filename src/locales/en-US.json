@@ -68,7 +68,20 @@
       "additional": "Additional notes",
       "additional_placeholder": "e.g. This is a Star Wars movie.",
       "file": "File",
-      "file_description": "Drag and drop the subtitle file or click here to choose a file."
+      "file_description": "Drag and drop the subtitle file or click here to choose a file.",
+      "subtitleFilter": {
+        "all": "All",
+        "translated": "Done",
+        "not_translated": "Remain"
+      },
+      "failed_to_translate": "Failed to translate line: {{text}}",
+      "tokens": "tokens",
+      "input": "input",
+      "output": "output",
+      "USD": "USD",
+      "start": "Start",
+      "reset": "Reset",
+      "save": "Save"
     }
   }
 }

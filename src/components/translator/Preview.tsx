@@ -67,6 +67,36 @@ function SubtitlePreview({
     </div>
   );
 }
+function SubtitleFilterItem({
+  subtitleFilter,
+  setSubtitleFilter,
+  value,
+}: {
+  subtitleFilter: "all" | "translated" | "not_translated";
+  setSubtitleFilter: any;
+  value: "all" | "translated" | "not_translated";
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer relative transition-colors ${
+        subtitleFilter === value ? " text-white" : "hover:bg-slate-200"
+      }`}
+      onClick={() => {
+        setSubtitleFilter(value);
+      }}
+    >
+      {subtitleFilter === value && (
+        <motion.div
+          layout
+          layoutId="subtitleFilter"
+          className="absolute top-0 right-0 w-full h-full bg-slate-500 rounded-sm"
+        />
+      )}
+      <div className="relative">{t(`translate.subtitleFilter.${value}`)}</div>
+    </div>
+  );
+}
 export default function File() {
   const [step, nextStep, previousStep] = useStep();
   const [keys] = useAPIKeys();
@@ -92,7 +122,6 @@ export default function File() {
   useEffect(() => {
     async function loadFile() {
       if (file?.path) {
-        console.log(file);
         const fileContent = fs
           .readFileSync(file.path, { encoding: `utf-8` })
           .toString();
@@ -212,7 +241,7 @@ export default function File() {
       );
       line.data.translatedText = translatedText;
     } catch (e) {
-      toast.error(`Failed to translate line: ${line.data.text}`);
+      toast.error(t("translate.failed_to_translate", { text: line.data.text }));
       console.error(e);
     }
   }
@@ -293,81 +322,40 @@ export default function File() {
         animate={{ opacity: 1 }}
         className="backdrop-blur-md bg-slate-100 bg-opacity-50 fixed w-[51px] h-full top-0 left-0 flex flex-col"
       >
-        <div
-          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer relative ${
-            subtitleFilter === "all" ? " text-white" : "hover:bg-slate-200"
-          }`}
-          onClick={() => {
-            setSubtitleFilter("all");
-          }}
-        >
-          {subtitleFilter === "all" && (
-            <motion.div
-              layout
-              layoutId="subtitleFilter"
-              className="absolute top-0 right-0 w-full h-full bg-slate-500 rounded-sm"
-            />
-          )}
-          <div className="relative">All</div>
-        </div>
-        <div
-          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer relative ${
-            subtitleFilter === "not_translated"
-              ? "text-white"
-              : "hover:bg-slate-200"
-          }`}
-          onClick={() => {
-            setSubtitleFilter("not_translated");
-          }}
-        >
-          {subtitleFilter === "not_translated" && (
-            <motion.div
-              layout
-              layoutId="subtitleFilter"
-              className="absolute top-0 right-0 w-full h-full bg-slate-500 rounded-sm"
-            />
-          )}
-          <div className="relative">Remain</div>
-        </div>
-        <div
-          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer relative ${
-            subtitleFilter === "translated"
-              ? "text-white"
-              : "hover:bg-slate-200"
-          }`}
-          onClick={() => {
-            setSubtitleFilter("translated");
-          }}
-        >
-          {" "}
-          {subtitleFilter === "translated" && (
-            <motion.div
-              layout
-              layoutId="subtitleFilter"
-              className="absolute top-0 right-0 w-full h-full bg-slate-500 rounded-sm"
-            />
-          )}
-          <div className="relative">Done</div>
-        </div>
+        <SubtitleFilterItem
+          subtitleFilter={subtitleFilter}
+          setSubtitleFilter={setSubtitleFilter}
+          value="all"
+        />
+        <SubtitleFilterItem
+          subtitleFilter={subtitleFilter}
+          setSubtitleFilter={setSubtitleFilter}
+          value="not_translated"
+        />
+        <SubtitleFilterItem
+          subtitleFilter={subtitleFilter}
+          setSubtitleFilter={setSubtitleFilter}
+          value="translated"
+        />
         <div className="flex-1" />
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
-          <span className="opacity-50 text-xs">tokens</span>
+          <span className="opacity-50 text-xs">{t(`translate.tokens`)}</span>
           <br />
           {usedOutputTokens.toLocaleString()}
           <br />
-          <span className="opacity-50 text-xs">output</span>
+          <span className="opacity-50 text-xs">{t(`translate.output`)}</span>
         </div>
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
-          <span className="opacity-50 text-xs">tokens</span>
+          <span className="opacity-50 text-xs">{t(`translate.tokens`)}</span>
           <br />
           {usedInputTokens.toLocaleString()}
           <br />
-          <span className="opacity-50 text-xs">input</span>
+          <span className="opacity-50 text-xs">{t(`translate.input`)}</span>
         </div>
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           {usedDollars.toFixed(2)}
           <br />
-          <span className="opacity-50 text-xs">USD</span>
+          <span className="opacity-50 text-xs">{t(`translate.USD`)}</span>
         </div>
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           {progress.toFixed(1)}
@@ -386,8 +374,9 @@ export default function File() {
         </motion.div>
       )}
       <div className="flex flex-col w-full h-full">
-        <div className="flex-1 overflow-y-scroll h-full flex flex-col gap-1 p-1">
+        <div className="flex-1 overflow-y-scroll h-full flex flex-col gap-1 p-1 group">
           {parsedSubtitle
+            .map((x, i) => ({ index: i, ...x }))
             .filter((x) => {
               switch (subtitleFilter) {
                 case "all":
@@ -400,17 +389,17 @@ export default function File() {
                   return true;
               }
             })
-            .map((x, i) => (
+            .map((x) => (
               <SubtitlePreview
                 subtitle={x}
-                index={i}
+                index={x.index}
                 parsedSubtitle={parsedSubtitle}
                 setParsedSubtitle={setParsedSubtitle}
                 translateSingle={translateSingle}
-                key={i}
+                key={x.index}
               />
             ))}
-          <div className="mt-16 w-full"></div>
+          <div className="mt-16 w-full"> </div>
         </div>
         <div
           className="h-16 w-[calc(100%-52px)] ml-[52px] absolute bottom-0 left-0 bg-opacity-40 backdrop-blur-xl bg-white"
@@ -441,12 +430,12 @@ export default function File() {
               variant="primary"
               icon="bx-play"
             >
-              Start
+              {t(`translate.start`)}
             </Button>
           )}
           {!isTranslating && progress >= 100 && (
             <Button onClick={() => location.reload()} icon="bx-refresh">
-              Reset
+              {t(`translate.reset`)}
             </Button>
           )}
           {!isTranslating && progress >= 100 && (
@@ -455,7 +444,7 @@ export default function File() {
               variant="primary"
               icon="bx-save"
             >
-              Save
+              {t(`translate.save`)}
             </Button>
           )}
         </div>
