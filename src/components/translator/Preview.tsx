@@ -285,40 +285,60 @@ export default function File() {
         className="backdrop-blur-md bg-slate-100 bg-opacity-50 fixed w-[51px] h-full top-0 left-0 flex flex-col"
       >
         <div
-          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
-            subtitleFilter === "all"
-              ? "bg-slate-500 text-white"
-              : "bg-slate-200"
+          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer relative ${
+            subtitleFilter === "all" ? " text-white" : "hover:bg-slate-200"
           }`}
           onClick={() => {
             setSubtitleFilter("all");
           }}
         >
-          All
+          {subtitleFilter === "all" && (
+            <motion.div
+              layout
+              layoutId="subtitleFilter"
+              className="absolute top-0 right-0 w-full h-full bg-slate-500 rounded-sm"
+            />
+          )}
+          <div className="relative">All</div>
         </div>
         <div
-          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
+          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer relative ${
             subtitleFilter === "not_translated"
-              ? "bg-slate-500 text-white"
-              : "bg-slate-200"
+              ? "text-white"
+              : "hover:bg-slate-200"
           }`}
           onClick={() => {
             setSubtitleFilter("not_translated");
           }}
         >
-          Remain
+          {subtitleFilter === "not_translated" && (
+            <motion.div
+              layout
+              layoutId="subtitleFilter"
+              className="absolute top-0 right-0 w-full h-full bg-slate-500 rounded-sm"
+            />
+          )}
+          <div className="relative">Remain</div>
         </div>
         <div
-          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer ${
+          className={`text-center m-0.5 text-xs px-0.5 py-3 rounded-sm cursor-pointer relative ${
             subtitleFilter === "translated"
-              ? "bg-slate-500 text-white"
-              : "bg-slate-200"
+              ? "text-white"
+              : "hover:bg-slate-200"
           }`}
           onClick={() => {
             setSubtitleFilter("translated");
           }}
         >
-          Done
+          {" "}
+          {subtitleFilter === "translated" && (
+            <motion.div
+              layout
+              layoutId="subtitleFilter"
+              className="absolute top-0 right-0 w-full h-full bg-slate-500 rounded-sm"
+            />
+          )}
+          <div className="relative">Done</div>
         </div>
         <div className="flex-1" />
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
