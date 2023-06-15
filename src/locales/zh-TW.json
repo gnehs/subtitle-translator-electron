@@ -82,7 +82,8 @@
       "start": "開始翻譯",
       "reset": "重設",
       "save": "儲存",
-      "translation_completed": "翻譯完成"
+      "translation_completed": "翻譯完成",
+      "no_api_key": "請先設定 API 金鑰"
     }
   }
 }
