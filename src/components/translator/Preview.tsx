@@ -374,7 +374,7 @@ export default function File() {
       <motion.div
         initial={{ opacity: 0, x: 10 }}
         animate={{ opacity: 1, x: 0 }}
-        className="backdrop-blur-md bg-slate-100 bg-opacity-50 fixed w-[51px] h-full top-0 left-0 flex flex-col"
+        className="backdrop-blur-md bg-slate-100 bg-opacity-80 fixed w-[51px] h-full top-0 left-0 flex flex-col"
       >
         <SubtitleFilterItem
           subtitleFilter={subtitleFilter}
@@ -467,13 +467,9 @@ export default function File() {
             !isTranslating && progress >= 100 ? `h-[200px]` : `h-16`
           } w-[calc(100%-52px)] ml-[52px] absolute bottom-0 left-0 bg-opacity-40 backdrop-blur-xl bg-white`}
           style={{
-            mask:
-              !isTranslating && progress >= 100
-                ? `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 20%)`
-                : `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)`,
             WebkitMask:
               !isTranslating && progress >= 100
-                ? `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 20%)`
+                ? `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 30%)`
                 : `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)`,
           }}
         ></div>
@@ -481,7 +477,7 @@ export default function File() {
           <div className="flex items-center gap-2 px-2 py-1 w-full">
             {!isTranslating && progress <= 0 && (
               <>
-                <Button onClick={() => previousStep()}>
+                <Button onClick={() => previousStep()} className="shadow">
                   {t(`translate.back`)}
                 </Button>
               </>
@@ -503,12 +499,17 @@ export default function File() {
                 onClick={() => startTranslation()}
                 variant="primary"
                 icon="bx-play"
+                className="shadow"
               >
                 {t(`translate.start`)}
               </Button>
             )}
             {!isTranslating && progress >= 100 && (
-              <Button onClick={() => location.reload()} icon="bx-refresh">
+              <Button
+                onClick={() => location.reload()}
+                icon="bx-refresh"
+                className="shadow"
+              >
                 {t(`translate.reset`)}
               </Button>
             )}
@@ -517,6 +518,7 @@ export default function File() {
                 onClick={() => downloadSubtitle()}
                 variant={progress >= 100 ? `primary` : ``}
                 icon="bx-save"
+                className="shadow"
               >
                 {t(`translate.save`)}
               </Button>
