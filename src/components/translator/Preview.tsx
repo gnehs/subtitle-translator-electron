@@ -38,7 +38,7 @@ function SubtitlePreview({
   translateSingle: any;
 }) {
   return (
-    <div className="flex items-center rounded-sm border border-slate-100 bg-slate-50">
+    <div className="flex items-center rounded-sm border border-slate-100 bg-slate-50 subtitle-preview__item">
       <div className="text-sm min-w-[3em] p-1 rounded-l-sm bg-slate-100 h-full flex items-center justify-center">
         {index + 1}
       </div>
@@ -208,6 +208,14 @@ export default function File() {
               parsedSubtitle.length) *
             100
         );
+        // scroll to item
+        let i = parsedSubtitle.findIndex((line) => line === block.at(-1));
+        let item = document.querySelector(
+          `#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`
+        );
+        if (item) {
+          item.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       } catch (e) {
         console.groupCollapsed(
           //@ts-ignore
@@ -396,7 +404,10 @@ export default function File() {
         </motion.div>
       )}
       <div className="flex flex-col w-full h-full">
-        <div className="flex-1 overflow-y-scroll h-full flex flex-col gap-1 p-1 group">
+        <div
+          className="flex-1 overflow-y-scroll h-full flex flex-col gap-1 p-1 group"
+          id="subtitle-preview"
+        >
           {parsedSubtitle
             .map((x, i) => ({ index: i, ...x }))
             .filter((x) => {
