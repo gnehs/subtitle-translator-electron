@@ -1,4 +1,5 @@
 import Button from "../Button";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import asyncPool from "tiny-async-pool";
@@ -455,58 +456,73 @@ export default function File() {
                 key={x.index}
               />
             ))}
-          <div className="mt-16 w-full"> </div>
+          <div
+            className={`${
+              !isTranslating && progress >= 100 ? `mt-[178px]` : `mt-16`
+            } w-full`}
+          />
         </div>
         <div
-          className="h-16 w-[calc(100%-52px)] ml-[52px] absolute bottom-0 left-0 bg-opacity-40 backdrop-blur-xl bg-white"
+          className={`${
+            !isTranslating && progress >= 100 ? `h-[200px]` : `h-16`
+          } w-[calc(100%-52px)] ml-[52px] absolute bottom-0 left-0 bg-opacity-40 backdrop-blur-xl bg-white`}
           style={{
-            mask: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)",
-            WebkitMask: `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)`,
+            mask:
+              !isTranslating && progress >= 100
+                ? `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 20%)`
+                : `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)`,
+            WebkitMask:
+              !isTranslating && progress >= 100
+                ? `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 20%)`
+                : `linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,1) 70%)`,
           }}
         ></div>
-        <div className="flex items-center gap-2 px-2 py-1 absolute bottom-0 left-0 w-[calc(100%-52px)] ml-[52px] ">
-          {!isTranslating && progress <= 0 && (
-            <>
-              <Button onClick={() => previousStep()}>
-                {t(`translate.back`)}
-              </Button>
-            </>
-          )}
-          {isTranslating ? (
-            <div className="flex-1 w-full h-2">
-              <div className="h-full bg-slate-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-slate-500"
-                  style={{ width: `${progress}%` }}
-                ></div>
+        <div className="absolute bottom-0 left-0 w-[calc(100%-52px)] ml-[52px]">
+          <div className="flex items-center gap-2 px-2 py-1 w-full">
+            {!isTranslating && progress <= 0 && (
+              <>
+                <Button onClick={() => previousStep()}>
+                  {t(`translate.back`)}
+                </Button>
+              </>
+            )}
+            {isTranslating ? (
+              <div className="flex-1 w-full h-2">
+                <div className="h-full bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-slate-500"
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex-1" />
-          )}
-          {!isTranslating && progress < 100 && (
-            <Button
-              onClick={() => startTranslation()}
-              variant="primary"
-              icon="bx-play"
-            >
-              {t(`translate.start`)}
-            </Button>
-          )}
-          {!isTranslating && progress >= 100 && (
-            <Button onClick={() => location.reload()} icon="bx-refresh">
-              {t(`translate.reset`)}
-            </Button>
-          )}
-          {!isTranslating && progress >= 90 && (
-            <Button
-              onClick={() => downloadSubtitle()}
-              variant={progress >= 100 ? `primary` : ``}
-              icon="bx-save"
-            >
-              {t(`translate.save`)}
-            </Button>
-          )}
+            ) : (
+              <div className="flex-1" />
+            )}
+            {!isTranslating && progress < 100 && (
+              <Button
+                onClick={() => startTranslation()}
+                variant="primary"
+                icon="bx-play"
+              >
+                {t(`translate.start`)}
+              </Button>
+            )}
+            {!isTranslating && progress >= 100 && (
+              <Button onClick={() => location.reload()} icon="bx-refresh">
+                {t(`translate.reset`)}
+              </Button>
+            )}
+            {!isTranslating && progress >= 90 && (
+              <Button
+                onClick={() => downloadSubtitle()}
+                variant={progress >= 100 ? `primary` : ``}
+                icon="bx-save"
+              >
+                {t(`translate.save`)}
+              </Button>
+            )}
+          </div>
+          {!isTranslating && progress >= 100 && <BuyMeACoffee />}
         </div>
       </div>
     </>
