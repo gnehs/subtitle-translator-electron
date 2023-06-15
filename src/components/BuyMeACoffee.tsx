@@ -4,8 +4,8 @@ export default function BuyMeACoffee() {
   const { t } = useTranslation();
   return (
     <motion.div
-      initial={{ y: 100, opacity: 0, height: 0 }}
-      animate={{ y: 0, opacity: 1, height: "auto" }}
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
       className=" bg-slate-100 border border-slate-200 bg-opacity-40 m-2 rounded"
     >
       <div className="px-4 py-3 flex gap-4 items-center">
