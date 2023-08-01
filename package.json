@@ -26,7 +26,7 @@
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.14",
     "electron": "^25.1.0",
-    "electron-builder": "^23.6.0",
+    "electron-builder": "^24.6.3",
     "postcss": "^8.4.24",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
