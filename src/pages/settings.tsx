@@ -16,7 +16,7 @@ export default function Settings() {
         <API />
         <Save />
         <Model />
-        {/* <Prompt /> */}
+        <Prompt />
         <Reset />
       </div>
     </>
