@@ -6,6 +6,7 @@ import asyncPool from "tiny-async-pool";
 import useStep from "@/hooks/useStep";
 import useFile from "@/hooks/useFile";
 import useModel from "@/hooks/useModel";
+import useDelay from "@/hooks/useDelay";
 import fs from "node:fs";
 import { motion } from "framer-motion";
 import { useTranslate, useAPIKeys } from "@/hooks/useOpenAI";
@@ -112,6 +113,7 @@ export default function File() {
   const [progress, setProgress] = useState<number>(0);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [model] = useModel();
+  const [delay] = useDelay();
   const {
     translateSubtitleChunk,
     translateSubtitleSingle,
@@ -187,6 +189,9 @@ export default function File() {
     async function translateChunk(block: any[], retryTimes = 0) {
       if (block.length === 0) return;
       if (block.every((line) => line.data.translatedText)) return;
+      // delay
+      await new Promise((resolve) => setTimeout(resolve, delay * 1000));
+
       let text = block.map((line) => line.data.text);
       let res;
       try {

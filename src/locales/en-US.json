@@ -18,6 +18,10 @@
         "description": "Translation performed using GPT-3 without sending context, resulting in lower cost but lower translation quality. Some sentences may require manual correction."
       }
     },
+    "delay": {
+      "title": "Delay",
+      "description": "The delay between each translation. This is used to prevent the API from being overloaded. The default value is 5 second."
+    },
     "api": {
       "title": "API & Host",
       "key": {
