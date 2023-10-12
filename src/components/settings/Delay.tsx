@@ -11,7 +11,7 @@ export default function Language() {
       <InputField
         label={""}
         type="number"
-        value={delay.toString()}
+        value={delay?.toString() || ""}
         onChange={(e: any) => setDelay(e.target.valueAsNumber)}
       />
       <div className="text-sm opacity-80">{t(`delay.description`)}</div>
