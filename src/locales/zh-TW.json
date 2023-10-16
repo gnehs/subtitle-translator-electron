@@ -49,7 +49,7 @@
         "name": "雙語字幕",
         "description": "請選擇是否同時儲存原文與翻譯文本。",
         "options": {
-          "none": "僅儲存原文字幕",
+          "none": "僅儲存翻譯字幕",
           "translate+original": "翻譯字幕+原文字幕",
           "original+translate": "原文字幕+翻譯字幕"
         }

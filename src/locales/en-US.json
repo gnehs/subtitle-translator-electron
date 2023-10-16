@@ -44,7 +44,7 @@
         "name": "Bilingual Subtitles",
         "description": "Please select whether to save the original text and the translated text simultaneously.",
         "options": {
-          "none": "Original Only",
+          "none": "Translated Only",
           "translate+original": "Translated + Original",
           "original+translate": "Original + Translated"
         }
