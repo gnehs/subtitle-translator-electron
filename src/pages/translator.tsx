@@ -2,8 +2,6 @@ import Header from "@/components/Header";
 import File from "@/components/translator/File";
 import Lang from "@/components/translator/Lang";
 import Preview from "@/components/translator/Preview";
-
-import useStep from "@/hooks/useStep";
 export default function Translator() {
   return (
     <div className="flex flex-col h-full">

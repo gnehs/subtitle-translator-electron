@@ -8,7 +8,7 @@ import Reset from "@/components/settings/Reset";
 import Delay from "@/components/settings/Delay";
 import { useTranslation } from "react-i18next";
 export default function Settings() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   return (
     <>
       <Header>{t(`settings`)}</Header>
