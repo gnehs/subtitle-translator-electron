@@ -1,4 +1,4 @@
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 import { useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
 import usePrompt from "./usePrompt";
@@ -34,11 +34,13 @@ export function useTranslate() {
   }
 
   //@ts-ignore
-  let openAIInstance = [] as OpenAIApi[];
+  let openAIInstance = [] as Array<OpenAI>;
   for (let apiKey of apiKeys) {
-    let configuration = new Configuration({ apiKey, basePath: apiHost });
-    delete configuration.baseOptions.headers["User-Agent"];
-    let openai = new OpenAIApi(configuration);
+    let openai = new OpenAI({
+      apiKey,
+      baseURL: apiHost,
+      dangerouslyAllowBrowser: true,
+    });
     openAIInstance.push(openai);
   }
 
@@ -58,7 +60,7 @@ export function useTranslate() {
         "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
         "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
       }[model]!;
-      let res = await ai.createChatCompletion({
+      let res = await ai.chat.completions.create({
         model: modelName,
         messages: [
           {
@@ -106,7 +108,7 @@ export function useTranslate() {
         "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
         "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
       }[model]!;
-      let res = await ai.createChatCompletion({
+      let res = await ai.chat.completions.create({
         model: modelName,
         messages: [
           {
