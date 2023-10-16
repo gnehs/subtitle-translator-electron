@@ -35,7 +35,7 @@
     },
     "prompt": {
       "title": "咒语",
-      "name": "编辑「{{name}}」的咒语",
+      "name": "编辑咒语",
       "description": "使用 ChatGPT 时所使用的咒语，你可以在此更改咒语，另外 <code>{{lang}}</code> 用于指定语言，<code>{{additional}}</code> 用于附加备注，上述字段将于翻译时自动带入内容，修改咒语时请务必保留这些字段。"
     },
     "reset": {

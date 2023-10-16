@@ -7,7 +7,7 @@ export function useTranslate() {
   const [apiKeys] = useAPIKeys();
   const [apiHost] = useAPIHost();
   const [model] = useModel();
-  const [prompt] = usePrompt(model);
+  const [prompt] = usePrompt();
   const [lang] = useLocalStorage("translate_lang", "");
   const [additional] = useLocalStorage("translate_additional", "");
 

@@ -1,14 +1,13 @@
 import { useLocalStorage } from "usehooks-ts";
-export default function usePrompt(name: string) {
-  let defaultPrompt = `Error`;
-  if (name === "gpt-4") {
-    defaultPrompt = `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Use setResult function to return the result. Target language: {{lang}}\nNote:{{additional}}`;
-  }
-  if (name === "gpt-3.5-turbo") {
-    defaultPrompt = `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Please transliterate the person's name into the local language. Use setResult function to return the result. Target language: {{lang}}\nNote:{{additional}}`;
-  }
-  if (name === "gpt-3.5-turbo-economy") {
-    defaultPrompt = `You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own.  Use setResult function to return the result. Target language: {{lang}}\nNote:{{additional}}`;
-  }
-  return useLocalStorage(`prompt_${name}`, defaultPrompt);
+export default function usePrompt() {
+  let defaultPrompt = `// You are a professional subtitle translator.
+// You will only receive subtitles and are only required to translate, no need for any replies.
+// Note: {{additional}}
+// 1. Parse the input subtitles
+// 2. Translate the input subtitles into {{lang}}
+// 3. Convert names into {{lang}}
+// 4. Paraphrase the translated subtitles into more fluent sentences
+// 5. Use the setResult method to output the translated subtitles as string[]`;
+
+  return useLocalStorage(`prompt`, defaultPrompt);
 }
