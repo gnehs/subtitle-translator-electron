@@ -158,6 +158,7 @@ export default function File() {
     if (progress >= 100) {
       setTimeout(() => {
         alert(t("translate.translation_completed"));
+        setIsTranslating(false);
       }, 500);
     }
   }, [progress]);
