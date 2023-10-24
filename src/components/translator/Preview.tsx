@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import asyncPool from "tiny-async-pool";
 import useStep from "@/hooks/useStep";
 import useFile from "@/hooks/useFile";
-import useModel from "@/hooks/useModel";
 import useDelay from "@/hooks/useDelay";
 import fs from "node:fs";
 import { motion } from "framer-motion";
@@ -112,7 +111,6 @@ export default function File() {
   >("all");
   const [progress, setProgress] = useState<number>(0);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
-  const [model] = useModel();
   const [delay] = useDelay();
   const {
     translateSubtitleChunk,
