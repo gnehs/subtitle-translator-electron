@@ -198,6 +198,13 @@ export default function File() {
         parsedSubtitle.filter((line) => !line.data.translatedText),
         (x: any) => translateSingle(x)
       );
+      if (
+        parsedSubtitle.filter((line) => !line.data.translatedText).length &&
+        retryTimes < 3
+      ) {
+        await startTranslation(retryTimes + 1);
+      }
+      console.log(`Translated ${parsedSubtitle.length} lines`);
       setIsTranslating(false);
     }
   }
@@ -292,7 +299,7 @@ export default function File() {
     }
     setIsTranslating(false);
   }
-  async function translateSingle(line: any) {
+  async function translateSingle(line: any, retryTimes: number = 0) {
     try {
       let res = await translateSubtitleSingle(line.data.text);
       let toolCalls = res.choices[0].message.tool_calls;
@@ -301,14 +308,21 @@ export default function File() {
       try {
         translatedText = JSON.parse(argsString).result;
       } catch (e) {
-        console.error(e);
         if (!argsString.includes("result")) {
           translatedText = argsString;
+        } else {
+          if (retryTimes < 3) {
+            console.log(`Retry ${retryTimes + 1}`, line.data.text);
+            await translateSingle(line, retryTimes + 1);
+          } else {
+            console.error(e);
+            throw new Error("Failed to translate");
+          }
         }
       }
       line.data.translatedText = translatedText;
       setProgress(
-        (progress) =>
+        () =>
           (parsedSubtitle
             .map((line) => line.data.translatedText)
             .filter((x) => x).length /
