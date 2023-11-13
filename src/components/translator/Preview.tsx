@@ -295,12 +295,17 @@ export default function File() {
   async function translateSingle(line: any) {
     try {
       let res = await translateSubtitleSingle(line.data.text);
+      let toolCalls = res.choices[0].message.tool_calls;
+      let argsString: string = toolCalls?.[0].function.arguments || "";
       let translatedText;
       try {
-        translatedText = JSON.parse(
-          res.choices[0].message?.tool_calls?.[0].function?.arguments!
-        ).result;
-      } catch (e) {}
+        translatedText = JSON.parse(argsString).result;
+      } catch (e) {
+        console.error(e);
+        if (!argsString.includes("result")) {
+          translatedText = argsString;
+        }
+      }
       line.data.translatedText = translatedText;
       setProgress(
         (progress) =>
