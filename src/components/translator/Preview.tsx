@@ -180,7 +180,7 @@ export default function File() {
   }
   async function startTranslation(retryTimes: number = 0) {
     // Check token
-    if (keys.length === 0) {
+    if (keys.length === 0 || keys.some((x) => x.length < 1)) {
       alert(t("translate.no_api_key"));
       return;
     }
