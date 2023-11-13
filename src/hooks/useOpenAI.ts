@@ -40,6 +40,7 @@ export function useTranslate() {
       apiKey,
       baseURL: apiHost,
       dangerouslyAllowBrowser: true,
+      timeout: 30 * 1000,
     });
     openAIInstance.push(openai);
   }
