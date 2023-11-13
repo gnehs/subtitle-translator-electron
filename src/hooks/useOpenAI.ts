@@ -16,12 +16,12 @@ export function useTranslate() {
   const [usedDollars, setUsedDollars] = useState<number>(0);
   function updateCost(res: any) {
     let inputToken = res?.usage?.prompt_tokens!;
-    let inputCost = 0.0015;
+    let inputCost = 0.001;
     let outputToken = res?.usage?.completion_tokens!;
     let outputCost = 0.002;
     if (model === "gpt-4") {
-      inputCost = 0.03;
-      outputCost = 0.06;
+      inputCost = 0.01;
+      outputCost = 0.03;
     }
     setUsedInputTokens((usedInputTokens) => usedInputTokens + inputToken);
     setUsedOutputTokens((usedOutputTokens) => usedOutputTokens + outputToken);
