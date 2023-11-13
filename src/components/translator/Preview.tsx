@@ -411,14 +411,18 @@ export default function File() {
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           <span className="opacity-50 text-xs">{t(`translate.tokens`)}</span>
           <br />
-          {usedOutputTokens.toLocaleString()}
+          {usedOutputTokens < 100000
+            ? usedOutputTokens.toLocaleString()
+            : (usedOutputTokens / 1000).toFixed(1) + "k"}
           <br />
           <span className="opacity-50 text-xs">{t(`translate.output`)}</span>
         </div>
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           <span className="opacity-50 text-xs">{t(`translate.tokens`)}</span>
           <br />
-          {usedInputTokens.toLocaleString()}
+          {usedInputTokens < 100000
+            ? usedInputTokens.toLocaleString()
+            : (usedInputTokens / 1000).toFixed(1) + "k"}
           <br />
           <span className="opacity-50 text-xs">{t(`translate.input`)}</span>
         </div>
