@@ -179,6 +179,13 @@ export default function File() {
     return chunks;
   }
   async function startTranslation(retryTimes: number = 0) {
+    // Check token
+    if (keys.length === 0) {
+      alert(t("translate.no_api_key"));
+      return;
+    }
+
+    // Start translation
     let subtitle = parsedSubtitle.filter((line) => line.type === "cue");
     if (retryTimes > 0) {
       subtitle.sort(() => Math.random() - 0.5);
