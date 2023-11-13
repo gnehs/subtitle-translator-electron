@@ -53,8 +53,8 @@ export function useTranslate() {
       let ai =
         openAIInstance[Math.floor(Math.random() * openAIInstance.length)];
       let presedPrompt = prompt
-        .replace("{{lang}}", lang)
-        .replace("{{additional}}", additional);
+        .replaceAll("{{lang}}", lang)
+        .replaceAll("{{additional}}", additional);
       let modelName = {
         "gpt-4": "gpt-4-1106-preview",
         "gpt-3.5-turbo": "gpt-3.5-turbo-1106",
