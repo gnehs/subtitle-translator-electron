@@ -16,6 +16,7 @@ import { toast } from "react-toastify";
 import assParser from "ass-parser";
 //@ts-ignore
 import assStringify from "ass-stringify";
+import OpenAI from "openai";
 //@ts-ignore
 async function asyncPoolAll(...args) {
   const results = [];
@@ -239,15 +240,7 @@ export default function File() {
         //@ts-ignore
         console.error(e?.response);
         console.groupEnd();
-        //@ts-ignore
-        let msg = e?.response?.data?.error?.message;
-
-        if (msg.startsWith("You didn't provide an API key.")) {
-          throw new Error("No API key");
-        }
-        if (msg.startsWith("You have exceeded your")) {
-          throw new Error("Exceeded");
-        }
+        throw e;
       }
     }
     setIsTranslating(true);
@@ -256,19 +249,17 @@ export default function File() {
         translateChunk(x, 0)
       );
     } catch (e: any) {
-      console.log(e);
-      if (e.toString() === "Error: 401") {
+      if (e instanceof OpenAI.APIError) {
+        console.log(e.status); // 400
+        console.log(e.name); // BadRequestError
+        console.log(e.headers); // {server: 'nginx', ...}
         setIsTranslating(false);
-        alert(t("translate.no_api_key"));
-        location.reload();
-      } else if (e.toString() === "Error: 429") {
-        setIsTranslating(false);
-        alert(t("translate.exceeded"));
-        location.reload();
-      } else {
-        if (retryTimes >= 3) {
-          setIsTranslating(false);
-          alert(e.toString());
+        if (e.status === 429) {
+          alert(t("translate.exceeded"));
+          location.reload();
+        }
+        if (e.status === 401) {
+          alert(t("translate.no_api_key"));
           location.reload();
         }
       }
