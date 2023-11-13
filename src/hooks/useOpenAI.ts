@@ -56,9 +56,9 @@ export function useTranslate() {
         .replace("{{lang}}", lang)
         .replace("{{additional}}", additional);
       let modelName = {
-        "gpt-4": "gpt-4-0613",
-        "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
-        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
+        "gpt-4": "gpt-4-1106-preview",
+        "gpt-3.5-turbo": "gpt-3.5-turbo-1106",
+        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-1106",
       }[model]!;
       let res = await ai.chat.completions.create({
         model: modelName,
@@ -104,9 +104,9 @@ export function useTranslate() {
           .replace("{{lang}}", lang)
           .replace("{{additional}}", additional);
       let modelName = {
-        "gpt-4": "gpt-4-0613",
-        "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
-        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
+        "gpt-4": "gpt-4-1106-preview",
+        "gpt-3.5-turbo": "gpt-3.5-turbo-1106",
+        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-1106",
       }[model]!;
       let res = await ai.chat.completions.create({
         model: modelName,
