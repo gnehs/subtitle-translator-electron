@@ -195,9 +195,9 @@ export default function File() {
       let res;
       try {
         res = await translateSubtitleChunk(text);
-        let { result: translatedText } = JSON.parse(
-          res.choices[0].message?.function_call?.arguments!
-        );
+        let translatedText = JSON.parse(
+          res.choices[0].message?.tool_calls?.[0].function?.arguments!
+        ).result;
         if (translatedText.length !== text.length) {
           throw new Error("Translated text length not match");
         }
@@ -282,13 +282,9 @@ export default function File() {
       let translatedText;
       try {
         translatedText = JSON.parse(
-          res.choices[0].message?.function_call?.arguments!
+          res.choices[0].message?.tool_calls?.[0].function?.arguments!
         ).result;
-      } catch (e) {
-        translatedText =
-          res.choices[0].message?.function_call?.arguments ||
-          res.choices[0].message?.content;
-      }
+      } catch (e) {}
       line.data.translatedText = translatedText;
       setProgress(
         (progress) =>

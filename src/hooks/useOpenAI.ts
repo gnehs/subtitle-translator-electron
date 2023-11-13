@@ -62,6 +62,32 @@ export function useTranslate() {
       }[model]!;
       let res = await ai.chat.completions.create({
         model: modelName,
+        tool_choice: {
+          type: "function",
+          function: { name: "setResult" },
+        },
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "setResult",
+              description: "Sets the result of the translation",
+              parameters: {
+                type: "object",
+                properties: {
+                  result: {
+                    type: "array",
+                    description: "The translated subtitles",
+                    items: {
+                      type: "string",
+                    },
+                  },
+                },
+                required: ["result"],
+              },
+            },
+          },
+        ],
         messages: [
           {
             role: "system",
@@ -70,26 +96,6 @@ export function useTranslate() {
           {
             role: "user",
             content: JSON.stringify(subtitles),
-          },
-        ],
-        functions: [
-          {
-            name: "setResult",
-            description: "Sets the result of the translation",
-            parameters: {
-              type: "object",
-              properties: {
-                result: {
-                  type: "array",
-                  description: "The translated subtitles",
-                  items: {
-                    type: "string",
-                    description: "A subtitle",
-                  },
-                },
-              },
-              required: ["result"],
-            },
           },
         ],
       });
@@ -110,6 +116,32 @@ export function useTranslate() {
       }[model]!;
       let res = await ai.chat.completions.create({
         model: modelName,
+        tool_choice: {
+          type: "function",
+          function: { name: "setResult" },
+        },
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "setResult",
+              description: "Sets the result of the translation",
+              parameters: {
+                type: "object",
+                properties: {
+                  result: {
+                    type: "array",
+                    description: "The translated subtitles",
+                    items: {
+                      type: "string",
+                    },
+                  },
+                },
+                required: ["result"],
+              },
+            },
+          },
+        ],
         messages: [
           {
             role: "system",
@@ -118,22 +150,6 @@ export function useTranslate() {
           {
             role: "user",
             content: subtitle,
-          },
-        ],
-        functions: [
-          {
-            name: "setResult",
-            description: "Sets the result of the translation",
-            parameters: {
-              type: "object",
-              properties: {
-                result: {
-                  type: "string",
-                  description: "The translated subtitle",
-                },
-              },
-              required: ["result"],
-            },
           },
         ],
       });
