@@ -6,15 +6,19 @@
     "model": "模型",
     "models": {
       "gpt-4": {
-        "name": "进阶",
+        "name": "标准 GPT-4",
         "description": "使用 GPT-4 进行翻译，较为精准，但速度较慢且费用较高。"
       },
       "gpt-3.5-turbo": {
-        "name": "标准",
+        "name": "标准 GPT-3",
         "description": "使用 GPT-3 进行翻译，平衡价格与质量的好选择。"
       },
+      "gpt-4-economy": {
+        "name": "逐句 GPT-4",
+        "description": "使用 GPT-4 进行逐句翻译，不传送上下文，可能会导致翻译质量下降。"
+      },
       "gpt-3.5-turbo-economy": {
-        "name": "经济",
+        "name": "逐句 GPT-3",
         "description": "使用 GPT-3 进行翻译，不会发送前后文，因此费用最低，且翻译质量较差，可能会有大量需要人工修正的句子。"
       }
     },

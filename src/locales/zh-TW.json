@@ -6,15 +6,19 @@
     "model": "模型",
     "models": {
       "gpt-4": {
-        "name": "進階",
+        "name": "標準 GPT-4",
         "description": "使用 GPT-4 進行翻譯，較為精準，但速度較慢且費用較高。"
       },
       "gpt-3.5-turbo": {
-        "name": "標準",
+        "name": "標準 GPT-3",
         "description": "使用 GPT-3 進行翻譯，平衡價格與品質的好選擇。"
       },
+      "gpt-4-economy": {
+        "name": "逐句 GPT-4",
+        "description": "使用 GPT-4 進行逐句翻譯，不傳送上下文，可能會導致翻譯品質下降。"
+      },
       "gpt-3.5-turbo-economy": {
-        "name": "經濟",
+        "name": "逐句 GPT-3",
         "description": "使用 GPT-3 進行翻譯，不會發送前後文，因此費用最低，且翻譯品質較差，可能會有大量需要人工修正的句子。"
       }
     },

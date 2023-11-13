@@ -17,6 +17,7 @@ import assParser from "ass-parser";
 //@ts-ignore
 import assStringify from "ass-stringify";
 import OpenAI from "openai";
+import useModel from "@/hooks/useModel";
 //@ts-ignore
 async function asyncPoolAll(...args) {
   const results = [];
@@ -113,6 +114,7 @@ export default function File() {
   const [progress, setProgress] = useState<number>(0);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [delay] = useDelay();
+  const [model] = useModel();
   const {
     translateSubtitleChunk,
     translateSubtitleSingle,
@@ -187,13 +189,26 @@ export default function File() {
     }
 
     // Start translation
+    if ([`gpt-4`, `gpt-3.5-turbo`].includes(model)) {
+      await translateChunk();
+    } else {
+      setIsTranslating(true);
+      await asyncPoolAll(
+        keys.length * 15,
+        parsedSubtitle.filter((line) => !line.data.translatedText),
+        (x: any) => translateSingle(x)
+      );
+      setIsTranslating(false);
+    }
+  }
+  async function translateChunk(retryTimes: number = 0) {
     let subtitle = parsedSubtitle.filter((line) => line.type === "cue");
     if (retryTimes > 0) {
       subtitle.sort(() => Math.random() - 0.5);
     }
     let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 10 + 5));
     console.log(`Splited into ${chunks.length} chunks`);
-    async function translateChunk(block: any[], retryTimes = 0) {
+    async function translateSplitedChunk(block: any[], retryTimes = 0) {
       if (block.length === 0) return;
       if (block.every((line) => line.data.translatedText)) return;
       // delay
@@ -246,7 +261,7 @@ export default function File() {
     setIsTranslating(true);
     try {
       await asyncPoolAll(keys.length * 1.5, chunks, (x: any) =>
-        translateChunk(x, 0)
+        translateSplitedChunk(x, 0)
       );
     } catch (e: any) {
       if (e instanceof OpenAI.APIError) {
@@ -266,7 +281,7 @@ export default function File() {
     }
     if (parsedSubtitle.filter((line) => !line.data.translatedText).length > 0) {
       if (retryTimes < 3) {
-        await startTranslation(retryTimes + 1);
+        await translateChunk(retryTimes + 1);
       } else {
         for (let cue of parsedSubtitle.filter(
           (line) => !line.data.translatedText

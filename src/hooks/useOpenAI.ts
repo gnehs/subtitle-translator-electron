@@ -16,12 +16,12 @@ export function useTranslate() {
   const [usedDollars, setUsedDollars] = useState<number>(0);
   function updateCost(res: any) {
     let inputToken = res?.usage?.prompt_tokens!;
-    let inputCost = 0.001;
+    let inputCost = 0.0015;
     let outputToken = res?.usage?.completion_tokens!;
     let outputCost = 0.002;
     if (model === "gpt-4") {
-      inputCost = 0.01;
-      outputCost = 0.03;
+      inputCost = 0.03;
+      outputCost = 0.06;
     }
     setUsedInputTokens((usedInputTokens) => usedInputTokens + inputToken);
     setUsedOutputTokens((usedOutputTokens) => usedOutputTokens + outputToken);
@@ -56,9 +56,10 @@ export function useTranslate() {
         .replaceAll("{{lang}}", lang)
         .replaceAll("{{additional}}", additional);
       let modelName = {
-        "gpt-4": "gpt-4-1106-preview",
-        "gpt-3.5-turbo": "gpt-3.5-turbo-1106",
-        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-1106",
+        "gpt-4": "gpt-4-0613",
+        "gpt-4-economy": "gpt-4-0613",
+        "gpt-3.5-turbo": "gpt-3.5-turbo-instruct",
+        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-instruct",
       }[model]!;
       let res = await ai.chat.completions.create({
         model: modelName,
@@ -105,14 +106,14 @@ export function useTranslate() {
     translateSubtitleSingle: async function (subtitle: string) {
       let ai =
         openAIInstance[Math.floor(Math.random() * openAIInstance.length)];
-      let presedPrompt =
-        `prompt: You are a program responsible for translating subtitles. Your task is to output the specified target language based on the input text. Please do not create the following subtitles on your own. Use setResult function to return the result. Target language: {{lang}}\n\n{{additional}}`
-          .replace("{{lang}}", lang)
-          .replace("{{additional}}", additional);
+      let presedPrompt = prompt
+        .replaceAll("{{lang}}", lang)
+        .replaceAll("{{additional}}", additional);
       let modelName = {
-        "gpt-4": "gpt-4-1106-preview",
-        "gpt-3.5-turbo": "gpt-3.5-turbo-1106",
-        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-1106",
+        "gpt-4": "gpt-4-0613",
+        "gpt-4-economy": "gpt-4-0613",
+        "gpt-3.5-turbo": "gpt-3.5-turbo-instruct",
+        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-instruct",
       }[model]!;
       let res = await ai.chat.completions.create({
         model: modelName,
@@ -130,11 +131,8 @@ export function useTranslate() {
                 type: "object",
                 properties: {
                   result: {
-                    type: "array",
-                    description: "The translated subtitles",
-                    items: {
-                      type: "string",
-                    },
+                    type: "string",
+                    description: "The translated subtitle",
                   },
                 },
                 required: ["result"],
