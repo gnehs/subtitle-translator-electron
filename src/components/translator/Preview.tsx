@@ -255,19 +255,22 @@ export default function File() {
       await asyncPoolAll(keys.length * 1.5, chunks, (x: any) =>
         translateChunk(x, 0)
       );
-    } catch (e) {
+    } catch (e: any) {
       console.log(e);
-      //@ts-ignore
-      if (e.toString() === "Error: No API key") {
+      if (e.toString() === "Error: 401") {
         setIsTranslating(false);
         alert(t("translate.no_api_key"));
         location.reload();
-      }
-      //@ts-ignore
-      if (e.toString() === "Error: Exceeded") {
+      } else if (e.toString() === "Error: 429") {
         setIsTranslating(false);
         alert(t("translate.exceeded"));
         location.reload();
+      } else {
+        if (retryTimes >= 3) {
+          setIsTranslating(false);
+          alert(e.toString());
+          location.reload();
+        }
       }
     }
     if (parsedSubtitle.filter((line) => !line.data.translatedText).length > 0) {
