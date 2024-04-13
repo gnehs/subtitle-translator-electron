@@ -18,6 +18,7 @@ import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import OpenAI from "openai";
 import useModel from "@/hooks/useModel";
+import { useEconomy } from "@/hooks/useOpenAI";
 //@ts-ignore
 async function asyncPoolAll(...args) {
   const results = [];
@@ -115,6 +116,7 @@ export default function File() {
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [delay] = useDelay();
   const [model] = useModel();
+  const [eco] = useEconomy();
   const {
     translateSubtitleChunk,
     translateSubtitleSingle,
@@ -189,7 +191,7 @@ export default function File() {
     }
 
     // Start translation
-    if ([`gpt-4`, `gpt-3.5-turbo`].includes(model)) {
+    if (!eco) {
       await translateChunk();
     } else {
       setIsTranslating(true);

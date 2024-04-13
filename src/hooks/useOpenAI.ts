@@ -56,14 +56,8 @@ export function useTranslate() {
       let presedPrompt = prompt
         .replaceAll("{{lang}}", lang)
         .replaceAll("{{additional}}", additional);
-      let modelName = {
-        "gpt-4": "gpt-4-0613",
-        "gpt-4-economy": "gpt-4-0613",
-        "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
-        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
-      }[model]!;
       let res = await ai.chat.completions.create({
-        model: modelName,
+        model,
         tool_choice: {
           type: "function",
           function: { name: "setResult" },
@@ -110,14 +104,8 @@ export function useTranslate() {
       let presedPrompt = prompt
         .replaceAll("{{lang}}", lang)
         .replaceAll("{{additional}}", additional);
-      let modelName = {
-        "gpt-4": "gpt-4-0613",
-        "gpt-4-economy": "gpt-4-0613",
-        "gpt-3.5-turbo": "gpt-3.5-turbo-0613",
-        "gpt-3.5-turbo-economy": "gpt-3.5-turbo-0613",
-      }[model]!;
       let res = await ai.chat.completions.create({
-        model: modelName,
+        model,
         tool_choice: {
           type: "function",
           function: { name: "setResult" },
@@ -162,4 +150,7 @@ export function useAPIKeys() {
 }
 export function useAPIHost() {
   return useLocalStorage("api_host", "https://api.openai.com/v1");
+}
+export function useEconomy() {
+  return useLocalStorage("ai_economy", false);
 }
