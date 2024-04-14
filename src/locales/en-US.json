@@ -4,23 +4,14 @@
     "settings": "Settings",
     "language": "Language",
     "model": "Model",
-    "models": {
-      "gpt-4": {
-        "name": "Standard GPT-4",
-        "description": "Translation performed using GPT-4, which provides higher accuracy but slower speed and higher cost."
-      },
-      "gpt-3.5-turbo": {
-        "name": "Standard GPT-3",
-        "description": "Translation performed using GPT-3, offering a balanced choice between price and quality."
-      },
-      "gpt-4-economy": {
-        "name": "Single sentence GPT-4",
-        "description": "Using GPT-4 for sentence-by-sentence translation without providing context may result in a decrease in translation quality."
-      },
-      "gpt-3.5-turbo-economy": {
-        "name": "Single sentence GPT-3",
-        "description": "Translation performed using GPT-3 without sending context, resulting in lower cost but lower translation quality. Some sentences may require manual correction."
-      }
+    "modelName": "Model name",
+    "modelDescription": "Select a model or enter a custom model.",
+    "eco": {
+      "title": "Economy Mode",
+      "description1": "Economy is a mode that reduces the cost of the API request by using sentence-by-sentence translation without providing context may result in a decrease in translation quality.",
+      "description2": "* In old versions, this was called 'Single sentence GPT-4' or 'Single sentence GPT-3'.",
+      "enable": "Enable",
+      "disable": "Disable (Recommended)"
     },
     "delay": {
       "title": "Delay",

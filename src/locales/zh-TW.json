@@ -4,23 +4,14 @@
     "settings": "設定",
     "language": "語言",
     "model": "模型",
-    "models": {
-      "gpt-4": {
-        "name": "標準 GPT-4",
-        "description": "使用 GPT-4 進行翻譯，較為精準，但速度較慢且費用較高。"
-      },
-      "gpt-3.5-turbo": {
-        "name": "標準 GPT-3",
-        "description": "使用 GPT-3 進行翻譯，平衡價格與品質的好選擇。"
-      },
-      "gpt-4-economy": {
-        "name": "逐句 GPT-4",
-        "description": "使用 GPT-4 進行逐句翻譯，不傳送上下文，可能會導致翻譯品質下降。"
-      },
-      "gpt-3.5-turbo-economy": {
-        "name": "逐句 GPT-3",
-        "description": "使用 GPT-3 進行翻譯，不會發送前後文，因此費用最低，且翻譯品質較差，可能會有大量需要人工修正的句子。"
-      }
+    "modelName": "模型名稱",
+    "modelDescription": "選擇一個模型或輸入自訂模型名稱。",
+    "eco": {
+      "title": "經濟模式",
+      "description1": "經濟模式透過逐句翻譯而不提供上下文來降低 API 請求的成本，但可能會導致翻譯品質下降。",
+      "description2": "＊在舊版本中，這被稱為「逐句 GPT-4」或「逐句 GPT-3」。",
+      "enable": "啟用",
+      "disable": "關閉（建議）"
     },
     "delay": {
       "title": "延遲",

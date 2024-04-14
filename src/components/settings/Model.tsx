@@ -14,8 +14,8 @@ export default function Language() {
       <Title>{t("model")}</Title>
 
       <InputField
-        label={t("model")}
-        description={"Select a model or enter a custom model."}
+        label={t("modelName")}
+        description={t("modelDescription")}
         value={model}
         onChange={(e: any) => setModel(e.target.value)}
         list="chatgpt-models"
@@ -25,19 +25,18 @@ export default function Language() {
         <option value="gpt-3.5-turbo">GPT 3.5 Turbo</option>
       </datalist>
 
-      <Title>Economy Mode</Title>
+      <Title>{t("eco.title")}</Title>
       <p>
-        Economy is a mode that reduces the cost of the API request by using
-        sentence-by-sentence translation without providing context may result in
-        a decrease in translation quality. <br />* In old versions, this was
-        called "Single sentence GPT-4" or "Single sentence GPT-3".
+        {t("eco.description1")}
+        <br />
+        {t("eco.description2")}
       </p>
       <div className="grid grid-cols-2 gap-2">
         <Button active={eco} onClick={() => setEco(!eco)}>
-          Enable
+          {t("eco.enable")}
         </Button>
         <Button active={!eco} onClick={() => setEco(!eco)}>
-          Disable (Recommended)
+          {t("eco.disable")}
         </Button>
       </div>
     </div>
