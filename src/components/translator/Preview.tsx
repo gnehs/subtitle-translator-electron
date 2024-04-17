@@ -18,7 +18,7 @@ import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import OpenAI from "openai";
 import useModel from "@/hooks/useModel";
-import { useEconomy } from "@/hooks/useOpenAI";
+import { useEconomy, useCompatibility } from "@/hooks/useOpenAI";
 //@ts-ignore
 async function asyncPoolAll(...args) {
   const results = [];
@@ -117,6 +117,7 @@ export default function File() {
   const [delay] = useDelay();
   const [model] = useModel();
   const [eco] = useEconomy();
+  const [compatibility] = useCompatibility();
   const {
     translateSubtitleChunk,
     translateSubtitleSingle,
@@ -227,9 +228,24 @@ export default function File() {
       let res;
       try {
         res = await translateSubtitleChunk(text);
-        let translatedText = JSON.parse(
-          res.choices[0].message?.tool_calls?.[0].function?.arguments!
-        ).result;
+        let translatedText;
+        if (compatibility) {
+          let msgText = res.choices[0].message.content!;
+          // get [ & ] index
+          let start = msgText.indexOf("[");
+          let end = msgText.lastIndexOf("]");
+          if ((start === -1 || end === -1) && block.length === 1) {
+            translatedText = msgText;
+          } else {
+            // get translated text
+            translatedText = JSON.parse(msgText.slice(start, end + 1));
+          }
+        } else {
+          translatedText = JSON.parse(
+            res.choices[0].message?.tool_calls?.[0].function?.arguments!
+          ).result;
+        }
+
         if (translatedText.length !== text.length) {
           throw new Error("Translated text length not match");
         }
@@ -258,8 +274,10 @@ export default function File() {
           //@ts-ignore
           e?.response?.data?.error?.message || e.toString()
         );
+        console.log(new Date().toLocaleTimeString());
         console.log(text);
         console.log(res);
+        res && console.log(res.choices[0].message.content);
         console.error(e);
         //@ts-ignore
         console.error(e?.response);
@@ -305,10 +323,25 @@ export default function File() {
     try {
       let res = await translateSubtitleSingle(line.data.text);
       let toolCalls = res.choices[0].message.tool_calls;
-      let argsString: string = toolCalls?.[0].function.arguments || "";
       let translatedText;
+      let argsString: string = toolCalls?.[0].function.arguments || "";
+
       try {
-        translatedText = JSON.parse(argsString).result;
+        if (compatibility) {
+          let msgText = res.choices[0].message.content!;
+          // get [ & ] index
+          let start = msgText.indexOf("[");
+          let end = msgText.lastIndexOf("]");
+          if (start === -1 || end === -1) {
+            translatedText = msgText;
+          } else {
+            // get translated text
+            translatedText = JSON.parse(msgText.slice(start, end + 1));
+          }
+        } else {
+          let translatedText;
+          translatedText = JSON.parse(argsString).result;
+        }
       } catch (e) {
         if (!argsString.includes("result")) {
           translatedText = argsString;
@@ -448,7 +481,7 @@ export default function File() {
           <span className="opacity-50 text-xs">{t(`translate.input`)}</span>
         </div>
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
-          {usedDollars.toFixed(2)}
+          {compatibility ? "N/A" : usedDollars.toFixed(2)}
           <br />
           <span className="opacity-50 text-xs">{t(`translate.USD`)}</span>
         </div>

@@ -11,6 +11,7 @@ export function useTranslate() {
   const [lang] = useLocalStorage("translate_lang", "");
   const [additional] = useLocalStorage("translate_additional", "");
   const [temperature] = useTemperature();
+  const [compatibility] = useCompatibility();
   const [usedInputTokens, setUsedInputTokens] = useState<number>(0);
   const [usedOutputTokens, setUsedOutputTokens] = useState<number>(0);
   const [usedDollars, setUsedDollars] = useState<number>(0);
@@ -46,7 +47,7 @@ export function useTranslate() {
       apiKey,
       baseURL: apiHost,
       dangerouslyAllowBrowser: true,
-      timeout: 30 * 1000,
+      timeout: compatibility ? 180 * 1000 : 30 * 1000,
     });
     openAIInstance.push(openai);
   }
@@ -164,4 +165,7 @@ export function useEconomy() {
 }
 export function useTemperature() {
   return useLocalStorage("ai_temperature", 1);
+}
+export function useCompatibility() {
+  return useLocalStorage("ai_compatibility", false);
 }

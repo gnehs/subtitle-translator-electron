@@ -4,12 +4,17 @@ import { useTranslation } from "react-i18next";
 import useModel from "../../hooks/useModel";
 import modelList from "../../model/list";
 import InputField from "../InputField";
-import { useEconomy, useTemperature } from "../../hooks/useOpenAI";
+import {
+  useEconomy,
+  useTemperature,
+  useCompatibility,
+} from "../../hooks/useOpenAI";
 export default function Language() {
   const { t } = useTranslation();
   const [model, setModel] = useModel();
   const [eco, setEco] = useEconomy();
   const [temperature, setTemperature] = useTemperature();
+  const [compatibility, setCompatibility] = useCompatibility();
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -42,10 +47,9 @@ export default function Language() {
             {t("eco.disable")}
           </Button>
         </div>
-      </div>{" "}
+      </div>
       <div className="flex flex-col gap-2">
         <Title>{t("temperature.title")}</Title>
-
         <p>{t("temperature.description")}</p>
         <div className="flex items-center gap-2">
           <input
@@ -66,7 +70,25 @@ export default function Language() {
             step={0.01}
           />
         </div>
-      </div>{" "}
+      </div>
+      <div className="flex flex-col gap-2">
+        <Title>{t("compatibility.title")}</Title>
+        <p>{t("compatibility.description")}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            active={compatibility}
+            onClick={() => setCompatibility(!compatibility)}
+          >
+            {t("compatibility.enable")}
+          </Button>
+          <Button
+            active={!compatibility}
+            onClick={() => setCompatibility(!compatibility)}
+          >
+            {t("compatibility.disable")}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
