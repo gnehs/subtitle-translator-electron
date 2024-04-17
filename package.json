@@ -54,6 +54,7 @@
     "react-router-dom": "^6.22.3",
     "react-toastify": "^10.0.5",
     "subtitle": "^4.2.1",
+    "tailwind-merge": "^2.2.2",
     "tiny-async-pool": "^2.1.0",
     "usehooks-ts": "^3.1.0"
   }

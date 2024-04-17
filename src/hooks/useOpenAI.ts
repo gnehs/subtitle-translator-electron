@@ -10,7 +10,7 @@ export function useTranslate() {
   const [prompt] = usePrompt();
   const [lang] = useLocalStorage("translate_lang", "");
   const [additional] = useLocalStorage("translate_additional", "");
-
+  const [temperature] = useTemperature();
   const [usedInputTokens, setUsedInputTokens] = useState<number>(0);
   const [usedOutputTokens, setUsedOutputTokens] = useState<number>(0);
   const [usedDollars, setUsedDollars] = useState<number>(0);
@@ -64,6 +64,7 @@ export function useTranslate() {
         .replaceAll("{{additional}}", additional);
       let res = await ai.chat.completions.create({
         model,
+        temperature,
         tool_choice: {
           type: "function",
           function: { name: "setResult" },
@@ -112,6 +113,7 @@ export function useTranslate() {
         .replaceAll("{{additional}}", additional);
       let res = await ai.chat.completions.create({
         model,
+        temperature,
         tool_choice: {
           type: "function",
           function: { name: "setResult" },
@@ -159,4 +161,7 @@ export function useAPIHost() {
 }
 export function useEconomy() {
   return useLocalStorage("ai_economy", false);
+}
+export function useTemperature() {
+  return useLocalStorage("ai_temperature", 1);
 }

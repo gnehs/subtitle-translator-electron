@@ -1,12 +1,15 @@
+import { twMerge } from "tailwind-merge";
 export default function InputField({
   label,
   description,
+  className = "",
   children,
   ...props
 }: {
   label: string;
   description?: string;
   children?: React.ReactNode;
+  className?: string;
 } & React.HTMLProps<HTMLInputElement>) {
   const randomString = Math.random().toString(36).substring(7);
   return (
@@ -14,7 +17,10 @@ export default function InputField({
       {label && <label htmlFor={randomString}>{label}</label>}
       <div className="flex flex-row gap-2">
         <input
-          className="p-2 flex-1 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+          className={twMerge(
+            "p-2 flex-1 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500",
+            className
+          )}
           id={randomString}
           {...props}
         />
