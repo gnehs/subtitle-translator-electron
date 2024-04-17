@@ -25,7 +25,7 @@
       "title": "API & Host",
       "key": {
         "name": "API Key",
-        "description": "You can obtain API keys at <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a>. Adding multiple keys can enhance translation speed."
+        "description": "You can obtain API keys at <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a>."
       },
       "host": {
         "name": "API Host",

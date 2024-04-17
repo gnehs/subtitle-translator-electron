@@ -25,7 +25,7 @@
       "title": "API 与主机",
       "key": {
         "name": "API 密钥",
-        "description": "您可以在 <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a> 中取得密钥，新增多把密钥可以提升翻译速度。"
+        "description": "您可以在 <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a> 中取得密钥。"
       },
       "host": {
         "name": "API 主机",
