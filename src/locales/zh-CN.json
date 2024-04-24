@@ -31,7 +31,7 @@
       "title": "API 与主机",
       "key": {
         "name": "API 密钥",
-        "description": "您可以在 <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a> 中取得密钥。",
+        "description": "您可以在 <a href=\"https://platform.openai.com/api-keys\" target=\"_blank\">https://platform.openai.com/api-keys</a> 中取得密钥。",
         "notify": "注意：API 服务和 ChatGPT 会员的计费是分开计费的，请确保已于 <a href=\"https://platform.openai.com/settings/organization/billing/overview\" target=\"_blank\">https://platform.openai.com/settings/organization/billing/overviews</a> 绑定信用卡。"
       },
       "host": {
