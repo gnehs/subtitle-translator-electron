@@ -44,6 +44,10 @@ export default function API() {
         className="text-sm opacity-80 text-inject"
         dangerouslySetInnerHTML={{ __html: t("api.key.description")! }}
       />
+      <div
+        className="text-sm opacity-80 text-inject"
+        dangerouslySetInnerHTML={{ __html: t("api.key.notify")! }}
+      />
       <InputField
         label={t("api.host.name")}
         description={t("api.host.description")!}

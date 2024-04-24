@@ -31,7 +31,8 @@
       "title": "API & Host",
       "key": {
         "name": "API Key",
-        "description": "You can obtain API keys at <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a>."
+        "description": "You can obtain API keys at <a href=\"https://platform.openai.com/account/api-keys\" target=\"_blank\">https://platform.openai.com/account/api-keys</a>.",
+        "notify": "Note: API and ChatGPT memberships are billed separately. Please ensure that you have linked your credit card at <a href=\"https://platform.openai.com/settings/organization/billing/overview\" target=\"_blank\">https://platform.openai.com/settings/organization/billing/overviews</a>."
       },
       "host": {
         "name": "API Host",
