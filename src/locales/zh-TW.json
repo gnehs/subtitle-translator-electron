@@ -31,12 +31,25 @@
       "title": "API 與主機",
       "key": {
         "name": "API 金鑰",
-        "description": "您可以在 <a href=\"https://platform.openai.com/api-keys\" target=\"_blank\">https://platform.openai.com/api-keys</a> 中取得金鑰。",
-        "notify": "注意：API 服務和 ChatGPT 會員的計費是分開計費的，請確保已於 <a href=\"https://platform.openai.com/settings/organization/billing/overview\" target=\"_blank\">https://platform.openai.com/settings/organization/billing/overviews</a> 綁定信用卡。"
+        "description": "您可以選擇供應商（例如 OpenRouter、OpenAI 等）並於該供應商建立 API 金鑰。",
+        "notify": "注意：用量由各供應商計費，請確認您的帳號狀態正常並已設定付款方式。"
       },
       "host": {
         "name": "API 主機",
         "description": "這通常用於繞過防火牆封鎖，若這個應用程式可以正常運作，則不需要更改此設定。"
+      },
+      "presets": {
+        "title": "快速預設",
+        "openrouter": "OpenRouter",
+        "openai": "OpenAI",
+        "vercel_gateway": "Vercel AI Gateway",
+        "openai_compatible": "OpenAI 相容（自訂）",
+        "recommendation": "建議：若您尚未使用過任何 API，先使用 OpenRouter，可使用更多模型且請求上限較大。可用下方按鈕快速套用預設。"
+      },
+      "headers": {
+        "title": "HTTP 標頭",
+        "name": "標頭名稱",
+        "value": "標頭值"
       }
     },
     "prompt": {

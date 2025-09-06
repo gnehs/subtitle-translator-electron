@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import useModel from "../../hooks/useModel";
 import modelList from "../../model/list";
 import InputField from "../InputField";
+import { useEffect, useMemo, useState } from "react";
+import { useAPIHost, useAPIKeys, useAPIHeaders } from "@/hooks/useOpenAI";
 import {
   useEconomy,
   useTemperature,
@@ -15,6 +17,43 @@ export default function Language() {
   const [eco, setEco] = useEconomy();
   const [temperature, setTemperature] = useTemperature();
   const [compatibility, setCompatibility] = useCompatibility();
+  const [host] = useAPIHost();
+  const [keys] = useAPIKeys();
+  const [headers] = useAPIHeaders();
+  const [remoteModels, setRemoteModels] = useState<string[]>([]);
+  const baseUrl = useMemo(() => (host || "").replace(/\/$/, ""), [host]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadModels() {
+      try {
+        if (!baseUrl || !keys?.[0]) return;
+        const res = await fetch(`${baseUrl}/models`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${keys[0]}`,
+            ...(Object.fromEntries(
+              (headers || [])
+                .filter((h: any) => h?.name)
+                .map((h: any) => [h.name, h.value || ""])
+            ) as any),
+          },
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const data = Array.isArray(json?.data) ? json.data : [];
+        const ids = data
+          .map((m: any) => m?.id)
+          .filter((id: any) => typeof id === "string");
+        setRemoteModels(ids);
+      } catch (_) {
+        // silent
+      }
+    }
+    loadModels();
+    return () => controller.abort();
+  }, [baseUrl, JSON.stringify(headers), keys?.[0]]);
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -28,8 +67,9 @@ export default function Language() {
           list="chatgpt-models"
         />
         <datalist id="chatgpt-models">
-          <option value="gpt-4-turbo">GPT 4 Turbo</option>
-          <option value="gpt-3.5-turbo">GPT 3.5 Turbo</option>
+          {remoteModels.map((m) => (
+            <option value={m} key={m} />
+          ))}
         </datalist>
       </div>
       <div className="flex flex-col gap-2">

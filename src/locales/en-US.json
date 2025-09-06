@@ -32,11 +32,24 @@
       "key": {
         "name": "API Key",
         "description": "You can obtain API keys at <a href=\"https://platform.openai.com/api-keys\" target=\"_blank\">https://platform.openai.com/api-keys</a>.",
-        "notify": "Note: API and ChatGPT memberships are billed separately. Please ensure that you have added your credit card at <a href=\"https://platform.openai.com/settings/organization/billing/overview\" target=\"_blank\">https://platform.openai.com/settings/organization/billing/overviews</a>."
+        "notify": "Note: Usage is billed by the chosen provider. Please ensure your account is active and has a valid payment method."
       },
       "host": {
         "name": "API Host",
         "description": "This is typically used to bypass firewall blocking. If this application is functioning properly, there is no need to modify this setting."
+      },
+      "presets": {
+        "title": "Quick Presets",
+        "openrouter": "OpenRouter",
+        "openai": "OpenAI",
+        "vercel_gateway": "Vercel AI Gateway",
+        "openai_compatible": "OpenAI-Compatible (custom)",
+        "recommendation": "Tip: If you haven't used any API before, start with OpenRouter. It offers more models and higher request limits. Use the buttons below to set defaults."
+      },
+      "headers": {
+        "title": "HTTP Headers",
+        "name": "Header Name",
+        "value": "Header Value"
       }
     },
     "prompt": {

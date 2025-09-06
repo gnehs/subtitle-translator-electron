@@ -31,12 +31,25 @@
       "title": "API 与主机",
       "key": {
         "name": "API 密钥",
-        "description": "您可以在 <a href=\"https://platform.openai.com/api-keys\" target=\"_blank\">https://platform.openai.com/api-keys</a> 中取得密钥。",
-        "notify": "注意：API 服务和 ChatGPT 会员的计费是分开计费的，请确保已于 <a href=\"https://platform.openai.com/settings/organization/billing/overview\" target=\"_blank\">https://platform.openai.com/settings/organization/billing/overviews</a> 绑定信用卡。"
+        "description": "您可以选择供应商（例如 OpenRouter、OpenAI 等）并在该供应商创建 API 密钥。",
+        "notify": "注意：费用由各供应商计费，请确认您的账号状态正常并已设置付款方式。"
       },
       "host": {
         "name": "API 主机",
         "description": "这通常用于绕过防火墙封锁，若这个应用程序可以正常运作，则不需要更改此设定。"
+      },
+      "presets": {
+        "title": "快速预设",
+        "openrouter": "OpenRouter",
+        "openai": "OpenAI",
+        "vercel_gateway": "Vercel AI Gateway",
+        "openai_compatible": "OpenAI 兼容（自定义）",
+        "recommendation": "建议：如果您从未使用过任何 API，建议先使用 OpenRouter，可使用更多模型且请求上限更高。可使用下方按钮快速套用预设。"
+      },
+      "headers": {
+        "title": "HTTP 头",
+        "name": "头名称",
+        "value": "头值"
       }
     },
     "prompt": {

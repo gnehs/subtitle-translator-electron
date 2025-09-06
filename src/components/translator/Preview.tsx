@@ -16,7 +16,6 @@ import { toast } from "react-toastify";
 import assParser from "ass-parser";
 //@ts-ignore
 import assStringify from "ass-stringify";
-import OpenAI from "openai";
 import useModel from "@/hooks/useModel";
 import { useEconomy, useCompatibility } from "@/hooks/useOpenAI";
 //@ts-ignore
@@ -118,13 +117,7 @@ export default function File() {
   const [model] = useModel();
   const [eco] = useEconomy();
   const [compatibility] = useCompatibility();
-  const {
-    translateSubtitleChunk,
-    translateSubtitleSingle,
-    usedInputTokens,
-    usedOutputTokens,
-    usedDollars,
-  } = useTranslate();
+  const { translateSubtitleChunk, translateSubtitleSingle } = useTranslate();
   const { t } = useTranslation();
   useEffect(() => {
     async function loadFile() {
@@ -196,16 +189,57 @@ export default function File() {
       await translateChunk();
     } else {
       setIsTranslating(true);
-      await asyncPoolAll(
-        keys.length * 15,
-        parsedSubtitle.filter((line) => !line.data.translatedText),
-        (x: any) => translateSingle(x)
-      );
+      const controller = new AbortController();
+      try {
+        await asyncPoolAll(
+          keys.length * 15,
+          parsedSubtitle.filter((line) => !line.data.translatedText),
+          (x: any) => translateSingle(x, controller.signal)
+        );
+      } catch (e: any) {
+        console.error(e);
+        controller.abort();
+        setIsTranslating(false);
+        const status = e?.status || e?.response?.status;
+        const message: string = e?.message || e?.toString?.() || "";
+        if (status === 429) {
+          alert(t("translate.exceeded"));
+          return;
+        }
+        if (status === 401) {
+          alert(t("translate.no_api_key"));
+          return;
+        }
+        if (status === 404) {
+          alert(
+            "API endpoint not found (404). Please check your host and provider."
+          );
+          return;
+        }
+        if (status === 403) {
+          alert(
+            "API request forbidden (403). Please check your provider policy and API key permissions."
+          );
+          return;
+        }
+        if (message.includes("No endpoints found matching your data policy")) {
+          alert(
+            "OpenRouter policy blocked this request. Update privacy/policy settings or headers."
+          );
+          return;
+        }
+        alert(
+          "Translation stopped due to an API error." +
+            (message ? `\n${message}` : "")
+        );
+        return;
+      }
       if (
         parsedSubtitle.filter((line) => !line.data.translatedText).length &&
         retryTimes < 3
       ) {
         await startTranslation(retryTimes + 1);
+        return;
       }
       console.log(`Translated ${parsedSubtitle.length} lines`);
       setIsTranslating(false);
@@ -218,94 +252,100 @@ export default function File() {
     }
     let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 10 + 5));
     console.log(`Splited into ${chunks.length} chunks`);
-    async function translateSplitedChunk(block: any[], retryTimes = 0) {
-      if (block.length === 0) return;
-      if (block.every((line) => line.data.translatedText)) return;
-      // delay
-      await new Promise((resolve) => setTimeout(resolve, delay * 1000));
+    function sleep(ms: number) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    function backoff(attempt: number, base: number = 500) {
+      const jitter = Math.random() * 100;
+      return base * Math.pow(2, attempt) + jitter;
+    }
+    async function translateSplitedChunk(
+      block: any[],
+      _retryTimes = 0,
+      abortSignal?: AbortSignal
+    ) {
+      if (block.length === 0) return true as any;
+      if (block.every((line) => line.data.translatedText)) return true as any;
+      // delay before this chunk to respect rate limits
+      await sleep(delay * 1000);
 
-      let text = block.map((line) => line.data.text);
-      let res;
-      try {
-        res = await translateSubtitleChunk(text);
-        let translatedText;
-        if (compatibility) {
-          let msgText = res.choices[0].message.content!;
-          // get [ & ] index
-          let start = msgText.indexOf("[");
-          let end = msgText.lastIndexOf("]");
-          if ((start === -1 || end === -1) && block.length === 1) {
-            translatedText = msgText;
+      const text = block.map((line) => line.data.text);
+      const MAX_CHUNK_RETRIES = 3;
+      // Try chunk-level translation with retries
+      for (let attempt = 0; attempt <= MAX_CHUNK_RETRIES; attempt++) {
+        try {
+          const res: any = await translateSubtitleChunk(text, { abortSignal });
+          let translatedText: any;
+          if (compatibility) {
+            const raw = res?.translated ?? "";
+            translatedText = block.length === 1 ? raw : JSON.parse(raw);
           } else {
-            // get translated text
-            translatedText = JSON.parse(msgText.slice(start, end + 1));
+            translatedText = res?.translated;
           }
-        } else {
-          translatedText = JSON.parse(
-            res.choices[0].message?.tool_calls?.[0].function?.arguments!
-          ).result;
-        }
-
-        if (translatedText.length !== text.length) {
-          throw new Error("Translated text length not match");
-        }
-        for (let i = 0; i < translatedText.length; i++) {
-          block[i].data.translatedText = translatedText[i];
-        }
-        setParsedSubtitle([...parsedSubtitle]);
-        setProgress(
-          (progress) =>
-            (parsedSubtitle
-              .map((line) => line.data.translatedText)
-              .filter((x) => x).length /
-              parsedSubtitle.length) *
-            100
-        );
-        // scroll to item
-        let i = parsedSubtitle.findIndex((line) => line === block.at(-1));
-        let item = document.querySelector(
-          `#subtitle-preview .subtitle-preview__item:nth-child(${i + 1})`
-        );
-        if (item) {
-          item.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      } catch (e) {
-        console.groupCollapsed(
+          if (!Array.isArray(translatedText)) {
+            throw new Error("Invalid translated response format");
+          }
+          if (translatedText.length !== text.length) {
+            throw new Error("Translated text length not match");
+          }
+          for (let i = 0; i < translatedText.length; i++) {
+            block[i].data.translatedText = translatedText[i];
+          }
+          setParsedSubtitle([...parsedSubtitle]);
+          setProgress(
+            (progress) =>
+              (parsedSubtitle
+                .map((line) => line.data.translatedText)
+                .filter((x) => x).length /
+                parsedSubtitle.length) *
+              100
+          );
+          // scroll to item
+          const lastIdx = parsedSubtitle.findIndex(
+            (line) => line === block.at(-1)
+          );
+          const item = document.querySelector(
+            `#subtitle-preview .subtitle-preview__item:nth-child(${
+              lastIdx + 1
+            })`
+          );
+          if (item) {
+            item.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+          return true as any;
+        } catch (e) {
+          console.groupCollapsed(
+            //@ts-ignore
+            e?.response?.data?.error?.message ||
+              (e as any)?.toString?.() ||
+              "Chunk translate error"
+          );
+          console.log(new Date().toLocaleTimeString());
+          console.log(text);
+          console.error(e);
           //@ts-ignore
-          e?.response?.data?.error?.message || e.toString()
-        );
-        console.log(new Date().toLocaleTimeString());
-        console.log(text);
-        console.log(res);
-        res && console.log(res.choices[0].message.content);
-        console.error(e);
-        //@ts-ignore
-        console.error(e?.response);
-        console.groupEnd();
-        throw e;
+          console.error(e?.response);
+          console.groupEnd();
+          if (attempt < MAX_CHUNK_RETRIES) {
+            await sleep(backoff(attempt));
+            continue;
+          }
+        }
       }
+
+      // Fallback: translate each line individually, do not throw
+      for (const line of block) {
+        if (!line.data.translatedText) {
+          await translateSingle(line, abortSignal);
+        }
+      }
+      return true as any;
     }
     setIsTranslating(true);
-    try {
-      await asyncPoolAll(keys.length * 1.5, chunks, (x: any) =>
-        translateSplitedChunk(x, 0)
-      );
-    } catch (e: any) {
-      if (e instanceof OpenAI.APIError) {
-        console.log(e.status); // 400
-        console.log(e.name); // BadRequestError
-        console.log(e.headers); // {server: 'nginx', ...}
-        setIsTranslating(false);
-        if (e.status === 429) {
-          alert(t("translate.exceeded"));
-          location.reload();
-        }
-        if (e.status === 401) {
-          alert(t("translate.no_api_key"));
-          location.reload();
-        }
-      }
-    }
+    const controller = new AbortController();
+    await asyncPoolAll(keys.length * 1.5, chunks, (x: any) =>
+      translateSplitedChunk(x, 0, controller.signal)
+    );
     if (parsedSubtitle.filter((line) => !line.data.translatedText).length > 0) {
       if (retryTimes < 3) {
         await translateChunk(retryTimes + 1);
@@ -313,60 +353,45 @@ export default function File() {
         for (let cue of parsedSubtitle.filter(
           (line) => !line.data.translatedText
         )) {
-          await translateSingle(cue);
+          await translateSingle(cue, controller.signal);
         }
       }
     }
     setIsTranslating(false);
   }
-  async function translateSingle(line: any, retryTimes: number = 0) {
-    try {
-      let res = await translateSubtitleSingle(line.data.text);
-      let toolCalls = res.choices[0].message.tool_calls;
-      let translatedText;
-      let argsString: string = toolCalls?.[0].function.arguments || "";
-
+  async function translateSingle(
+    line: any,
+    abortSignal?: AbortSignal,
+    retryTimes: number = 0
+  ) {
+    const MAX_LINE_RETRIES = 3;
+    for (let attempt = retryTimes; attempt <= MAX_LINE_RETRIES; attempt++) {
       try {
-        if (compatibility) {
-          let msgText = res.choices[0].message.content!;
-          // get [ & ] index
-          let start = msgText.indexOf("[");
-          let end = msgText.lastIndexOf("]");
-          if (start === -1 || end === -1) {
-            translatedText = msgText;
-          } else {
-            // get translated text
-            translatedText = JSON.parse(msgText.slice(start, end + 1));
-          }
-        } else {
-          let translatedText;
-          translatedText = JSON.parse(argsString).result;
-        }
+        const res: any = await translateSubtitleSingle(line.data.text, {
+          abortSignal,
+        });
+        const translatedText: any = res?.translated ?? "";
+        if (!translatedText) throw new Error("Empty translation");
+        line.data.translatedText = translatedText;
+        setProgress(
+          () =>
+            (parsedSubtitle.map((l) => l.data.translatedText).filter((x) => x)
+              .length /
+              parsedSubtitle.length) *
+            100
+        );
+        return true as any;
       } catch (e) {
-        if (!argsString.includes("result")) {
-          translatedText = argsString;
-        } else {
-          if (retryTimes < 3) {
-            console.log(`Retry ${retryTimes + 1}`, line.data.text);
-            await translateSingle(line, retryTimes + 1);
-          } else {
-            console.error(e);
-            throw new Error("Failed to translate");
-          }
+        console.error(e);
+        if (attempt < MAX_LINE_RETRIES) {
+          await new Promise((r) => setTimeout(r, 300 * Math.pow(2, attempt)));
+          continue;
         }
+        toast.error(
+          t("translate.failed_to_translate", { text: line.data.text })
+        );
+        return false as any;
       }
-      line.data.translatedText = translatedText;
-      setProgress(
-        () =>
-          (parsedSubtitle
-            .map((line) => line.data.translatedText)
-            .filter((x) => x).length /
-            parsedSubtitle.length) *
-          100
-      );
-    } catch (e) {
-      toast.error(t("translate.failed_to_translate", { text: line.data.text }));
-      console.error(e);
     }
   }
   function downloadSubtitle() {
@@ -462,29 +487,7 @@ export default function File() {
           value="translated"
         />
         <div className="flex-1" />
-        <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
-          <span className="opacity-50 text-xs">{t(`translate.tokens`)}</span>
-          <br />
-          {usedOutputTokens < 100000
-            ? usedOutputTokens.toLocaleString()
-            : (usedOutputTokens / 1000).toFixed(1) + "k"}
-          <br />
-          <span className="opacity-50 text-xs">{t(`translate.output`)}</span>
-        </div>
-        <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
-          <span className="opacity-50 text-xs">{t(`translate.tokens`)}</span>
-          <br />
-          {usedInputTokens < 100000
-            ? usedInputTokens.toLocaleString()
-            : (usedInputTokens / 1000).toFixed(1) + "k"}
-          <br />
-          <span className="opacity-50 text-xs">{t(`translate.input`)}</span>
-        </div>
-        <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
-          {compatibility ? "N/A" : usedDollars.toFixed(2)}
-          <br />
-          <span className="opacity-50 text-xs">{t(`translate.USD`)}</span>
-        </div>
+
         <div className="text-center m-0.5 text-sm bg-slate-200 p-0.5 rounded-sm">
           {progress.toFixed(1)}
           <br />
