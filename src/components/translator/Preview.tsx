@@ -250,7 +250,7 @@ export default function File() {
     if (retryTimes > 0) {
       subtitle.sort(() => Math.random() - 0.5);
     }
-    let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 10 + 5));
+    let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 10 + 20));
     console.log(`Splited into ${chunks.length} chunks`);
     function sleep(ms: number) {
       return new Promise((resolve) => setTimeout(resolve, ms));
@@ -343,7 +343,7 @@ export default function File() {
     }
     setIsTranslating(true);
     const controller = new AbortController();
-    await asyncPoolAll(keys.length * 1.5, chunks, (x: any) =>
+    await asyncPoolAll(10, chunks, (x: any) =>
       translateSplitedChunk(x, 0, controller.signal)
     );
     if (parsedSubtitle.filter((line) => !line.data.translatedText).length > 0) {
