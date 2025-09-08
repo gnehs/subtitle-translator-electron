@@ -1,16 +1,16 @@
 import { useSelector, useDispatch } from "react-redux";
-import { setFile } from "@/store/file";
+import { setFiles } from "@/store/file";
 import { useState, useEffect } from "react";
-export default function useStep() {
+export default function useFile() {
   // Get
   //@ts-ignore
-  const file = useSelector((state) => state.file.value);
+  const files = useSelector((state) => state.file.value);
 
   // Set
   const dispatch = useDispatch();
-  const _setFile = (file: File) =>
-    dispatch(setFile({ path: file.path, name: file.name }));
+  const _setFiles = (files: { path: string; name: string }[]) =>
+    dispatch(setFiles(files));
 
   // Return
-  return [file, _setFile];
+  return [files, _setFiles];
 }

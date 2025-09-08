@@ -1,6 +1,9 @@
 import { app, BrowserWindow, shell, ipcMain } from "electron";
 import { release } from "node:os";
 import { join } from "node:path";
+import fs from 'node:fs';
+import path from 'node:path';
+import { splitIntoChunk, parseSubtitle, translateSubtitleChunk, translateSubtitleSingle, saveTranslated } from './utils/translate';
 
 // The built directory structure
 //
@@ -111,4 +114,109 @@ ipcMain.handle("open-win", (_, arg) => {
   } else {
     childWindow.loadFile(indexHtml, { hash: arg });
   }
+});
+
+ipcMain.on('batch-progress', (event, data) => {
+  // Optional: log or handle progress if needed
+  console.log('Batch progress:', data);
+});
+
+ipcMain.handle('batch-translate', async (event, { files, params }) => {
+  for (const file of files) {
+    try {
+      event.sender.send('batch-progress', { filePath: file.path, progress: 0, status: 'translating', totalCues: 0 });
+      const ext = path.extname(file.path).slice(1).toLowerCase();
+      const content = fs.readFileSync(file.path, 'utf8');
+      let parsed = parseSubtitle(content, ext);
+      let subtitle;
+      if (Array.isArray(parsed)) {
+        subtitle = parsed.filter((line: any) => line.type === "cue");
+      } else if (parsed.events) {
+        subtitle = parsed.events;
+      } else {
+        subtitle = parsed;
+      }
+      const totalCues = subtitle.length;
+      event.sender.send('batch-progress', { filePath: file.path, progress: 0, status: 'translating', totalCues, currentCue: 0 });
+
+      // Translate
+      let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 10 + 20));
+      let totalChunks = chunks.length;
+      let cueProgressPerChunk = 90 / totalCues;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const block = chunks[i];
+        const text = block.map((line: any) => line.data.text);
+        const translatedText = await translateSubtitleChunk(text, { ...params, apiKeys: params.apiKeys || [], apiHost: params.apiHost || 'https://api.openai.com/v1', apiHeaders: params.apiHeaders || [], model: params.model || '', prompt: params.prompt || '', lang: params.lang || '', additional: params.additional || '', temperature: params.temperature || 1, compatibility: params.compatibility || false });
+        for (let j = 0; j < translatedText.length; j++) {
+          block[j].data.translatedText = translatedText[j];
+          const currentCue = subtitle.findIndex((cue: any) => cue === block[j]) + 1;
+          event.sender.send('batch-progress', { filePath: file.path, progress: 10 + currentCue * cueProgressPerChunk, status: 'translating', totalCues, currentCue });
+        }
+      }
+
+      // Fallback for untranslated
+      const untranslated = subtitle.filter((line: any) => !line.data.translatedText);
+      for (let k = 0; k < untranslated.length; k++) {
+        const cue = untranslated[k];
+        cue.data.translatedText = await translateSubtitleSingle(cue.data.text, { ...params, apiKeys: params.apiKeys || [], apiHost: params.apiHost || 'https://api.openai.com/v1', apiHeaders: params.apiHeaders || [], model: params.model || '', prompt: params.prompt || '', lang: params.lang || '', additional: params.additional || '', temperature: params.temperature || 1, compatibility: params.compatibility || false });
+        const currentCue = subtitle.findIndex((c: any) => c === cue) + 1;
+        event.sender.send('batch-progress', { filePath: file.path, progress: Math.min(100, 10 + currentCue * cueProgressPerChunk), status: 'translating', totalCues, currentCue });
+      }
+
+      const outputPath = path.join(path.dirname(file.path), file.name.replace(/\.[^/.]+$/, '') + '.translated.' + ext);
+      saveTranslated(outputPath, parsed, ext, params.multiLangSave || 'none');
+      console.log(`Saved translated file to: ${outputPath}`);
+      event.sender.send('batch-progress', { filePath: file.path, progress: 100, status: 'done', totalCues, currentCue: totalCues });
+    } catch (e) {
+      console.error(`Batch translation error for ${file.path}:`, e);
+      event.sender.send('batch-progress', { filePath: file.path, progress: 0, status: 'error', error: e.message });
+    }
+  }
+  return { success: true };
+});
+
+ipcMain.handle('get-translated-content', async (event, filePath) => {
+  const translatedPath = filePath.replace(/\.[^/.]+$/, '') + '.translated.' + path.extname(filePath).slice(1).toLowerCase();
+  if (fs.existsSync(translatedPath)) {
+    return fs.readFileSync(translatedPath, 'utf8');
+  }
+  throw new Error('Translated file not found');
+});
+
+ipcMain.handle('get-subtitle-preview', async (event, filePath) => {
+  const ext = path.extname(filePath).slice(1).toLowerCase();
+  const content = fs.readFileSync(filePath, 'utf8');
+  let parsed = parseSubtitle(content, ext);
+  let subtitle;
+  if (Array.isArray(parsed)) {
+    subtitle = parsed.filter((line: any) => line.type === "cue");
+  } else if (parsed.events) {
+    subtitle = parsed.events;
+  } else {
+    subtitle = parsed;
+  }
+
+  const translatedPath = filePath.replace(/\.[^/.]+$/, '') + '.translated.' + ext;
+  let translatedCues = null;
+  if (fs.existsSync(translatedPath)) {
+    const translatedContent = fs.readFileSync(translatedPath, 'utf8');
+    let translatedParsed = parseSubtitle(translatedContent, ext);
+    if (Array.isArray(translatedParsed)) {
+      translatedCues = translatedParsed.filter((line: any) => line.type === "cue").map((c: any) => c.data.translatedText || c.data.text);
+    } else if (translatedParsed.events) {
+      translatedCues = translatedParsed.events.map((e: any) => e.data.translatedText || e.data.text);
+    } else {
+      translatedCues = translatedParsed.filter((line: any) => line.type === "cue").map((c: any) => c.data.translatedText || c.data.text);
+    }
+  }
+
+  const cues = subtitle.map((cue: any, index: number) => ({
+    text: cue.data.text,
+    translatedText: translatedCues ? translatedCues[index] : undefined,
+    start: cue.data.start,
+    end: cue.data.end
+  }));
+
+  return { cues };
 });
