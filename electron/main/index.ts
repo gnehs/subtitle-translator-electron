@@ -121,6 +121,27 @@ ipcMain.on('batch-progress', (event, data) => {
   console.log('Batch progress:', data);
 });
 
+async function retryTranslate(fn, params, maxRetries = 3, delay = 1000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn(params);
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      // Check if error is retryable (e.g., network, rate limit)
+      const errorMessage = error.message || error.toString();
+      if (errorMessage.includes('network') || errorMessage.includes('timeout') ||
+          (error.status && (error.status >= 429 || error.status >= 500))) {
+        console.warn(`Translation attempt ${attempt} failed: ${errorMessage}. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw error; // Non-retryable error
+      }
+    }
+  }
+}
+
 ipcMain.handle('batch-translate', async (event, { files, params }) => {
   for (const file of files) {
     try {
@@ -147,7 +168,10 @@ ipcMain.handle('batch-translate', async (event, { files, params }) => {
       for (let i = 0; i < chunks.length; i++) {
         const block = chunks[i];
         const text = block.map((line: any) => line.data.text);
-        const translatedText = await translateSubtitleChunk(text, { ...params, apiKeys: params.apiKeys || [], apiHost: params.apiHost || 'https://api.openai.com/v1', apiHeaders: params.apiHeaders || [], model: params.model || '', prompt: params.prompt || '', lang: params.lang || '', additional: params.additional || '', temperature: params.temperature || 1, compatibility: params.compatibility || false });
+        const translatedText = await retryTranslate(
+          async (chunkText) => translateSubtitleChunk(chunkText, { ...params, apiKeys: params.apiKeys || [], apiHost: params.apiHost || 'https://api.openai.com/v1', apiHeaders: params.apiHeaders || [], model: params.model || '', prompt: params.prompt || '', lang: params.lang || '', additional: params.additional || '', temperature: params.temperature || 1, compatibility: params.compatibility || false }),
+          text
+        );
         for (let j = 0; j < translatedText.length; j++) {
           block[j].data.translatedText = translatedText[j];
           const currentCue = subtitle.findIndex((cue: any) => cue === block[j]) + 1;
@@ -159,7 +183,10 @@ ipcMain.handle('batch-translate', async (event, { files, params }) => {
       const untranslated = subtitle.filter((line: any) => !line.data.translatedText);
       for (let k = 0; k < untranslated.length; k++) {
         const cue = untranslated[k];
-        cue.data.translatedText = await translateSubtitleSingle(cue.data.text, { ...params, apiKeys: params.apiKeys || [], apiHost: params.apiHost || 'https://api.openai.com/v1', apiHeaders: params.apiHeaders || [], model: params.model || '', prompt: params.prompt || '', lang: params.lang || '', additional: params.additional || '', temperature: params.temperature || 1, compatibility: params.compatibility || false });
+        cue.data.translatedText = await retryTranslate(
+          async (singleText) => translateSubtitleSingle(singleText, { ...params, apiKeys: params.apiKeys || [], apiHost: params.apiHost || 'https://api.openai.com/v1', apiHeaders: params.apiHeaders || [], model: params.model || '', prompt: params.prompt || '', lang: params.lang || '', additional: params.additional || '', temperature: params.temperature || 1, compatibility: params.compatibility || false }),
+          cue.data.text
+        );
         const currentCue = subtitle.findIndex((c: any) => c === cue) + 1;
         event.sender.send('batch-progress', { filePath: file.path, progress: Math.min(100, 10 + currentCue * cueProgressPerChunk), status: 'translating', totalCues, currentCue });
       }
@@ -202,13 +229,15 @@ ipcMain.handle('get-subtitle-preview', async (event, filePath) => {
   if (fs.existsSync(translatedPath)) {
     const translatedContent = fs.readFileSync(translatedPath, 'utf8');
     let translatedParsed = parseSubtitle(translatedContent, ext);
+    let translatedSubtitle;
     if (Array.isArray(translatedParsed)) {
-      translatedCues = translatedParsed.filter((line: any) => line.type === "cue").map((c: any) => c.data.translatedText || c.data.text);
+      translatedSubtitle = translatedParsed.filter((line: any) => line.type === "cue");
     } else if (translatedParsed.events) {
-      translatedCues = translatedParsed.events.map((e: any) => e.data.translatedText || e.data.text);
+      translatedSubtitle = translatedParsed.events;
     } else {
-      translatedCues = translatedParsed.filter((line: any) => line.type === "cue").map((c: any) => c.data.translatedText || c.data.text);
+      translatedSubtitle = translatedParsed;
     }
+    translatedCues = translatedSubtitle.map((c: any) => c.data.translatedText || c.data.text);
   }
 
   const cues = subtitle.map((cue: any, index: number) => ({
