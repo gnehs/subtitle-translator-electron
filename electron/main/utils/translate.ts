@@ -1,21 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { parseSync, stringifySync } from 'subtitle';
-import assParser from 'ass-parser';
-import assStringify from 'ass-stringify';
-import { z } from 'zod';
-import { generateObject, generateText, tool } from 'ai';
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import asyncPool from 'tiny-async-pool';
-
-async function asyncPoolAll(...args) {
-  const results = [];
-  const pool = asyncPool(...args);
-  for await (const result of pool) {
-    results.push(result);
-  }
-  return results;
-}
+import fs from "node:fs";
+import path from "node:path";
+import { parseSync, stringifySync } from "subtitle";
+import assParser from "ass-parser";
+import assStringify from "ass-stringify";
+import { z } from "zod";
+import { generateObject, generateText, tool } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 function splitIntoChunk(array: any[], by = 5) {
   let chunks = [];
@@ -34,7 +24,30 @@ function splitIntoChunk(array: any[], by = 5) {
   return chunks;
 }
 
-async function translateSubtitleChunk(subtitles: string[], { apiKeys, apiHost, apiHeaders, model, prompt, lang, additional, temperature, compatibility }: { apiKeys: string[], apiHost: string, apiHeaders: {name: string, value: string}[], model: string, prompt: string, lang: string, additional: string, temperature: number, compatibility: boolean }) {
+async function translateSubtitleChunk(
+  subtitles: string[],
+  {
+    apiKeys,
+    apiHost,
+    apiHeaders,
+    model,
+    prompt,
+    lang,
+    additional,
+    temperature,
+    compatibility,
+  }: {
+    apiKeys: string[];
+    apiHost: string;
+    apiHeaders: { name: string; value: string }[];
+    model: string;
+    prompt: string;
+    lang: string;
+    additional: string;
+    temperature: number;
+    compatibility: boolean;
+  }
+) {
   let openAIProviders = [];
   for (let apiKey of apiKeys) {
     if (apiKey.length > 0) {
@@ -55,10 +68,11 @@ async function translateSubtitleChunk(subtitles: string[], { apiKeys, apiHost, a
   }
 
   if (openAIProviders.length === 0) {
-    throw new Error('No valid API keys provided');
+    throw new Error("No valid API keys provided");
   }
 
-  const ai = openAIProviders[Math.floor(Math.random() * openAIProviders.length)];
+  const ai =
+    openAIProviders[Math.floor(Math.random() * openAIProviders.length)];
   const systemPrompt = prompt
     .replaceAll("{{lang}}", lang)
     .replaceAll("{{additional}}", additional);
@@ -69,8 +83,7 @@ async function translateSubtitleChunk(subtitles: string[], { apiKeys, apiHost, a
         model: ai(model),
         temperature,
         system:
-          systemPrompt +
-          "\nReturn ONLY a JSON array of translated strings.",
+          systemPrompt + "\nReturn ONLY a JSON array of translated strings.",
         prompt: JSON.stringify(subtitles),
         maxRetries: 3,
       });
@@ -130,7 +143,30 @@ async function translateSubtitleChunk(subtitles: string[], { apiKeys, apiHost, a
   }
 }
 
-async function translateSubtitleSingle(subtitle: string, { apiKeys, apiHost, apiHeaders, model, prompt, lang, additional, temperature, compatibility }: { apiKeys: string[], apiHost: string, apiHeaders: {name: string, value: string}[], model: string, prompt: string, lang: string, additional: string, temperature: number, compatibility: boolean }) {
+async function translateSubtitleSingle(
+  subtitle: string,
+  {
+    apiKeys,
+    apiHost,
+    apiHeaders,
+    model,
+    prompt,
+    lang,
+    additional,
+    temperature,
+    compatibility,
+  }: {
+    apiKeys: string[];
+    apiHost: string;
+    apiHeaders: { name: string; value: string }[];
+    model: string;
+    prompt: string;
+    lang: string;
+    additional: string;
+    temperature: number;
+    compatibility: boolean;
+  }
+) {
   let openAIProviders = [];
   for (let apiKey of apiKeys) {
     if (apiKey.length > 0) {
@@ -151,10 +187,11 @@ async function translateSubtitleSingle(subtitle: string, { apiKeys, apiHost, api
   }
 
   if (openAIProviders.length === 0) {
-    throw new Error('No valid API keys provided');
+    throw new Error("No valid API keys provided");
   }
 
-  const ai = openAIProviders[Math.floor(Math.random() * openAIProviders.length)];
+  const ai =
+    openAIProviders[Math.floor(Math.random() * openAIProviders.length)];
   const systemPrompt = prompt
     .replaceAll("{{lang}}", lang)
     .replaceAll("{{additional}}", additional);
@@ -238,10 +275,15 @@ function parseSubtitle(fileContent: string, fileExtension: string) {
       });
     return { full: parsedAssSubtitle, events };
   }
-  throw new Error('Unsupported file extension');
+  throw new Error("Unsupported file extension");
 }
 
-function saveTranslated(outputPath: string, parsedSubtitle: any, fileExtension: string, multiLangSave: string = 'none') {
+function saveTranslated(
+  outputPath: string,
+  parsedSubtitle: any,
+  fileExtension: string,
+  multiLangSave: string = "none"
+) {
   function parseTranslatedText(
     originalSubtitle: string = "",
     translatedText: string = "",
@@ -265,7 +307,10 @@ function saveTranslated(outputPath: string, parsedSubtitle: any, fileExtension: 
           type: x.type,
           data: {
             ...x.data,
-            text: parseTranslatedText(x.data.text, x.data.translatedText || x.data.text),
+            text: parseTranslatedText(
+              x.data.text,
+              x.data.translatedText || x.data.text
+            ),
           },
         };
       }),
@@ -280,8 +325,13 @@ function saveTranslated(outputPath: string, parsedSubtitle: any, fileExtension: 
         if (x.section === "Events") {
           x.body = x.body.map((line: any) => {
             if (line.key === "Dialogue") {
-              const eventIndex = events.findIndex((e: any) => e.data.text === line.value.Text);
-              const translatedText = eventIndex >= 0 ? events[eventIndex].data.translatedText || line.value.Text : line.value.Text;
+              const eventIndex = events.findIndex(
+                (e: any) => e.data.text === line.value.Text
+              );
+              const translatedText =
+                eventIndex >= 0
+                  ? events[eventIndex].data.translatedText || line.value.Text
+                  : line.value.Text;
               return {
                 key: "Dialogue",
                 value: {
@@ -302,7 +352,13 @@ function saveTranslated(outputPath: string, parsedSubtitle: any, fileExtension: 
     );
   }
 
-  fs.writeFileSync(outputPath, newSubtitle, 'utf8');
+  fs.writeFileSync(outputPath, newSubtitle, "utf8");
 }
 
-export { translateSubtitleChunk, translateSubtitleSingle, parseSubtitle, saveTranslated, asyncPoolAll, splitIntoChunk };
+export {
+  translateSubtitleChunk,
+  translateSubtitleSingle,
+  parseSubtitle,
+  saveTranslated,
+  splitIntoChunk,
+};

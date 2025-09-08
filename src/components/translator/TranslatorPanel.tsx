@@ -18,7 +18,6 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import InputField from "../InputField";
 import TextareaField from "../TextareaField";
-import TranslatorContainer from "../TranslatorContainer";
 import Button from "../Button";
 
 interface FileType {
@@ -129,19 +128,23 @@ export default function TranslatorPanel() {
     }
   };
 
-  const openModal = async (file: FileType) => {
-    setSelectedFile(file);
+  const loadCues = async (filePath: string) => {
     try {
       const { cues } = await ipcRenderer.invoke(
         "get-subtitle-preview",
-        file.path
+        filePath
       );
       setCues(cues);
-      setModalOpen(true);
     } catch (e: unknown) {
       const error = e as Error;
       toast.error(`Failed to load content: ${error.message}`);
     }
+  };
+
+  const openModal = async (file: FileType) => {
+    setSelectedFile(file);
+    await loadCues(file.path);
+    setModalOpen(true);
   };
 
   const closeModal = () => {
@@ -149,6 +152,15 @@ export default function TranslatorPanel() {
     setSelectedFile(null);
     setCues([]);
   };
+
+  useEffect(() => {
+    if (selectedFile && modalOpen) {
+      const progress = batchProgress[selectedFile.path];
+      if (progress && progress.status === "done") {
+        loadCues(selectedFile.path);
+      }
+    }
+  }, [batchProgress, selectedFile, modalOpen]);
 
   const isDisabled = isTranslating;
 
