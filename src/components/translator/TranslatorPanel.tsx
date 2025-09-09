@@ -58,6 +58,7 @@ export default function TranslatorPanel() {
     Record<string, ProgressType>
   >({});
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
   const [cues, setCues] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -205,7 +206,37 @@ export default function TranslatorPanel() {
         {/* Right Sidebar: File Upload and Batch Progress */}
         <div className="w-3/5 flex flex-col gap-4 p-2 h-[calc(100vh-61px)]">
           {/* File Upload Area */}
-          <div className="flex flex-col gap-1 border-2 border-dashed rounded items-center justify-center relative p-4">
+          <motion.div
+            className="flex flex-col gap-1 border-2 border-dashed rounded items-center justify-center relative p-4 cursor-pointer"
+            animate={{
+              scale: isDragging ? 1.01 : 1,
+              borderColor: isDragging ? "#3b82f6" : "#d1d5db",
+              backgroundColor: isDragging
+                ? "rgba(59, 130, 246, 0.1)"
+                : "transparent",
+            }}
+            transition={{ duration: 0.2 }}
+            onDragOver={(e) => e.preventDefault()}
+            onDragEnter={() => setIsDragging(true)}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              if (!isDisabled && e.dataTransfer.files) {
+                const fileArray = Array.from(e.dataTransfer.files)
+                  .filter((f: File) =>
+                    [".ass", ".srt", ".vtt", ".saa"].some((ext) =>
+                      f.name.toLowerCase().endsWith(ext)
+                    )
+                  )
+                  .map((f: File) => ({
+                    path: f.path,
+                    name: f.name,
+                  }));
+                setFiles(fileArray);
+              }
+            }}
+          >
             <i
               className={`bx ${
                 files.length > 0
@@ -245,7 +276,7 @@ export default function TranslatorPanel() {
               required
               onChange={() => {}}
             />
-          </div>
+          </motion.div>
           <div className="flex-1 h-full overflow-y-auto">
             {/* Batch Progress if files are present */}
             {files.length > 0 && (
