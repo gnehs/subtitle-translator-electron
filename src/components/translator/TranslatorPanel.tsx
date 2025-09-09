@@ -154,6 +154,35 @@ export default function TranslatorPanel() {
     setCues([]);
   };
 
+  const clearCompletedFiles = () => {
+    const completedFiles = files.filter((file) => {
+      const progress = batchProgress[file.path];
+      return progress && progress.status === "done";
+    });
+
+    if (completedFiles.length === 0) {
+      toast.info("No completed files to clear");
+      return;
+    }
+
+    const newFiles = files.filter((file) => {
+      const progress = batchProgress[file.path];
+      return !progress || progress.status !== "done";
+    });
+
+    setFiles(newFiles);
+
+    const newBatchProgress = Object.fromEntries(
+      Object.entries(batchProgress).filter(([path]) =>
+        newFiles.some((f) => f.path === path)
+      )
+    );
+
+    setBatchProgress(newBatchProgress);
+
+    toast.success(`Cleared ${completedFiles.length} completed file(s)`);
+  };
+
   useEffect(() => {
     if (selectedFile && modalOpen) {
       const progress = batchProgress[selectedFile.path];
@@ -277,7 +306,20 @@ export default function TranslatorPanel() {
               onChange={() => {}}
             />
           </motion.div>
+
           <div className="flex-1 h-full overflow-y-auto">
+            {files.length > 0 && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={clearCompletedFiles}
+                  variant="secondary"
+                  icon="bx-trash"
+                  className="text-sm"
+                >
+                  Clear Completed
+                </Button>
+              </div>
+            )}
             {/* Batch Progress if files are present */}
             {files.length > 0 && (
               <div className="flex-1 overflow-y-scroll flex flex-col gap-1 p-1">

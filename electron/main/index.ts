@@ -190,7 +190,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       // Translate
       let chunks = splitIntoChunk(
         subtitle,
-        Math.round(Math.random() * 10 + 20)
+        Math.round(Math.random() * 10 + 40)
       );
       let cueProgressPerChunk = 90 / totalCues;
 
