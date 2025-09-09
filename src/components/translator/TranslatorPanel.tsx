@@ -168,7 +168,7 @@ export default function TranslatorPanel() {
     <div className="w-full h-full flex flex-col">
       <div className="flex flex-row w-full flex-1">
         {/* Left Sidebar: Settings */}
-        <div className="w-1/3 flex flex-col gap-4 p-2 border-r border-slate-200 h-full">
+        <div className="w-2/5 flex flex-col gap-4 p-2 border-r border-slate-200 h-full">
           <InputField
             label={t(`translate.target`)}
             placeholder={t(`translate.target_description`)!}
@@ -203,12 +203,14 @@ export default function TranslatorPanel() {
         </div>
 
         {/* Right Sidebar: File Upload and Batch Progress */}
-        <div className="w-2/3 flex flex-col gap-4 p-2 h-[calc(100vh-61px)]">
+        <div className="w-3/5 flex flex-col gap-4 p-2 h-[calc(100vh-61px)]">
           {/* File Upload Area */}
           <div className="flex flex-col gap-1 border-2 border-dashed rounded items-center justify-center relative p-4">
             <i
               className={`bx ${
-                files.length > 0 ? `bxs-file-blank` : `bx-file-blank`
+                files.length > 0
+                  ? `bxs-file-blank`
+                  : `bx-file-blank opacity-50 `
               } text-4xl`}
             ></i>
 
@@ -291,45 +293,6 @@ export default function TranslatorPanel() {
             )}
           </div>
         </div>
-        {/* Modal */}
-        {modalOpen && selectedFile && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-4 rounded max-w-4xl max-h-full overflow-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">{selectedFile.name}</h3>
-                <Button onClick={closeModal} icon="bx-x">
-                  Close
-                </Button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 p-2 text-left">
-                        Original
-                      </th>
-                      <th className="border border-gray-300 p-2 text-left">
-                        Translated
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cues.map((cue: any, index: number) => (
-                      <tr key={index}>
-                        <td className="border border-gray-300 p-2">
-                          {cue.text}
-                        </td>
-                        <td className="border border-gray-300 p-2">
-                          {cue.translatedText || "Not translated yet"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="bg-slate-200 border-t border-slate-200 overflow-hidden h-2">
@@ -339,6 +302,29 @@ export default function TranslatorPanel() {
           transition={{ duration: 0.5 }}
         />
       </div>
+      {/* Modal */}
+      {modalOpen && selectedFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded max-w-4xl max-h-full overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">{selectedFile.name}</h3>
+              <Button onClick={closeModal} icon="bx-x">
+                Close
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              {cues.map((cue: any, index: number) => (
+                <div key={index} className="border border-gray-300 p-2">
+                  <div>{cue.text}</div>
+                  <div className="text-sm opacity-75">
+                    {cue.translatedText || "Not translated yet"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
