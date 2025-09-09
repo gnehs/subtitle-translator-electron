@@ -16,9 +16,9 @@ import {
 } from "@/hooks/useOpenAI";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import InputField from "../InputField";
-import TextareaField from "../TextareaField";
-import Button from "../Button";
+import InputField from "@/components/InputField";
+import TextareaField from "@/components/TextareaField";
+import Button from "@/components/Button";
 
 interface FileType {
   path: string;

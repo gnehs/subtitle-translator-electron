@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import TranslatorPanel from "@/components/translator/TranslatorPanel";
+import TranslatorPanel from "@/components/TranslatorPanel";
 export default function Translator() {
   return (
     <div className="flex flex-col h-full">
