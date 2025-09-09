@@ -103,11 +103,16 @@
       "output": "output",
       "USD": "USD",
       "start": "Start",
+      "translating": "Translating...",
       "reset": "Reset",
       "save": "Save",
       "translation_completed": "Translation completed",
       "no_api_key": "Please enter your API key in the settings.",
-      "exceeded": "API usage exceeded."
+      "exceeded": "API usage exceeded.",
+      "clear_completed": "Clear Completed",
+      "file_removed": "File removed",
+      "no_completed_files": "No completed files to clear",
+      "cleared_files": "Cleared {{count}} completed file(s)"
     }
   }
 }

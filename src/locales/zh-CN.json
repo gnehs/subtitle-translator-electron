@@ -103,11 +103,16 @@
       "output": "输出",
       "USD": "美金",
       "start": "开始翻译",
+      "translating": "翻译中...",
       "reset": "重设",
       "save": "储存",
       "translation_completed": "翻译完成",
       "no_api_key": "请先设定 API 密钥",
-      "exceeded": "API 额度已用罄"
+      "exceeded": "API 额度已用罄",
+      "clear_completed": "清除已完成",
+      "file_removed": "档案已移除",
+      "no_completed_files": "没有已完成的档案可清除",
+      "cleared_files": "已清除 {{count}} 个已完成档案"
     }
   }
 }

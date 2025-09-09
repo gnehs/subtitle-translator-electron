@@ -161,7 +161,7 @@ export default function TranslatorPanel() {
     });
 
     if (completedFiles.length === 0) {
-      toast.info("No completed files to clear");
+      toast.info(t("translate.no_completed_files"));
       return;
     }
 
@@ -180,7 +180,21 @@ export default function TranslatorPanel() {
 
     setBatchProgress(newBatchProgress);
 
-    toast.success(`Cleared ${completedFiles.length} completed file(s)`);
+    toast.success(
+      t("translate.cleared_files", { count: completedFiles.length })
+    );
+  };
+
+  const removeFile = (filePath: string) => {
+    const newFiles = files.filter((f) => f.path !== filePath);
+    setFiles(newFiles);
+
+    const newBatchProgress = Object.fromEntries(
+      Object.entries(batchProgress).filter(([path]) => path !== filePath)
+    );
+    setBatchProgress(newBatchProgress);
+
+    toast.success(t("translate.file_removed"));
   };
 
   useEffect(() => {
@@ -228,7 +242,7 @@ export default function TranslatorPanel() {
               isDisabled ? "cursor-not-allowed opacity-50" : ""
             }`}
           >
-            {isTranslating ? `Translating...` : "Start Translation"}
+            {isTranslating ? t("translate.translating") : t("translate.start")}
           </Button>
         </div>
 
@@ -316,7 +330,7 @@ export default function TranslatorPanel() {
                   icon="bx-trash"
                   className="text-sm"
                 >
-                  Clear Completed
+                  {t("translate.clear_completed")}
                 </Button>
               </div>
             )}
@@ -341,10 +355,22 @@ export default function TranslatorPanel() {
                   return (
                     <div
                       key={file.path}
-                      className="flex flex-col gap-2 p-2 border rounded cursor-pointer"
+                      className="flex flex-col gap-2 p-2 border rounded cursor-pointer group"
                       onClick={() => openModal(file)}
                     >
-                      <div className="text-sm font-bold">{file.name}</div>
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm font-bold">{file.name}</div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(file.path);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-sm"
+                          title="Remove file"
+                        >
+                          <i className="bx bx-trash"></i>
+                        </button>
+                      </div>
                       <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                         <motion.div
                           className="h-full bg-slate-500"
