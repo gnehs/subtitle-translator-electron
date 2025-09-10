@@ -1,7 +1,6 @@
 import Title from "../Title";
 import { useTranslation } from "react-i18next";
 import useModel from "../../hooks/useModel";
-import modelList from "../../model/list";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useAPIHost, useAPIKeys, useAPIHeaders } from "@/hooks/useOpenAI";
 import {
@@ -73,8 +72,6 @@ export default function Model() {
     };
   }, []);
 
-  const allModels = [...modelList, ...remoteModels];
-
   return (
     <div className="space-y-4">
       {/* Model Selection */}
@@ -115,7 +112,7 @@ export default function Model() {
           {isModelOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
               <div className="py-1">
-                {allModels.map((modelName) => (
+                {remoteModels.map((modelName) => (
                   <button
                     key={modelName}
                     onClick={() => {
