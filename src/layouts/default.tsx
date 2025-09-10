@@ -12,11 +12,11 @@ function NavItem({ to, icon }: { to: string; icon: string }) {
     <Link
       to={to}
       className={`flex items-center justify-center text-[24px] ${
-        isActive ? `bg-slate-200` : `hover:bg-slate-200`
-      } group p-2 rounded-lg transition-colors duration-200`}
+        isActive ? `bg-black/10` : `hover:bg-black/5`
+      } group p-2 rounded-lg transition-colors duration-200 cursor-pointer`}
     >
       <i
-        className={`bx ${icon} group-active:scale-95 transition-all duration-200`}
+        className={`bx ${icon} group-active:scale-90 transition-all duration-200`}
       ></i>
     </Link>
   );
@@ -73,18 +73,31 @@ function DefaultLayout() {
   }, []);
 
   return (
-    <div className="flex h-[100vh]">
-      <div className="flex flex-col w-[52px] h-full bg-slate-100 p-1 gap-[2px] border-r border-slate-200">
-        <NavItem to="/" icon="bx-transfer-alt" />
-        <div className="flex-1"></div>
-        <CheckUpdate />
-        <NavItem to="/settings" icon="bx-cog" />
-        <NavItem to="/about" icon="bx-info-circle" />
+    <div className="flex flex-col h-[100vh] p-2 gap-2 bg-white/75">
+      <div
+        className="text-center shrink-0"
+        style={{
+          // @ts-expect-error Electron API
+          appRegion: "drag",
+        }}
+      >
+        Subtitle translator
       </div>
-      <main className="flex-1 h-[100vh] overflow-scroll">
-        <Outlet />
-      </main>
-      <ToastContainer position="bottom-center" newestOnTop />
+      <div className="flex flex-1">
+        <div className="flex flex-col w-[52px] h-full pr-2 gap-0.5">
+          <NavItem to="/" icon="bx-transfer-alt" />
+          <div className="flex-1"></div>
+          <CheckUpdate />
+          <NavItem to="/settings" icon="bx-cog" />
+          <NavItem to="/about" icon="bx-info-circle" />
+        </div>
+        <div className="drop-shadow-xl w-full h-full bg-white/90 rounded-md">
+          <main className=" overflow-hidden w-full h-full rounded-md   ">
+            <Outlet />
+          </main>
+        </div>
+        <ToastContainer position="bottom-center" newestOnTop />
+      </div>
     </div>
   );
 }

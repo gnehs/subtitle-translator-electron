@@ -10,9 +10,8 @@ import { useTranslation } from "react-i18next";
 export default function Settings() {
   const { t } = useTranslation();
   return (
-    <>
-      <Header>{t(`settings`)}</Header>
-      <div className="p-2 flex flex-col gap-8">
+    <div className="h-[calc(100vh-48px)] overflow-y-auto">
+      <div className="p-4 flex flex-col gap-8">
         <Language />
         <API />
         <Delay />
@@ -21,6 +20,6 @@ export default function Settings() {
         <Prompt />
         <Reset />
       </div>
-    </>
+    </div>
   );
 }
