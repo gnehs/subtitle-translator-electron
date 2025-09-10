@@ -11,7 +11,7 @@ export default function Settings() {
   const { t } = useTranslation();
   return (
     <div className="h-[calc(100vh-48px)] overflow-y-auto">
-      <div className="p-4 flex flex-col gap-8">
+      <div className="p-4 flex flex-col gap-2">
         <Language />
         <API />
         <Delay />

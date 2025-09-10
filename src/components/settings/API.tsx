@@ -1,9 +1,8 @@
 import Title from "../Title";
-import Button from "../Button";
-import InputField from "../InputField";
 import { useTranslation } from "react-i18next";
 import { useAPIHost, useAPIKeys, useAPIHeaders } from "@/hooks/useOpenAI";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+
 export default function API() {
   const { t } = useTranslation();
   const [keys, setKeys] = useAPIKeys();
@@ -13,22 +12,16 @@ export default function API() {
   const [provider, setProvider] = useState<
     "openrouter" | "openai" | "vercel-gateway" | "openai-compatible"
   >("openrouter");
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   function setKey(index: number, value: string) {
     const newKeys = structuredClone(keys);
     //@ts-ignore
     newKeys[index] = value;
     setKeys(newKeys);
   }
-  function addKey() {
-    const newKeys = structuredClone(keys);
-    newKeys.push("");
-    setKeys(newKeys);
-  }
-  function removeKey(i: number) {
-    const newKeys = structuredClone(keys);
-    newKeys.splice(i, 1);
-    setKeys(newKeys);
-  }
+
   function setHeaderName(i: number, value: string) {
     const newHeaders = structuredClone(headers || []);
     newHeaders[i] = {
@@ -37,27 +30,29 @@ export default function API() {
     };
     setHeaders(newHeaders);
   }
+
   function setHeaderValue(i: number, value: string) {
     const newHeaders = structuredClone(headers || []);
     newHeaders[i] = { ...(newHeaders[i] || { name: "", value: "" }), value };
     setHeaders(newHeaders);
   }
+
   function addHeader() {
     const newHeaders = structuredClone(headers || []);
     newHeaders.push({ name: "", value: "" });
     setHeaders(newHeaders);
   }
+
   function removeHeader(i: number) {
     const newHeaders = structuredClone(headers || []);
     newHeaders.splice(i, 1);
     setHeaders(newHeaders);
   }
+
   function preset(hostUrl: string, keyLabel: string) {
     setHost(hostUrl);
-    if (noKey && keys.length === 1 && !keys[0]) {
-      // Hint label via placeholder behavior is handled by UI text below
-    }
   }
+
   useEffect(() => {
     switch (provider) {
       case "openrouter":
@@ -74,71 +69,136 @@ export default function API() {
         break;
     }
   }, [provider]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const getProviderInfo = (providerValue: string) => {
+    const providerNames: Record<string, { name: string }> = {
+      "openrouter": { name: t("api.presets.openrouter") },
+      "openai": { name: t("api.presets.openai") },
+      "vercel-gateway": { name: t("api.presets.vercel_gateway") },
+      "openai-compatible": { name: t("api.presets.openai_compatible") },
+    };
+    return providerNames[providerValue] || { name: providerValue };
+  };
+
+  const currentProviderInfo = getProviderInfo(provider);
+
   return (
-    <div className="flex flex-col gap-2">
-      <Title>{t("api.title")}</Title>
-      {noKey && (
-        <div className="p-2 rounded bg-yellow-100 text-yellow-900 text-sm">
-          {t("api.presets.recommendation")}
-        </div>
-      )}
-      <Title>{t("api.presets.title")}</Title>
-      <div>
-        <select
-          className="p-2 rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
-          value={provider}
-          onChange={(e) => setProvider(e.target.value as any)}
-        >
-          <option value="openrouter">{t("api.presets.openrouter")}</option>
-          <option value="openai">{t("api.presets.openai")}</option>
-          <option value="vercel-gateway">
-            {t("api.presets.vercel_gateway")}
-          </option>
-          <option value="openai-compatible">
-            {t("api.presets.openai_compatible")}
-          </option>
-        </select>
+    <div className="bg-white rounded flex justify-between items-start border border-slate-200 p-4 gap-8">
+      <div className="flex flex-col">
+        <Title>{t("api.title")}</Title>
+        {noKey && (
+          <div className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded mt-2">
+            {t("api.presets.recommendation")}
+          </div>
+        )}
       </div>
-      <InputField
-        label={t("api.key.name")}
-        type="password"
-        value={keys[0] || ""}
-        onChange={(e: any) => setKey(0, e.target.value)}
-      />
-      <div
-        className="text-sm opacity-80 text-inject"
-        dangerouslySetInnerHTML={{ __html: t("api.key.description")! }}
-      />
-      <div
-        className="text-sm opacity-80 text-inject break-all"
-        dangerouslySetInnerHTML={{ __html: t("api.key.notify")! }}
-      />
-      {provider === "openai-compatible" && (
-        <InputField
-          label={t("api.host.name")}
-          description={t("api.host.description")!}
-          value={host}
-          onChange={(e: any) => setHost(e.target.value)}
-        />
-      )}
-      <Title>{t("api.headers.title")}</Title>
-      {(headers || []).map((h, i) => (
-        <div className="flex gap-2" key={i}>
-          <InputField
-            label={i === 0 ? t("api.headers.name") : ""}
-            value={h?.name || ""}
-            onChange={(e: any) => setHeaderName(i, e.target.value)}
-          />
-          <InputField
-            label={i === 0 ? t("api.headers.value") : ""}
-            value={h?.value || ""}
-            onChange={(e: any) => setHeaderValue(i, e.target.value)}
+
+      <div className="flex flex-col gap-4 w-80 shrink-0">
+        {/* Provider Selection */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className={`
+              w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3
+              flex items-center justify-between
+              hover:bg-white hover:border-slate-300
+              focus:outline-none focus:bg-white focus:border-slate-400 focus:ring-1 focus:ring-slate-400
+              transition-all duration-150 ease-in-out
+              cursor-pointer
+              ${isOpen ? "bg-white border-slate-400 ring-1 ring-slate-400" : ""}
+            `}
           >
-            <Button onClick={() => removeHeader(i)} icon="bx-x"></Button>
-          </InputField>
+            <div className="text-left">
+              <div className="font-medium text-slate-800 text-sm">
+                {currentProviderInfo.name}
+              </div>
+            </div>
+            <i
+              className={`bx bx-chevron-down text-slate-400 transition-transform duration-200 ease-in-out ${
+                isOpen ? "rotate-180" : ""
+              }`}
+            ></i>
+          </button>
+
+          {isOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+              <div className="py-1">
+                {["openrouter", "openai", "vercel-gateway", "openai-compatible"].map((providerValue) => {
+                  const providerInfo = getProviderInfo(providerValue);
+                  const isActive = provider === providerValue;
+
+                  return (
+                    <button
+                      key={providerValue}
+                      onClick={() => {
+                        setProvider(providerValue as any);
+                        setIsOpen(false);
+                      }}
+                      className={`
+                        w-full px-4 py-2.5 flex items-center gap-3 text-left
+                        hover:bg-slate-50 transition-colors duration-150
+                        ${isActive ? "bg-slate-100" : ""}
+                      `}
+                    >
+                      <div className="flex-1">
+                        <div
+                          className={`font-medium text-sm ${
+                            isActive ? "text-slate-800" : "text-slate-700"
+                          }`}
+                        >
+                          {providerInfo.name}
+                        </div>
+                      </div>
+                      {isActive && (
+                        <div className="w-4 h-4 bg-slate-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <i className="bx bx-check text-white text-xs"></i>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-      ))}
-      <Button onClick={() => addHeader()} icon="bx-plus"></Button>
+
+        {/* API Key Input */}
+        <input
+          type="password"
+          placeholder={t("api.key.name")}
+          value={keys[0] || ""}
+          onChange={(e) => setKey(0, e.target.value)}
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+        />
+
+        {/* Custom Host for OpenAI Compatible */}
+        {provider === "openai-compatible" && (
+          <input
+            type="text"
+            placeholder={t("api.host.name")}
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import Title from "../Title";
-import Button from "../Button";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "usehooks-ts";
+
 export default function Save() {
   const { t } = useTranslation();
   const [multiLangSave, setMultiLangSave] = useLocalStorage(
@@ -13,23 +13,30 @@ export default function Save() {
     "translate+original",
     "original+translate",
   ];
+
   return (
-    <div className="flex flex-col gap-2">
-      <Title>{t(`save.title`)}</Title>
-      <p>{t(`save.multi-language.name`)}</p>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+    <div className="bg-white rounded flex justify-between items-center border border-slate-200 p-4 gap-8">
+      <div className="flex flex-col">
+        <Title>{t(`save.title`)}</Title>
+        <div className="text-sm text-slate-600 mt-1">
+          {t(`save.multi-language.description`)}
+        </div>
+      </div>
+      
+      <div className="flex gap-2 shrink-0">
         {multiLangSaveOptions.map((id) => (
-          <Button
+          <button
             key={id}
-            active={multiLangSave == id}
             onClick={() => setMultiLangSave(id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              multiLangSave === id 
+                ? "bg-slate-800 text-white" 
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
           >
             {t(`save.multi-language.options.${id}`)}
-          </Button>
+          </button>
         ))}
-      </div>
-      <div className="text-sm opacity-80">
-        {t(`save.multi-language.description`)}
       </div>
     </div>
   );
