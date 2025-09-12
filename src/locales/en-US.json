@@ -112,7 +112,15 @@
       "clear_completed": "Clear Completed",
       "file_removed": "File removed",
       "no_completed_files": "No completed files to clear",
-      "cleared_files": "Cleared {{count}} completed file(s)"
+      "cleared_files": "Cleared {{count}} completed file(s)",
+      "analyzing_context": "Analyzing context",
+      "close": "Close",
+      "context": {
+        "title": "Context",
+        "plot_summary": "Plot summary",
+        "glossary": "Glossary"
+      },
+      "not_translated_yet": "Not translated yet"
     }
   }
 }

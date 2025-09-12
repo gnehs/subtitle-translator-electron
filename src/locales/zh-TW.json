@@ -112,7 +112,15 @@
       "clear_completed": "清除已完成",
       "file_removed": "檔案已移除",
       "no_completed_files": "沒有已完成的檔案可清除",
-      "cleared_files": "已清除 {{count}} 個已完成檔案"
+      "cleared_files": "已清除 {{count}} 個已完成檔案",
+      "analyzing_context": "分析上下文",
+      "close": "關閉",
+      "context": {
+        "title": "內容脈絡",
+        "plot_summary": "劇情摘要",
+        "glossary": "詞彙表"
+      },
+      "not_translated_yet": "尚未翻譯"
     }
   }
 }

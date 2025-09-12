@@ -10,6 +10,7 @@ import {
   translateSubtitleChunk,
   translateSubtitleSingle,
   saveTranslated,
+  analyzeSubtitlesForContext,
 } from "./utils/translate";
 
 // The built directory structure
@@ -133,6 +134,9 @@ ipcMain.on("batch-progress", (event, data) => {
   console.log("Batch progress:", data);
 });
 
+// Cache analysis per file so renderer can fetch it on demand
+const analysisCache = new Map<string, any>();
+
 async function retryTranslate(fn, params, maxRetries = 3, delay = 1000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -186,10 +190,77 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       const totalCues = subtitle.length;
       event.sender.send("batch-progress", {
         filePath: file.path,
-        progress: 0,
+        progress: 1,
+        status: "analyzing",
+        totalCues,
+        currentCue: 0,
+      });
+
+      // Prepare output path early so we can write partial updates during translation
+      const outputPath = path.join(
+        path.dirname(file.path),
+        file.name.replace(/\.[^/.]+$/, "") + ".translated." + ext
+      );
+
+      // Build analysis context (plot summary + glossary) and attach to all requests
+      const allTexts = subtitle
+        .map((cue: any) => (cue && cue.data ? cue.data.text : ""))
+        .filter((t: string) => t && t.length > 0);
+
+      let combinedAdditional = params.additional || "";
+      let analysisData: any = null;
+      try {
+        const analysis = await analyzeSubtitlesForContext(allTexts, {
+          apiKeys: params.apiKeys || [],
+          apiHost: params.apiHost || "https://api.openai.com/v1",
+          apiHeaders: params.apiHeaders || [],
+          model: params.model || "",
+          lang: params.lang || "",
+          temperature: 0.3,
+        });
+
+        const glossaryStr = (analysis.glossary || [])
+          .map((g: any) => {
+            const pieces = [
+              g.term || "",
+              g.preferredTranslation ? `(${g.preferredTranslation})` : "",
+              g.category ? `[${g.category}]` : "",
+              ":",
+              g.description || "",
+              g.notes ? ` (${g.notes})` : "",
+            ].filter(Boolean);
+            return `- ${pieces.join(" ")}`.replace(/\s+/g, " ").trim();
+          })
+          .join("\n");
+
+        const contextBlock =
+          `Plot summary:\n${analysis.plotSummary}\n\nGlossary:\n${glossaryStr}`;
+ 
+        combinedAdditional = `${combinedAdditional ? combinedAdditional + "\n\n" : ""}[Context]\n${contextBlock}`;
+ 
+        analysisData = analysis;
+        // Save in cache for renderer retrieval
+        analysisCache.set(file.path, analysis);
+        // Notify renderer with analysis result so UI can display it
+        event.sender.send("batch-progress", {
+          filePath: file.path,
+          progress: 4,
+          status: "analyzing",
+          totalCues,
+          currentCue: 0,
+          analysis,
+        });
+      } catch (analysisErr) {
+        console.warn("Context analysis failed, continue without it:", analysisErr);
+      }
+
+      event.sender.send("batch-progress", {
+        filePath: file.path,
+        progress: 5,
         status: "translating",
         totalCues,
         currentCue: 0,
+        analysis: analysisData,
       });
 
       // Translate
@@ -211,7 +282,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
               model: params.model || "",
               prompt: params.prompt || "",
               lang: params.lang || "",
-              additional: params.additional || "",
+              additional: combinedAdditional || "",
               temperature: params.temperature || 1,
               compatibility: params.compatibility || false,
             }),
@@ -242,7 +313,15 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
           status: "translating",
           totalCues,
           currentCue,
+          analysis: analysisData,
         });
+
+        // Write partial translated file for live preview during chunk processing
+        try {
+          saveTranslated(outputPath, parsed, ext, params.multiLangSave || "none");
+        } catch (e) {
+          console.warn("Failed to write partial translated file:", e);
+        }
       };
 
       for await (const _ of pool(2, chunks, chunkProcessor)) {
@@ -266,7 +345,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
                 model: params.model || "",
                 prompt: params.prompt || "",
                 lang: params.lang || "",
-                additional: params.additional || "",
+                additional: combinedAdditional || "",
                 temperature: params.temperature || 1,
                 compatibility: params.compatibility || false,
               }),
@@ -287,15 +366,20 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
               status: "translating",
               totalCues,
               currentCue,
+              analysis: analysisData,
             });
+
+            // Write partial translated file after single-line fallback updates
+            try {
+              saveTranslated(outputPath, parsed, ext, params.multiLangSave || "none");
+            } catch (e) {
+              console.warn("Failed to write partial translated file (fallback):", e);
+            }
           }
         }
       }
 
-      const outputPath = path.join(
-        path.dirname(file.path),
-        file.name.replace(/\.[^/.]+$/, "") + ".translated." + ext
-      );
+      // Final write
       saveTranslated(outputPath, parsed, ext, params.multiLangSave || "none");
       console.log(`Saved translated file to: ${outputPath}`);
       event.sender.send("batch-progress", {
@@ -304,6 +388,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         status: "done",
         totalCues,
         currentCue: totalCues,
+        analysis: analysisData,
       });
     } catch (e) {
       console.error(`Batch translation error for ${file.path}:`, e);
@@ -322,6 +407,15 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
   return { success: true };
 });
 
+// Allow renderer to fetch cached analysis for a file (in case progress event missed)
+ipcMain.handle("get-analysis", async (event, filePath: string) => {
+  try {
+    return analysisCache.get(filePath) || null;
+  } catch {
+    return null;
+  }
+});
+ 
 ipcMain.handle("get-translated-content", async (event, filePath) => {
   const translatedPath =
     filePath.replace(/\.[^/.]+$/, "") +

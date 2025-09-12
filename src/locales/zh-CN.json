@@ -112,7 +112,15 @@
       "clear_completed": "清除已完成",
       "file_removed": "档案已移除",
       "no_completed_files": "没有已完成的档案可清除",
-      "cleared_files": "已清除 {{count}} 个已完成档案"
+      "cleared_files": "已清除 {{count}} 个已完成档案",
+      "analyzing_context": "分析上下文",
+      "close": "关闭",
+      "context": {
+        "title": "内容上下文",
+        "plot_summary": "剧情摘要",
+        "glossary": "词汇表"
+      },
+      "not_translated_yet": "尚未翻译"
     }
   }
 }

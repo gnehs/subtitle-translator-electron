@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import useFile from "@/hooks/useFile";
 import { ipcRenderer } from "electron";
@@ -27,10 +27,20 @@ interface FileType {
 
 interface ProgressType {
   progress: number;
-  status: "pending" | "translating" | "done" | "error";
+  status: "pending" | "analyzing" | "translating" | "done" | "error";
   error?: string;
   totalCues?: number;
   currentCue?: number;
+  analysis?: {
+    plotSummary: string;
+    glossary: {
+      term: string;
+      category?: string;
+      description: string;
+      preferredTranslation?: string;
+      notes?: string;
+    }[];
+  };
 }
 
 export default function TranslatorPanel() {
@@ -62,10 +72,36 @@ export default function TranslatorPanel() {
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
   const [cues, setCues] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  // throttle live preview reload
+  const lastPreviewUpdateRef = useRef<number>(0);
 
   useEffect(() => {
     const handleProgress = (event: any, data: any) => {
-      setBatchProgress((prev) => ({ ...prev, [data.filePath]: data }));
+      setBatchProgress((prev) => {
+        const prevFile = prev[data.filePath] || {};
+        const merged: ProgressType = {
+          ...prevFile,
+          ...data,
+          analysis: data.analysis ?? (prevFile as any).analysis,
+        } as ProgressType;
+        return { ...prev, [data.filePath]: merged };
+      });
+
+      // Live update cues in modal during translating/done with throttling
+      const now = Date.now();
+      const shouldUpdatePreview =
+        modalOpen &&
+        selectedFile &&
+        selectedFile.path === data.filePath &&
+        (data.status === "translating" || data.status === "done") &&
+        now - lastPreviewUpdateRef.current > 800;
+
+      if (shouldUpdatePreview) {
+        lastPreviewUpdateRef.current = now;
+        // fire and forget
+        loadCues(data.filePath).catch(() => {});
+      }
+
       if (data.status === "error") {
         toast.error(`Translation error for ${data.filePath}: ${data.error}`);
       }
@@ -79,7 +115,7 @@ export default function TranslatorPanel() {
     return () => {
       ipcRenderer.removeListener("batch-progress", handleProgress);
     };
-  }, []);
+  }, [modalOpen, selectedFile]);
 
   const overallProgress =
     Object.values(batchProgress).reduce(
@@ -145,6 +181,22 @@ export default function TranslatorPanel() {
   const openModal = async (file: FileType) => {
     setSelectedFile(file);
     await loadCues(file.path);
+    // Ensure analysis is available even if the renderer missed the progress event
+    try {
+      const analysis = await ipcRenderer.invoke("get-analysis", file.path);
+      if (analysis) {
+        setBatchProgress((prev) => {
+          const prevFile = prev[file.path] || { progress: 0, status: "pending" as const };
+          const merged: ProgressType = {
+            ...prevFile,
+            analysis,
+          } as ProgressType;
+          return { ...prev, [file.path]: merged };
+        });
+      }
+    } catch (e) {
+      // ignore fetch analysis errors
+    }
     setModalOpen(true);
   };
 
@@ -207,6 +259,8 @@ export default function TranslatorPanel() {
   }, [batchProgress, selectedFile, modalOpen]);
 
   const isDisabled = isTranslating;
+  const selectedAnalysis =
+    selectedFile ? batchProgress[selectedFile.path]?.analysis : undefined;
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -342,16 +396,18 @@ export default function TranslatorPanel() {
                     progress: 0,
                     status: "pending" as const,
                   };
-                  const statusText =
+                  let statusText = "";
+                  if (
                     progressData.status === "translating" &&
                     progressData.currentCue &&
                     progressData.totalCues
-                      ? `Translating cue ${progressData.currentCue} of ${
-                          progressData.totalCues
-                        } - ${progressData.progress.toFixed(1)}%`
-                      : `${
-                          progressData.status
-                        } - ${progressData.progress.toFixed(1)}%`;
+                  ) {
+                    statusText = `Translating cue ${progressData.currentCue} of ${progressData.totalCues} - ${progressData.progress.toFixed(1)}%`;
+                  } else if (progressData.status === "analyzing") {
+                    statusText = `${t("translate.analyzing_context")} - ${progressData.progress.toFixed(1)}%`;
+                  } else {
+                    statusText = `${progressData.status} - ${progressData.progress.toFixed(1)}%`;
+                  }
                   return (
                     <div
                       key={file.path}
@@ -408,15 +464,44 @@ export default function TranslatorPanel() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold">{selectedFile.name}</h3>
               <Button onClick={closeModal} icon="bx-x">
-                Close
+                {t("translate.close")}
               </Button>
             </div>
             <div className="overflow-x-auto">
+              {selectedAnalysis && (
+                <div className="mb-4">
+                  <div className="mb-2">
+                    <div className="text-md font-semibold">{t("translate.context.title")}</div>
+                    <div className="mt-1">
+                      <div className="font-medium">{t("translate.context.plot_summary")}</div>
+                      <p className="text-sm whitespace-pre-wrap">
+                        {selectedAnalysis.plotSummary}
+                      </p>
+                    </div>
+                    <div className="mt-2">
+                      <div className="font-medium">{t("translate.context.glossary")}</div>
+                      <ul className="text-sm list-disc pl-5">
+                        {selectedAnalysis.glossary?.map(
+                          (g: any, idx: number) => (
+                            <li key={idx}>
+                              <span className="font-semibold">{g.term}</span>
+                              {g.preferredTranslation ? ` (${g.preferredTranslation})` : ""}
+                              {g.category ? ` [${g.category}]` : ""}: {g.description}
+                              {g.notes ? ` (${g.notes})` : ""}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                  <hr className="my-2" />
+                </div>
+              )}
               {cues.map((cue: any, index: number) => (
                 <div key={index} className="border border-gray-300 p-2">
                   <div>{cue.text}</div>
                   <div className="text-sm opacity-75">
-                    {cue.translatedText || "Not translated yet"}
+                    {cue.translatedText || t("translate.not_translated_yet")}
                   </div>
                 </div>
               ))}
