@@ -57,11 +57,6 @@ async function createWindow() {
     icon: join(process.env.PUBLIC, "favicon.ico"),
     minWidth: 800,
     minHeight: 640,
-    vibrancy: "fullscreen-ui", // on MacOS
-    backgroundMaterial: "mica", // on Windows 11
-    autoHideMenuBar: true, // on Windows 11
-    titleBarStyle: "hidden", // on Windows 11
-    trafficLightPosition: { x: 10, y: 12 },
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
@@ -70,6 +65,17 @@ async function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
     },
+    ...(process.platform === "darwin"
+      ? {
+          vibrancy: "fullscreen-ui",
+          titleBarStyle: "hiddenInset",
+          trafficLightPosition: { x: 10, y: 12 },
+        }
+      : {
+          titleBarOverlay: true,
+          autoHideMenuBar: true, // on Windows 11
+          backgroundMaterial: "mica", // on Windows 11
+        }),
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {
