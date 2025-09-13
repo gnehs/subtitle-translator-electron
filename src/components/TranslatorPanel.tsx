@@ -473,60 +473,65 @@ export default function TranslatorPanel() {
       {/* Modal */}
       {modalOpen && selectedFile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded max-w-4xl max-h-full overflow-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">{selectedFile.name}</h3>
-              <Button onClick={closeModal} icon="bx-x">
-                {t("translate.close")}
-              </Button>
-            </div>
-            <div className="overflow-x-auto">
-              {selectedAnalysis && (
-                <div className="mb-4">
-                  <div className="mb-2">
-                    <div className="text-md font-semibold">
-                      {t("translate.context.title")}
-                    </div>
-                    <div className="mt-1">
-                      <div className="font-medium">
-                        {t("translate.context.plot_summary")}
+          <div className="p-4 h-full">
+            <div className="bg-white p-4 rounded max-w-4xl  h-full overflow-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">{selectedFile.name}</h3>
+                <Button onClick={closeModal} icon="bx-x" className="shrink-0">
+                  {t("translate.close")}
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                {selectedAnalysis && (
+                  <div className="mb-4">
+                    <div className="mb-2">
+                      <div className="text-md font-semibold">
+                        {t("translate.context.title")}
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">
-                        {selectedAnalysis.plotSummary}
-                      </p>
-                    </div>
-                    <div className="mt-2">
-                      <div className="font-medium">
-                        {t("translate.context.glossary")}
+                      <div className="mt-1">
+                        <div className="font-medium">
+                          {t("translate.context.plot_summary")}
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {selectedAnalysis.plotSummary}
+                        </p>
                       </div>
-                      <ul className="text-sm list-disc pl-5">
-                        {selectedAnalysis.glossary?.map(
-                          (g: any, idx: number) => (
-                            <li key={idx}>
-                              <span className="font-semibold">{g.term}</span>
-                              {g.preferredTranslation
-                                ? ` (${g.preferredTranslation})`
-                                : ""}
-                              {g.category ? ` [${g.category}]` : ""}:{" "}
-                              {g.description}
-                              {g.notes ? ` (${g.notes})` : ""}
-                            </li>
-                          )
-                        )}
-                      </ul>
+                      <div className="mt-2">
+                        <div className="font-medium">
+                          {t("translate.context.glossary")}
+                        </div>
+                        <ul className="text-sm list-disc pl-5">
+                          {selectedAnalysis.glossary?.map(
+                            (g: any, idx: number) => (
+                              <li key={idx}>
+                                <span className="font-semibold">{g.term}</span>
+                                {g.preferredTranslation
+                                  ? ` (${g.preferredTranslation})`
+                                  : ""}
+                                {g.category ? ` [${g.category}]` : ""}:{" "}
+                                {g.description}
+                                {g.notes ? ` (${g.notes})` : ""}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                    <hr className="my-2" />
+                  </div>
+                )}
+                {cues.map((cue: any, index: number) => (
+                  <div
+                    key={index}
+                    className="border border-gray-300 p-1 px-2 mb-1 rounded"
+                  >
+                    <div>{cue.text}</div>
+                    <div className="text-sm opacity-75">
+                      {cue.translatedText || t("translate.not_translated_yet")}
                     </div>
                   </div>
-                  <hr className="my-2" />
-                </div>
-              )}
-              {cues.map((cue: any, index: number) => (
-                <div key={index} className="border border-gray-300 p-2">
-                  <div>{cue.text}</div>
-                  <div className="text-sm opacity-75">
-                    {cue.translatedText || t("translate.not_translated_yet")}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
