@@ -6,13 +6,9 @@ labels: bug
 assignees: ""
 ---
 
-#### Which method you use?
+#### Which model you use?
 
-<!-- To use the `gpt-4` translation method, you need to join the waitlist and receive an invitation to access the `gpt-4` model. -->
-
-- [ ] `gpt-4`
-- [ ] `gpt-3.5-turbo`
-- [ ] `gpt-3.5-turbo-economy`
+<!-- Please provide your model and model provider -->
 
 #### Provide your subtitle file
 

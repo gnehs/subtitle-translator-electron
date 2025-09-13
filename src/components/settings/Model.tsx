@@ -20,7 +20,10 @@ export default function Model() {
   const [headers] = useAPIHeaders();
   const [remoteModels, setRemoteModels] = useState<string[]>([]);
   const [isModelOpen, setIsModelOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const baseUrl = useMemo(() => (host || "").replace(/\/$/, ""), [host]);
 
   useEffect(() => {
@@ -63,6 +66,8 @@ export default function Model() {
         !modelDropdownRef.current.contains(event.target as Node)
       ) {
         setIsModelOpen(false);
+        setSearchInput("");
+        setSelectedIndex(-1);
       }
     };
 
@@ -71,6 +76,69 @@ export default function Model() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Reset selected index when search input changes
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [searchInput]);
+
+  const filteredModels = useMemo(() => {
+    if (!searchInput.trim()) return remoteModels;
+    return remoteModels.filter((modelName) =>
+      modelName.toLowerCase().includes(searchInput.toLowerCase())
+    );
+  }, [remoteModels, searchInput]);
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+  };
+
+  const handleSearchInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      if (selectedIndex >= 0 && selectedIndex < filteredModels.length) {
+        handleModelSelect(filteredModels[selectedIndex]);
+      } else if (searchInput.trim()) {
+        setModel(searchInput.trim());
+        setIsModelOpen(false);
+        setSearchInput("");
+        setSelectedIndex(-1);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (filteredModels.length > 0) {
+        setSelectedIndex((prev) =>
+          prev < filteredModels.length - 1 ? prev + 1 : 0
+        );
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (filteredModels.length > 0) {
+        setSelectedIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredModels.length - 1
+        );
+      }
+    } else if (e.key === "Escape") {
+      setIsModelOpen(false);
+      setSearchInput("");
+      setSelectedIndex(-1);
+    }
+  };
+
+  const handleModelSelect = (modelName: string) => {
+    setModel(modelName);
+    setIsModelOpen(false);
+    setSearchInput("");
+    setSelectedIndex(-1);
+  };
+
+  const handleDropdownToggle = () => {
+    setIsModelOpen(!isModelOpen);
+    if (!isModelOpen) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -82,7 +150,7 @@ export default function Model() {
 
         <div className="relative w-80" ref={modelDropdownRef}>
           <button
-            onClick={() => setIsModelOpen(!isModelOpen)}
+            onClick={handleDropdownToggle}
             className={`
               w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3
               flex items-center justify-between
@@ -110,39 +178,75 @@ export default function Model() {
           </button>
 
           {isModelOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
-              <div className="py-1">
-                {remoteModels.map((modelName) => (
-                  <button
-                    key={modelName}
-                    onClick={() => {
-                      setModel(modelName);
-                      setIsModelOpen(false);
-                    }}
-                    className={`
-                      w-full px-4 py-2.5 flex items-center gap-3 text-left
-                      hover:bg-slate-50 transition-colors duration-150
-                      ${model === modelName ? "bg-slate-100" : ""}
-                    `}
-                  >
-                    <div className="flex-1">
-                      <div
-                        className={`font-medium text-sm ${
-                          model === modelName
-                            ? "text-slate-800"
-                            : "text-slate-700"
-                        }`}
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+              {/* Search Input */}
+              <div className="p-2 border-b border-slate-200">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchInput}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={handleSearchInputKeyPress}
+                  placeholder={t("searchOrEnterModel")}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm
+                    focus:outline-none focus:bg-white focus:border-slate-400 focus:ring-1 focus:ring-slate-400
+                    transition-all duration-150 ease-in-out"
+                />
+              </div>
+
+              {/* Model List */}
+              <div className="max-h-60 overflow-y-auto">
+                {filteredModels.length > 0 ? (
+                  <div className="py-1">
+                    {filteredModels.map((modelName, index) => (
+                      <button
+                        key={modelName}
+                        onClick={() => handleModelSelect(modelName)}
+                        onMouseEnter={() => setSelectedIndex(index)}
+                        className={`
+                          w-full px-4 py-2.5 flex items-center gap-3 text-left
+                          hover:bg-slate-50
+                          ${model === modelName ? "bg-slate-100" : ""}
+                          ${selectedIndex === index ? "bg-slate-100" : ""}
+                        `}
                       >
-                        {modelName}
-                      </div>
+                        <div className="flex-1">
+                          <div
+                            className={`font-medium text-sm ${
+                              model === modelName || selectedIndex === index
+                                ? "text-slate-800"
+                                : "text-slate-700"
+                            }`}
+                          >
+                            {modelName}
+                          </div>
+                        </div>
+                        {(model === modelName || selectedIndex === index) && (
+                          <div
+                            className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              model === modelName
+                                ? "bg-slate-500"
+                                : "bg-slate-300"
+                            }`}
+                          >
+                            <i className="bx bx-check text-white text-xs"></i>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-4 px-4 text-center">
+                    <div className="text-sm text-slate-500 mb-2">
+                      {t("noModelsFound")}
                     </div>
-                    {model === modelName && (
-                      <div className="w-4 h-4 bg-slate-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i className="bx bx-check text-white text-xs"></i>
+                    {searchInput.trim() && (
+                      <div className="text-xs text-slate-400">
+                        {t("pressEnterToUse")} "{searchInput}"
                       </div>
                     )}
-                  </button>
-                ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -6,6 +6,13 @@
     "model": "Model",
     "modelName": "Model name",
     "modelDescription": "Select a model or enter a custom model.",
+    "manualInput": "Manual Input",
+    "enterModelName": "Enter model name",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "searchOrEnterModel": "Search or enter model name",
+    "noModelsFound": "No models found",
+    "pressEnterToUse": "Press Enter to use",
     "eco": {
       "title": "Economy Mode",
       "description1": "Economy is a mode that reduces the cost of the API request by using sentence-by-sentence translation without providing context may result in a decrease in translation quality.",

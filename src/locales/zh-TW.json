@@ -6,6 +6,13 @@
     "model": "模型",
     "modelName": "模型名稱",
     "modelDescription": "選擇一個模型或輸入自訂模型名稱。",
+    "manualInput": "手動輸入",
+    "enterModelName": "輸入模型名稱",
+    "confirm": "確認",
+    "cancel": "取消",
+    "searchOrEnterModel": "搜尋或輸入模型名稱",
+    "noModelsFound": "找不到模型",
+    "pressEnterToUse": "按 Enter 使用",
     "eco": {
       "title": "經濟模式",
       "description1": "經濟模式透過逐句翻譯而不提供上下文來降低 API 請求的成本，但可能會導致翻譯品質下降。",
