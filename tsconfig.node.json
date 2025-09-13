@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "composite": true,
-    "target": "es2024",
+    "target": "es2022",
     "module": "ESNext",
     "moduleResolution": "Node",
     "resolveJsonModule": true,
