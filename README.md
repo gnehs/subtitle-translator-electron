@@ -2,7 +2,7 @@
 
 # Subtitle Translator
 
-<img width="801" src="https://user-images.githubusercontent.com/16719720/229284472-2c9a6432-1ab0-43e4-bfbc-1f151dda7258.png">
+<img width="801" src="https://github.com/gnehs/subtitle-translator-electron/assets/16719720/07d147b3-2840-4cf1-8b49-15a5925581a5">
 <p align="center">
   Translate subtitle using ChatGPT
 </p>
@@ -16,7 +16,7 @@
 
 ## Features
 
-- Translate subtitle using ChatGPT `gpt-3.5-turbo` & `gpt-4`
+- Translate subtitle using ChatGPT
 - Support multiple languages
 - Translation according to the preceding and following sentences
 
@@ -24,10 +24,6 @@
 
 Download the latest stable version from the
 [Releases](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
-page
-
-Download the latest test version from
-[Actions](https://github.com/gnehs/subtitle-translator-electron/actions)
 page
 
 ## Contributing
