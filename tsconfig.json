@@ -29,6 +29,7 @@
   },
   "include": [
     "src",
+    "src/types",
     "postcss.config.js"
   ],
   "references": [

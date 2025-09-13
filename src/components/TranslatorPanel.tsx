@@ -46,8 +46,8 @@ interface ProgressType {
 export default function TranslatorPanel() {
   const { t } = useTranslation();
   const [files, setFiles] = useFile() as [
-    FileType[],
-    (files: FileType[]) => void
+    { path: string; name: string }[],
+    (files: { path: string; name: string }[]) => void
   ];
   const [lang, setLang] = useLocalStorage("translate_lang", "");
   const [additional, setAdditional] = useLocalStorage(
@@ -186,7 +186,10 @@ export default function TranslatorPanel() {
       const analysis = await ipcRenderer.invoke("get-analysis", file.path);
       if (analysis) {
         setBatchProgress((prev) => {
-          const prevFile = prev[file.path] || { progress: 0, status: "pending" as const };
+          const prevFile = prev[file.path] || {
+            progress: 0,
+            status: "pending" as const,
+          };
           const merged: ProgressType = {
             ...prevFile,
             analysis,
@@ -259,8 +262,9 @@ export default function TranslatorPanel() {
   }, [batchProgress, selectedFile, modalOpen]);
 
   const isDisabled = isTranslating;
-  const selectedAnalysis =
-    selectedFile ? batchProgress[selectedFile.path]?.analysis : undefined;
+  const selectedAnalysis = selectedFile
+    ? batchProgress[selectedFile.path]?.analysis
+    : undefined;
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -327,7 +331,7 @@ export default function TranslatorPanel() {
                     )
                   )
                   .map((f: File) => ({
-                    path: f.path,
+                    path: f.path!,
                     name: f.name,
                   }));
                 setFiles(fileArray);
@@ -357,7 +361,7 @@ export default function TranslatorPanel() {
                         const fileArray = Array.from(
                           e.target.files as FileList
                         ).map((f: File) => ({
-                          path: f.path,
+                          path: f.path!,
                           name: f.name,
                         }));
                         setFiles(fileArray);
@@ -402,11 +406,19 @@ export default function TranslatorPanel() {
                     progressData.currentCue &&
                     progressData.totalCues
                   ) {
-                    statusText = `Translating cue ${progressData.currentCue} of ${progressData.totalCues} - ${progressData.progress.toFixed(1)}%`;
+                    statusText = `Translating cue ${
+                      progressData.currentCue
+                    } of ${
+                      progressData.totalCues
+                    } - ${progressData.progress.toFixed(1)}%`;
                   } else if (progressData.status === "analyzing") {
-                    statusText = `${t("translate.analyzing_context")} - ${progressData.progress.toFixed(1)}%`;
+                    statusText = `${t(
+                      "translate.analyzing_context"
+                    )} - ${progressData.progress.toFixed(1)}%`;
                   } else {
-                    statusText = `${progressData.status} - ${progressData.progress.toFixed(1)}%`;
+                    statusText = `${
+                      progressData.status
+                    } - ${progressData.progress.toFixed(1)}%`;
                   }
                   return (
                     <div
@@ -471,22 +483,31 @@ export default function TranslatorPanel() {
               {selectedAnalysis && (
                 <div className="mb-4">
                   <div className="mb-2">
-                    <div className="text-md font-semibold">{t("translate.context.title")}</div>
+                    <div className="text-md font-semibold">
+                      {t("translate.context.title")}
+                    </div>
                     <div className="mt-1">
-                      <div className="font-medium">{t("translate.context.plot_summary")}</div>
+                      <div className="font-medium">
+                        {t("translate.context.plot_summary")}
+                      </div>
                       <p className="text-sm whitespace-pre-wrap">
                         {selectedAnalysis.plotSummary}
                       </p>
                     </div>
                     <div className="mt-2">
-                      <div className="font-medium">{t("translate.context.glossary")}</div>
+                      <div className="font-medium">
+                        {t("translate.context.glossary")}
+                      </div>
                       <ul className="text-sm list-disc pl-5">
                         {selectedAnalysis.glossary?.map(
                           (g: any, idx: number) => (
                             <li key={idx}>
                               <span className="font-semibold">{g.term}</span>
-                              {g.preferredTranslation ? ` (${g.preferredTranslation})` : ""}
-                              {g.category ? ` [${g.category}]` : ""}: {g.description}
+                              {g.preferredTranslation
+                                ? ` (${g.preferredTranslation})`
+                                : ""}
+                              {g.category ? ` [${g.category}]` : ""}:{" "}
+                              {g.description}
                               {g.notes ? ` (${g.notes})` : ""}
                             </li>
                           )
