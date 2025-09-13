@@ -339,7 +339,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         }
       };
 
-      for await (const _ of pool(2, chunks, chunkProcessor)) {
+      for await (const _ of pool(10, chunks, chunkProcessor)) {
         // Process chunks in parallel with concurrency 2
       }
 
