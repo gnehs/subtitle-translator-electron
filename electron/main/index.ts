@@ -59,8 +59,8 @@ async function createWindow() {
     minHeight: 640,
     vibrancy: "fullscreen-ui", // on MacOS
     backgroundMaterial: "mica", // on Windows 11
-
-    titleBarStyle: "hiddenInset",
+    autoHideMenuBar: true, // on Windows 11
+    titleBarStyle: "hidden", // on Windows 11
     trafficLightPosition: { x: 10, y: 12 },
     webPreferences: {
       preload,
@@ -233,11 +233,12 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
           })
           .join("\n");
 
-        const contextBlock =
-          `Plot summary:\n${analysis.plotSummary}\n\nGlossary:\n${glossaryStr}`;
- 
-        combinedAdditional = `${combinedAdditional ? combinedAdditional + "\n\n" : ""}[Context]\n${contextBlock}`;
- 
+        const contextBlock = `Plot summary:\n${analysis.plotSummary}\n\nGlossary:\n${glossaryStr}`;
+
+        combinedAdditional = `${
+          combinedAdditional ? combinedAdditional + "\n\n" : ""
+        }[Context]\n${contextBlock}`;
+
         analysisData = analysis;
         // Save in cache for renderer retrieval
         analysisCache.set(file.path, analysis);
@@ -251,7 +252,10 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
           analysis,
         });
       } catch (analysisErr) {
-        console.warn("Context analysis failed, continue without it:", analysisErr);
+        console.warn(
+          "Context analysis failed, continue without it:",
+          analysisErr
+        );
       }
 
       event.sender.send("batch-progress", {
@@ -318,7 +322,12 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
 
         // Write partial translated file for live preview during chunk processing
         try {
-          saveTranslated(outputPath, parsed, ext, params.multiLangSave || "none");
+          saveTranslated(
+            outputPath,
+            parsed,
+            ext,
+            params.multiLangSave || "none"
+          );
         } catch (e) {
           console.warn("Failed to write partial translated file:", e);
         }
@@ -371,9 +380,17 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
 
             // Write partial translated file after single-line fallback updates
             try {
-              saveTranslated(outputPath, parsed, ext, params.multiLangSave || "none");
+              saveTranslated(
+                outputPath,
+                parsed,
+                ext,
+                params.multiLangSave || "none"
+              );
             } catch (e) {
-              console.warn("Failed to write partial translated file (fallback):", e);
+              console.warn(
+                "Failed to write partial translated file (fallback):",
+                e
+              );
             }
           }
         }
@@ -415,7 +432,7 @@ ipcMain.handle("get-analysis", async (event, filePath: string) => {
     return null;
   }
 });
- 
+
 ipcMain.handle("get-translated-content", async (event, filePath) => {
   const translatedPath =
     filePath.replace(/\.[^/.]+$/, "") +
