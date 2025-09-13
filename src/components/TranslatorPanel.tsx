@@ -19,6 +19,7 @@ import { toast } from "react-toastify";
 import InputField from "@/components/InputField";
 import TextareaField from "@/components/TextareaField";
 import Button from "@/components/Button";
+import { getFilePath } from "@/utils/filePath";
 
 interface FileType {
   path: string;
@@ -331,7 +332,7 @@ export default function TranslatorPanel() {
                     )
                   )
                   .map((f: File) => ({
-                    path: f.path!,
+                    path: getFilePath(f),
                     name: f.name,
                   }));
                 setFiles(fileArray);
@@ -361,7 +362,7 @@ export default function TranslatorPanel() {
                         const fileArray = Array.from(
                           e.target.files as FileList
                         ).map((f: File) => ({
-                          path: f.path!,
+                          path: getFilePath(f),
                           name: f.name,
                         }));
                         setFiles(fileArray);
