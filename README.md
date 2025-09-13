@@ -1,8 +1,8 @@
 [![Flat](https://gnehs.github.io/made-with-pancake-badge/flat.svg)](https://pancake.tw)
 
 # Subtitle Translator
+<img width="801" height="601" alt="image" src="https://github.com/user-attachments/assets/6bdd9824-18a5-406e-bf38-73dc2753b474" />
 
-<img width="801" src="https://github.com/gnehs/subtitle-translator-electron/assets/16719720/07d147b3-2840-4cf1-8b49-15a5925581a5">
 <p align="center">
   Translate subtitle using ChatGPT
 </p>
