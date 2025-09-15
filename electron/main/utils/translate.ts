@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
@@ -248,6 +249,7 @@ function saveTranslated(
 
   let newSubtitle;
   if (["srt", "vtt"].includes(fileExtension)) {
+    const format = fileExtension === "vtt" ? "WebVTT" : "SRT";
     newSubtitle = stringifySync(
       parsedSubtitle.map((x) => {
         return {
@@ -261,23 +263,23 @@ function saveTranslated(
           },
         };
       }),
-      { format: "SRT" }
+      { format }
     );
   }
 
   if (["ass", "ssa"].includes(fileExtension)) {
     const { full, events } = parsedSubtitle;
+    // Use sequential alignment with Events order instead of text matching to avoid misalignment
+    let dialogueIndex = 0;
     newSubtitle = assStringify(
       full.map((x: any) => {
         if (x.section === "Events") {
           x.body = x.body.map((line: any) => {
             if (line.key === "Dialogue") {
-              const eventIndex = events.findIndex(
-                (e: any) => e.data.text === line.value.Text
-              );
+              const currentEvent = events[dialogueIndex++];
               const translatedText =
-                eventIndex >= 0
-                  ? events[eventIndex].data.translatedText || line.value.Text
+                currentEvent && currentEvent.data
+                  ? currentEvent.data.translatedText || line.value.Text
                   : line.value.Text;
               return {
                 key: "Dialogue",
@@ -299,7 +301,18 @@ function saveTranslated(
     );
   }
 
-  fs.writeFileSync(outputPath, newSubtitle, "utf8");
+  // Atomic write to avoid renderer reading partial file during concurrent updates
+  const tmpPath = `${outputPath}.tmp`;
+  fs.writeFileSync(tmpPath, newSubtitle, "utf8");
+  try {
+    fs.renameSync(tmpPath, outputPath);
+  } catch {
+    // Fallback for filesystems where rename might not be atomic
+    fs.writeFileSync(outputPath, newSubtitle, "utf8");
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {}
+  }
 }
 
 async function analyzeSubtitlesForContext(

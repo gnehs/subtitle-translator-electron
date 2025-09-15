@@ -143,7 +143,7 @@ ipcMain.on("batch-progress", (event, data) => {
 // Cache analysis per file so renderer can fetch it on demand
 const analysisCache = new Map<string, any>();
 
-async function retryTranslate(fn, params, maxRetries = 3, delay = 1000) {
+async function retryTranslate(fn, params, maxRetries = 5, delay = 1000) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fn(params);
@@ -151,23 +151,40 @@ async function retryTranslate(fn, params, maxRetries = 3, delay = 1000) {
       if (attempt === maxRetries) {
         throw error;
       }
-      // Check if error is retryable (e.g., network, rate limit, AI validation)
-      const errorMessage = error.message || error.toString();
+      // 判斷是否可重試（涵蓋 schema 不符、未產生物件 等訊息）
+      const errObj: any = error || {};
+      const msgParts = [
+        errObj.message,
+        typeof errObj.toString === "function" ? errObj.toString() : "",
+        errObj.cause?.message,
+      ].filter(Boolean);
+      const errorMessage = msgParts.join(" | ");
+      const status = errObj.status || errObj.response?.status;
+      const name = errObj.name || errObj.cause?.name;
+      const msgLower = (errorMessage || "").toLowerCase();
+
       const isRetryable =
-        errorMessage.includes("network") ||
-        errorMessage.includes("timeout") ||
-        (error.status && (error.status >= 429 || error.status >= 500)) ||
-        error.name === "NoObjectGeneratedError" ||
-        (error.cause && error.cause.name === "TypeValidationError") ||
-        errorMessage.includes("AI_NoObjectGeneratedError") ||
-        errorMessage.includes("validation");
+        msgLower.includes("network") ||
+        msgLower.includes("timeout") ||
+        msgLower.includes("rate limit") ||
+        msgLower.includes("no object generated") ||
+        msgLower.includes("did not match schema") ||
+        msgLower.includes("match schema") ||
+        msgLower.includes("validation") ||
+        name === "NoObjectGeneratedError" ||
+        name === "TypeValidationError" ||
+        (typeof status === "number" && (status >= 429 || status >= 500));
+
       if (isRetryable) {
+        // 指數退避 + 輕微抖動
+        const backoff =
+          Math.max(0, delay) * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
         console.warn(
-          `Translation attempt ${attempt} failed: ${errorMessage}. Retrying in ${delay}ms...`
+          `Translation attempt ${attempt} failed: ${errorMessage || name || "unknown error"}. Retrying in ${backoff}ms...`
         );
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, backoff));
       } else {
-        throw error; // Non-retryable error
+        throw error; // 不可重試錯誤，直接拋出
       }
     }
   }
@@ -194,6 +211,11 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         subtitle = parsed;
       }
       const totalCues = subtitle.length;
+
+      // 建立原始索引對照，供後續「上下文視窗」策略使用
+      const indexMap = new Map<any, number>();
+      subtitle.forEach((cue: any, idx: number) => indexMap.set(cue, idx));
+
       event.sender.send("batch-progress", {
         filePath: file.path,
         progress: 1,
@@ -257,44 +279,116 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       });
 
       // Translate
-      let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 5 + 10));
+      let chunks = splitIntoChunk(subtitle, 20);
 
       let completedCues = 0;
 
       const chunkProcessor = async (block) => {
-        const text = block.map((line: any) =>
-          line ? (line.data ? line.data.text : "") : ""
+        // 以原始索引建立「核心段」和「上下文視窗」
+        const contextSize =
+          typeof params.contextSize === "number" ? params.contextSize : 5;
+
+        const coreIndices = block
+          .map((cue: any) => indexMap.get(cue) as number)
+          .filter((n: number) => typeof n === "number")
+          .sort((a: number, b: number) => a - b);
+
+        if (coreIndices.length === 0) return;
+
+        const coreStart = coreIndices[0];
+        const coreEnd = coreIndices[coreIndices.length - 1];
+
+        const contextStart = Math.max(0, coreStart - contextSize);
+        const contextEnd = Math.min(subtitle.length - 1, coreEnd + contextSize);
+
+        const windowCues = subtitle.slice(contextStart, contextEnd + 1);
+        const windowText = windowCues.map((c: any) =>
+          c && c.data ? String(c.data.text).replaceAll(/\n/g, " ").trim() : ""
         );
-        const translatedText = await retryTranslate(
-          async (chunkText) =>
-            translateSubtitleChunk(chunkText, {
-              ...params,
-              apiKeys: params.apiKeys || [],
-              apiHost: params.apiHost || "https://api.openai.com/v1",
-              model: params.model || "",
-              prompt: params.prompt || "",
-              lang: params.lang || "",
-              additional: combinedAdditional || "",
-              temperature: params.temperature || 1,
-            }),
-          text
-        );
-        let chunkCompleted = 0;
-        for (
-          let j = 0;
-          j < Math.min(translatedText.length, block.length);
-          j++
-        ) {
-          if (block[j] && block[j].data) {
-            block[j].data.translatedText = translatedText[j] || "";
-            const currentCueIndex = subtitle.findIndex(
-              (cue: any) => cue === block[j]
+
+        // 多次嘗試整塊翻譯（利用隨機性），若三次仍未對齊，改用逐句翻譯（僅針對核心段）
+        let translatedWindow: string[] | null = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          const baseTemp =
+            typeof params.temperature === "number" ? params.temperature : 1;
+          const attemptTemp = Math.max(
+            0.1,
+            Math.min(2, baseTemp + (Math.random() - 0.5) * 0.4)
+          );
+          const attemptResult = await retryTranslate(
+            async (chunkText) =>
+              translateSubtitleChunk(chunkText, {
+                ...params,
+                apiKeys: params.apiKeys || [],
+                apiHost: params.apiHost || "https://api.openai.com/v1",
+                model: params.model || "",
+                prompt: params.prompt || "",
+                lang: params.lang || "",
+                additional: combinedAdditional || "",
+                temperature: attemptTemp,
+              }),
+            windowText
+          );
+          if (attempt > 1) {
+            console.log(
+              `Chunk attempt ${attempt} (context window) done, temp=${attemptTemp}`
             );
-            if (currentCueIndex !== -1) {
-              chunkCompleted++;
-            }
+          }
+          if (
+            Array.isArray(attemptResult) &&
+            attemptResult.length === windowText.length
+          ) {
+            translatedWindow = attemptResult;
+            break;
           }
         }
+
+        // 逐句 fallback：僅翻譯核心行，並填回對應視窗位置
+        if (!translatedWindow) {
+          translatedWindow = new Array(windowText.length).fill(null);
+          for (let i = 0; i < coreIndices.length; i++) {
+            const idx = coreIndices[i];
+            const lineText =
+              subtitle[idx] && subtitle[idx].data ? subtitle[idx].data.text : "";
+            const single = await retryTranslate(
+              async (singleText) =>
+                translateSubtitleSingle(singleText, {
+                  ...params,
+                  apiKeys: params.apiKeys || [],
+                  apiHost: params.apiHost || "https://api.openai.com/v1",
+                  model: params.model || "",
+                  prompt: params.prompt || "",
+                  lang: params.lang || "",
+                  additional: combinedAdditional || "",
+                  temperature:
+                    typeof params.temperature === "number"
+                      ? params.temperature
+                      : 1,
+                }),
+              lineText
+            );
+            translatedWindow[idx - contextStart] = single;
+          }
+        }
+
+        // 只回寫核心段的翻譯（丟棄上下文前後行），以避免割裂感
+        let chunkCompleted = 0;
+        for (const cue of block) {
+          const idx = indexMap.get(cue) as number;
+          if (typeof idx !== "number") continue;
+          const offset = idx - contextStart;
+          const t =
+            translatedWindow &&
+            translatedWindow[offset] != null &&
+            typeof translatedWindow[offset] === "string"
+              ? translatedWindow[offset]
+              : "";
+          if (cue && cue.data) {
+            cue.data.translatedText = t;
+            chunkCompleted++;
+          }
+        }
+
         completedCues += chunkCompleted;
         const progress = 10 + (completedCues / totalCues) * 90;
         const currentCue = Math.min(completedCues, totalCues);
@@ -307,7 +401,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
           analysis: analysisData,
         });
 
-        // Write partial translated file for live preview during chunk processing
+        // 寫入部分成果供即時預覽
         try {
           saveTranslated(
             outputPath,
@@ -444,7 +538,17 @@ ipcMain.handle("get-subtitle-preview", async (event, filePath) => {
 
   const translatedPath =
     filePath.replace(/\.[^/.]+$/, "") + ".translated." + ext;
-  let translatedCues = null;
+
+  // Prefer time-based alignment to avoid index drift; fallback to index-based if needed
+  let translatedCuesArray: string[] | null = null;
+  let translatedMap: Map<string, string> | null = null;
+
+  const makeKey = (start: any, end: any) => {
+    const norm = (v: any) =>
+      typeof v === "number" ? Math.round(v) : String(v).trim();
+    return `${norm(start)}|${norm(end)}`;
+  };
+
   if (fs.existsSync(translatedPath)) {
     const translatedContent = fs.readFileSync(translatedPath, "utf8");
     let translatedParsed = parseSubtitle(translatedContent, ext);
@@ -458,17 +562,31 @@ ipcMain.handle("get-subtitle-preview", async (event, filePath) => {
     } else {
       translatedSubtitle = translatedParsed;
     }
-    translatedCues = translatedSubtitle.map(
+
+    translatedCuesArray = translatedSubtitle.map(
       (c: any) => c.data.translatedText || c.data.text
     );
+
+    translatedMap = new Map<string, string>();
+    translatedSubtitle.forEach((c: any) => {
+      const key = makeKey(c.data.start, c.data.end);
+      translatedMap!.set(key, c.data.translatedText || c.data.text);
+    });
   }
 
-  const cues = subtitle.map((cue: any, index: number) => ({
-    text: cue.data.text,
-    translatedText: translatedCues ? translatedCues[index] : undefined,
-    start: cue.data.start,
-    end: cue.data.end,
-  }));
+  const cues = subtitle.map((cue: any, index: number) => {
+    const key = makeKey(cue.data.start, cue.data.end);
+    const byTime = translatedMap ? translatedMap.get(key) : undefined;
+    const byIndex = translatedCuesArray
+      ? translatedCuesArray[index]
+      : undefined;
+    return {
+      text: cue.data.text,
+      translatedText: byTime ?? byIndex,
+      start: cue.data.start,
+      end: cue.data.end,
+    };
+  });
 
   return { cues };
 });
