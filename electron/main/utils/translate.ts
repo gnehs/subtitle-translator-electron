@@ -35,7 +35,6 @@ async function translateSubtitleChunk(
     lang,
     additional,
     temperature,
-    compatibility,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -45,7 +44,6 @@ async function translateSubtitleChunk(
     lang: string;
     additional: string;
     temperature: number;
-    compatibility: boolean;
   }
 ) {
   let openAIProviders = [];
@@ -78,18 +76,6 @@ async function translateSubtitleChunk(
     .replaceAll("{{additional}}", additional);
 
   try {
-    if (compatibility) {
-      const { text } = await generateText({
-        model: ai(model),
-        temperature,
-        system:
-          systemPrompt + "\nReturn ONLY a JSON array of translated strings.",
-        prompt: JSON.stringify(subtitles),
-        maxRetries: 3,
-      });
-      return JSON.parse(text);
-    }
-
     // Primary path: Ask for Markdown list to improve robustness across providers
     try {
       const { text } = await generateText({
@@ -180,7 +166,6 @@ async function translateSubtitleSingle(
     lang,
     additional,
     temperature,
-    compatibility,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -190,7 +175,6 @@ async function translateSubtitleSingle(
     lang: string;
     additional: string;
     temperature: number;
-    compatibility: boolean;
   }
 ) {
   let openAIProviders = [];
@@ -223,17 +207,6 @@ async function translateSubtitleSingle(
     .replaceAll("{{additional}}", additional);
 
   try {
-    if (compatibility) {
-      const { text } = await generateText({
-        model: ai(model),
-        temperature,
-        system: systemPrompt + "\nReturn ONLY the translated text.",
-        prompt: subtitle,
-        maxRetries: 3,
-      });
-      return text;
-    }
-
     // Primary path: Markdown single line for robustness
     try {
       const { text } = await generateText({
@@ -410,7 +383,10 @@ function saveTranslated(
 /**
  * Even sampling helper to keep analysis prompt within token budget.
  */
-function sampleSubtitlesForAnalysis(subtitles: string[], maxChars: number = 8000) {
+function sampleSubtitlesForAnalysis(
+  subtitles: string[],
+  maxChars: number = 8000
+) {
   const cleaned = (subtitles || [])
     .filter(Boolean)
     .map((s) => s.replace(/\s+/g, " ").trim())
@@ -444,7 +420,9 @@ function parseMarkdownTranslations(md: string, expected: number): string[] {
   const text = md.replace(/\r\n/g, "\n");
 
   // Try code block JSON first
-  const codeBlockMatch = text.match(/```(?:json|js|javascript)?\s*([\s\S]*?)```/i);
+  const codeBlockMatch = text.match(
+    /```(?:json|js|javascript)?\s*([\s\S]*?)```/i
+  );
   if (codeBlockMatch) {
     const payload = codeBlockMatch[1].trim();
     try {
@@ -493,12 +471,17 @@ function parseMarkdownSingle(md: string): string {
 
   const text = md.replace(/\r\n/g, "\n").trim();
   // Try code block first
-  const codeBlockMatch = text.match(/```(?:json|js|javascript|text)?\s*([\s\S]*?)```/i);
+  const codeBlockMatch = text.match(
+    /```(?:json|js|javascript|text)?\s*([\s\S]*?)```/i
+  );
   if (codeBlockMatch) {
     const payload = codeBlockMatch[1].trim();
     try {
       // string JSON
-      if ((payload.startsWith('"') && payload.endsWith('"')) || (payload.startsWith("'") && payload.endsWith("'"))) {
+      if (
+        (payload.startsWith('"') && payload.endsWith('"')) ||
+        (payload.startsWith("'") && payload.endsWith("'"))
+      ) {
         return JSON.parse(payload);
       }
       // object with { result }
@@ -507,7 +490,10 @@ function parseMarkdownSingle(md: string): string {
       if (obj && typeof obj.result === "string") return obj.result;
     } catch {
       // not JSON, just use payload first line
-      const first = payload.split("\n").map((l) => l.trim()).find((l) => l.length > 0);
+      const first = payload
+        .split("\n")
+        .map((l) => l.trim())
+        .find((l) => l.length > 0);
       if (first) return first.replace(/^["'`]|["'`]$/g, "");
     }
   }
@@ -750,18 +736,16 @@ async function analyzeSubtitlesForContext(
 
   // Fallback 1: tool calling (some providers are more reliable with tools)
   try {
-    let toolAnalysis:
-      | {
-          plotSummary: string;
-          glossary: {
-            term: string;
-            category?: string;
-            description: string;
-            preferredTranslation?: string;
-            notes?: string;
-          }[];
-        }
-      | null = null;
+    let toolAnalysis: {
+      plotSummary: string;
+      glossary: {
+        term: string;
+        category?: string;
+        description: string;
+        preferredTranslation?: string;
+        notes?: string;
+      }[];
+    } | null = null;
 
     const tools = {
       submit_analysis: tool({

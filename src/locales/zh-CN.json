@@ -13,19 +13,6 @@
     "searchOrEnterModel": "搜索或输入模型名称",
     "noModelsFound": "找不到模型",
     "pressEnterToUse": "按 Enter 使用",
-    "eco": {
-      "title": "经济模式",
-      "description1": "经济模式通过逐句翻译而不提供上下文来降低 API 请求的成本，但可能会导致翻译质量下降。",
-      "description2": "＊在旧版本中，这被称为“逐句 GPT-4”或“逐句 GPT-3”。",
-      "enable": "启用",
-      "disable": "关闭（默认）"
-    },
-    "compatibility": {
-      "title": "相容模式（Beta）",
-      "description": "这个模式停用了 OpenAI 的 tool_choice 参数，并启用了从输出信息中读取 JSON 的功能，让您可以透过 LM Studio 等服务来进行翻译，某些无法稳定输出 JSON 格式的模型可能会导致额外的错误，启用此选项您还需要修改咒语来符合需求。",
-      "enable": "启用",
-      "disable": "关闭（建议）"
-    },
     "temperature": {
       "title": "溫度",
       "description": "采樣溫度影響語言模型生成文本的隨機性與確定性。較低的溫度（如 0.2）產生較確定、精確的文本，適合正式文件；而較高的溫度（如 0.8）則讓文本更具創意和多樣性，適合創作用途。通过适当调整这个参数，可以让模型输出更符合特定的使用需求。"

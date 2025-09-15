@@ -294,7 +294,6 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
               lang: params.lang || "",
               additional: combinedAdditional || "",
               temperature: params.temperature || 1,
-              compatibility: params.compatibility || false,
             }),
           text
         );
@@ -362,7 +361,6 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
                 lang: params.lang || "",
                 additional: combinedAdditional || "",
                 temperature: params.temperature || 1,
-                compatibility: params.compatibility || false,
               }),
             cue.data.text
           );

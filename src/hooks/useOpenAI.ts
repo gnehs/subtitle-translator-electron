@@ -13,7 +13,6 @@ export function useTranslate() {
   const [lang] = useLocalStorage("translate_lang", "");
   const [additional] = useLocalStorage("translate_additional", "");
   const [temperature] = useTemperature();
-  const [compatibility] = useCompatibility();
   // token usage tracking removed per request
 
   //@ts-ignore
@@ -49,20 +48,6 @@ export function useTranslate() {
         .replaceAll("{{additional}}", additional);
 
       try {
-        if (compatibility) {
-          const { text } = await generateText({
-            model: ai(model),
-            temperature,
-            system:
-              systemPrompt +
-              "\nReturn ONLY a JSON array of translated strings.",
-            prompt: JSON.stringify(subtitles),
-            abortSignal: opts?.abortSignal,
-            maxRetries: 3,
-          });
-          return { translated: text } as any;
-        }
-
         // Prefer tool-calling with a forced tool to reduce failure rate
         let toolTranslated: Array<string> | null = null;
         const tools = {
@@ -130,18 +115,6 @@ export function useTranslate() {
         .replaceAll("{{additional}}", additional);
 
       try {
-        if (compatibility) {
-          const { text } = await generateText({
-            model: ai(model),
-            temperature,
-            system: systemPrompt + "\nReturn ONLY the translated text.",
-            prompt: subtitle,
-            abortSignal: opts?.abortSignal,
-            maxRetries: 3,
-          });
-          return { translated: text } as any;
-        }
-
         // Prefer tool-calling with a forced tool to reduce failure rate
         let toolSingle: string | null = null;
         const tools = {
@@ -205,12 +178,6 @@ export function useAPIHeaders() {
     [] as Array<{ name: string; value: string }>
   );
 }
-export function useEconomy() {
-  return useLocalStorage("ai_economy", false);
-}
 export function useTemperature() {
   return useLocalStorage("ai_temperature", 1);
-}
-export function useCompatibility() {
-  return useLocalStorage("ai_compatibility", false);
 }

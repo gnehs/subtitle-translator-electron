@@ -3,18 +3,12 @@ import { useTranslation } from "react-i18next";
 import useModel from "../../hooks/useModel";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useAPIHost, useAPIKeys, useAPIHeaders } from "@/hooks/useOpenAI";
-import {
-  useEconomy,
-  useTemperature,
-  useCompatibility,
-} from "../../hooks/useOpenAI";
+import { useTemperature } from "../../hooks/useOpenAI";
 
 export default function Model() {
   const { t } = useTranslation();
   const [model, setModel] = useModel();
-  const [eco, setEco] = useEconomy();
   const [temperature, setTemperature] = useTemperature();
-  const [compatibility, setCompatibility] = useCompatibility();
   const [host] = useAPIHost();
   const [keys] = useAPIKeys();
   const [headers] = useAPIHeaders();
@@ -253,39 +247,6 @@ export default function Model() {
         </div>
       </div>
 
-      {/* Economy Mode */}
-      <div className="bg-white rounded flex justify-between items-center border border-slate-200 p-4 gap-8">
-        <div className="flex flex-col">
-          <Title>{t("eco.title")}</Title>
-          <div className="text-sm text-slate-600">
-            {t("eco.description1")} {t("eco.description2")}
-          </div>
-        </div>
-
-        <div className="flex gap-2 w-80 shrink-0">
-          <button
-            onClick={() => setEco(true)}
-            className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              eco
-                ? "bg-slate-800 text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            {t("eco.enable")}
-          </button>
-          <button
-            onClick={() => setEco(false)}
-            className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              !eco
-                ? "bg-slate-800 text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            {t("eco.disable")}
-          </button>
-        </div>
-      </div>
-
       {/* Temperature */}
       <div className="bg-white rounded flex justify-between items-center border border-slate-200 p-4 gap-8">
         <div className="flex flex-col">
@@ -314,39 +275,6 @@ export default function Model() {
             max="2"
             step="0.01"
           />
-        </div>
-      </div>
-
-      {/* Compatibility Mode */}
-      <div className="bg-white rounded flex justify-between items-center border border-slate-200 p-4 gap-8">
-        <div className="flex flex-col">
-          <Title>{t("compatibility.title")}</Title>
-          <div className="text-sm text-slate-600">
-            {t("compatibility.description")}
-          </div>
-        </div>
-
-        <div className="flex gap-2 w-80 shrink-0">
-          <button
-            onClick={() => setCompatibility(true)}
-            className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              compatibility
-                ? "bg-slate-800 text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            {t("compatibility.enable")}
-          </button>
-          <button
-            onClick={() => setCompatibility(false)}
-            className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              !compatibility
-                ? "bg-slate-800 text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            {t("compatibility.disable")}
-          </button>
         </div>
       </div>
     </div>

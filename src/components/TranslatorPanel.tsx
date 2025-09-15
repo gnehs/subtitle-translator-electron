@@ -10,8 +10,6 @@ import {
   useAPIKeys,
   useAPIHost,
   useAPIHeaders,
-  useEconomy,
-  useCompatibility,
   useTemperature,
 } from "@/hooks/useOpenAI";
 import { motion } from "framer-motion";
@@ -62,8 +60,6 @@ export default function TranslatorPanel() {
   const [apiHost] = useAPIHost();
   const [apiHeaders] = useAPIHeaders();
   const [temperature] = useTemperature();
-  const [eco] = useEconomy();
-  const [compatibility] = useCompatibility();
   const [multiLangSave] = useLocalStorage("multi_language_save", "none");
   const [batchProgress, setBatchProgress] = useState<
     Record<string, ProgressType>
@@ -151,10 +147,8 @@ export default function TranslatorPanel() {
       lang,
       additional,
       temperature,
-      compatibility,
       multiLangSave,
       delay: delay * 1000,
-      eco,
     };
     try {
       await ipcRenderer.invoke("batch-translate", { files, params });
