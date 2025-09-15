@@ -39,11 +39,6 @@
         "vercel_gateway": "Vercel AI Gateway",
         "openai_compatible": "OpenAI 相容（自訂）",
         "recommendation": "建議：若您尚未使用過任何 API，先使用 OpenRouter，可使用更多模型且請求上限較大。可用下方按鈕快速套用預設。"
-      },
-      "headers": {
-        "title": "HTTP 標頭",
-        "name": "標頭名稱",
-        "value": "標頭值"
       }
     },
     "prompt": {

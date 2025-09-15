@@ -39,11 +39,6 @@
         "vercel_gateway": "Vercel AI Gateway",
         "openai_compatible": "OpenAI-Compatible (custom)",
         "recommendation": "Tip: If you haven't used any API before, start with OpenRouter. It offers more models and higher request limits. Use the buttons below to set defaults."
-      },
-      "headers": {
-        "title": "HTTP Headers",
-        "name": "Header Name",
-        "value": "Header Value"
       }
     },
     "prompt": {
