@@ -1,6 +1,6 @@
 import Title from "../Title";
 import { useTranslation } from "react-i18next";
-import { useAPIHost, useAPIKeys } from "@/hooks/useOpenAI";
+import { useAPIHost, useAPIKeys, useAPIProvider } from "@/hooks/useOpenAI";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 export default function API() {
@@ -8,9 +8,7 @@ export default function API() {
   const [keys, setKeys] = useAPIKeys();
   const [host, setHost] = useAPIHost();
   const noKey = useMemo(() => keys.every((k) => !k), [keys]);
-  const [provider, setProvider] = useState<
-    "openrouter" | "openai" | "vercel-gateway" | "openai-compatible"
-  >("openrouter");
+  const [provider, setProvider] = useAPIProvider();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
