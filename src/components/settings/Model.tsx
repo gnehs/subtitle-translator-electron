@@ -24,6 +24,7 @@ export default function Model() {
     async function loadModels() {
       try {
         if (!baseUrl || !keys?.[0]) return;
+        setRemoteModels([]);
         const res = await fetch(`${baseUrl}/models`, {
           method: "GET",
           headers: {
@@ -33,6 +34,7 @@ export default function Model() {
         });
         if (!res.ok) return;
         const json = await res.json();
+        console.log("Fetched models", baseUrl, json);
         const data = Array.isArray(json?.data) ? json.data : [];
         const ids = data
           .map((m: any) => m?.id)
