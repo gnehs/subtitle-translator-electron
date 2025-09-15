@@ -1,4 +1,3 @@
-import Header from "@/components/Header";
 import TranslatorPanel from "@/components/TranslatorPanel";
 export default function Translator() {
   return (

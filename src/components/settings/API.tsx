@@ -1,13 +1,12 @@
 import Title from "../Title";
 import { useTranslation } from "react-i18next";
-import { useAPIHost, useAPIKeys, useAPIHeaders } from "@/hooks/useOpenAI";
+import { useAPIHost, useAPIKeys } from "@/hooks/useOpenAI";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 export default function API() {
   const { t } = useTranslation();
   const [keys, setKeys] = useAPIKeys();
   const [host, setHost] = useAPIHost();
-  const [headers, setHeaders] = useAPIHeaders();
   const noKey = useMemo(() => keys.every((k) => !k), [keys]);
   const [provider, setProvider] = useState<
     "openrouter" | "openai" | "vercel-gateway" | "openai-compatible"
@@ -20,33 +19,6 @@ export default function API() {
     //@ts-ignore
     newKeys[index] = value;
     setKeys(newKeys);
-  }
-
-  function setHeaderName(i: number, value: string) {
-    const newHeaders = structuredClone(headers || []);
-    newHeaders[i] = {
-      ...(newHeaders[i] || { name: "", value: "" }),
-      name: value,
-    };
-    setHeaders(newHeaders);
-  }
-
-  function setHeaderValue(i: number, value: string) {
-    const newHeaders = structuredClone(headers || []);
-    newHeaders[i] = { ...(newHeaders[i] || { name: "", value: "" }), value };
-    setHeaders(newHeaders);
-  }
-
-  function addHeader() {
-    const newHeaders = structuredClone(headers || []);
-    newHeaders.push({ name: "", value: "" });
-    setHeaders(newHeaders);
-  }
-
-  function removeHeader(i: number) {
-    const newHeaders = structuredClone(headers || []);
-    newHeaders.splice(i, 1);
-    setHeaders(newHeaders);
   }
 
   function preset(hostUrl: string, keyLabel: string) {
@@ -89,8 +61,8 @@ export default function API() {
 
   const getProviderInfo = (providerValue: string) => {
     const providerNames: Record<string, { name: string }> = {
-      "openrouter": { name: t("api.presets.openrouter") },
-      "openai": { name: t("api.presets.openai") },
+      openrouter: { name: t("api.presets.openrouter") },
+      openai: { name: t("api.presets.openai") },
       "vercel-gateway": { name: t("api.presets.vercel_gateway") },
       "openai-compatible": { name: t("api.presets.openai_compatible") },
     };
@@ -140,7 +112,12 @@ export default function API() {
           {isOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
               <div className="py-1">
-                {["openrouter", "openai", "vercel-gateway", "openai-compatible"].map((providerValue) => {
+                {[
+                  "openrouter",
+                  "openai",
+                  "vercel-gateway",
+                  "openai-compatible",
+                ].map((providerValue) => {
                   const providerInfo = getProviderInfo(providerValue);
                   const isActive = provider === providerValue;
 

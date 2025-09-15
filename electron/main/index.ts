@@ -219,31 +219,14 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         const analysis = await analyzeSubtitlesForContext(allTexts, {
           apiKeys: params.apiKeys || [],
           apiHost: params.apiHost || "https://api.openai.com/v1",
-          apiHeaders: params.apiHeaders || [],
+
           model: params.model || "",
           lang: params.lang || "",
           temperature: 0.3,
         });
-
-        const glossaryStr = (analysis.glossary || [])
-          .map((g: any) => {
-            const pieces = [
-              g.term || "",
-              g.preferredTranslation ? `(${g.preferredTranslation})` : "",
-              g.category ? `[${g.category}]` : "",
-              ":",
-              g.description || "",
-              g.notes ? ` (${g.notes})` : "",
-            ].filter(Boolean);
-            return `- ${pieces.join(" ")}`.replace(/\s+/g, " ").trim();
-          })
-          .join("\n");
-
-        const contextBlock = `Plot summary:\n${analysis.plotSummary}\n\nGlossary:\n${glossaryStr}`;
-
         combinedAdditional = `${
           combinedAdditional ? combinedAdditional + "\n\n" : ""
-        }[Context]\n${contextBlock}`;
+        }[Context]\n${analysis}`;
 
         analysisData = analysis;
         // Save in cache for renderer retrieval
@@ -274,7 +257,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       });
 
       // Translate
-      let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 5 + 15));
+      let chunks = splitIntoChunk(subtitle, Math.round(Math.random() * 5 + 10));
 
       let completedCues = 0;
 
@@ -288,7 +271,6 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
               ...params,
               apiKeys: params.apiKeys || [],
               apiHost: params.apiHost || "https://api.openai.com/v1",
-              apiHeaders: params.apiHeaders || [],
               model: params.model || "",
               prompt: params.prompt || "",
               lang: params.lang || "",
@@ -355,7 +337,6 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
                 ...params,
                 apiKeys: params.apiKeys || [],
                 apiHost: params.apiHost || "https://api.openai.com/v1",
-                apiHeaders: params.apiHeaders || [],
                 model: params.model || "",
                 prompt: params.prompt || "",
                 lang: params.lang || "",

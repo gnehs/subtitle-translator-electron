@@ -2,7 +2,7 @@ import Title from "../Title";
 import { useTranslation } from "react-i18next";
 import useModel from "../../hooks/useModel";
 import { useEffect, useMemo, useState, useRef } from "react";
-import { useAPIHost, useAPIKeys, useAPIHeaders } from "@/hooks/useOpenAI";
+import { useAPIHost, useAPIKeys } from "@/hooks/useOpenAI";
 import { useTemperature } from "../../hooks/useOpenAI";
 
 export default function Model() {
@@ -11,7 +11,6 @@ export default function Model() {
   const [temperature, setTemperature] = useTemperature();
   const [host] = useAPIHost();
   const [keys] = useAPIKeys();
-  const [headers] = useAPIHeaders();
   const [remoteModels, setRemoteModels] = useState<string[]>([]);
   const [isModelOpen, setIsModelOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -29,11 +28,6 @@ export default function Model() {
           method: "GET",
           headers: {
             Authorization: `Bearer ${keys[0]}`,
-            ...(Object.fromEntries(
-              (headers || [])
-                .filter((h: any) => h?.name)
-                .map((h: any) => [h.name, h.value || ""])
-            ) as any),
           },
           signal: controller.signal,
         });
@@ -50,7 +44,7 @@ export default function Model() {
     }
     loadModels();
     return () => controller.abort();
-  }, [baseUrl, JSON.stringify(headers), keys?.[0]]);
+  }, [baseUrl, keys?.[0]]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

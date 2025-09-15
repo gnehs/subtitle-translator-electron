@@ -7,7 +7,6 @@ import useModel from "./useModel";
 export function useTranslate() {
   const [apiKeys] = useAPIKeys();
   const [apiHost] = useAPIHost();
-  const [apiHeaders] = useAPIHeaders();
   const [model] = useModel();
   const [prompt] = usePrompt();
   const [lang] = useLocalStorage("translate_lang", "");
@@ -22,15 +21,6 @@ export function useTranslate() {
       name: "openai",
       apiKey,
       baseURL: apiHost,
-      fetch: async (url, init) => {
-        const headers = new Headers(init?.headers || {});
-        try {
-          for (const h of apiHeaders || []) {
-            if (h?.name) headers.set(h.name, h.value || "");
-          }
-        } catch {}
-        return fetch(url, { ...init, headers });
-      },
     });
     openAIProviders.push(provider);
   }
@@ -171,12 +161,6 @@ export function useAPIKeys() {
 }
 export function useAPIHost() {
   return useLocalStorage("api_host", "https://api.openai.com/v1");
-}
-export function useAPIHeaders() {
-  return useLocalStorage(
-    "api_headers",
-    [] as Array<{ name: string; value: string }>
-  );
 }
 export function useTemperature() {
   return useLocalStorage("ai_temperature", 1);

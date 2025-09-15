@@ -6,12 +6,7 @@ import { useLocalStorage } from "usehooks-ts";
 import useModel from "@/hooks/useModel";
 import usePrompt from "@/hooks/usePrompt";
 import useDelay from "@/hooks/useDelay";
-import {
-  useAPIKeys,
-  useAPIHost,
-  useAPIHeaders,
-  useTemperature,
-} from "@/hooks/useOpenAI";
+import { useAPIKeys, useAPIHost, useTemperature } from "@/hooks/useOpenAI";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import InputField from "@/components/InputField";
@@ -30,16 +25,7 @@ interface ProgressType {
   error?: string;
   totalCues?: number;
   currentCue?: number;
-  analysis?: {
-    plotSummary: string;
-    glossary: {
-      term: string;
-      category?: string;
-      description: string;
-      preferredTranslation?: string;
-      notes?: string;
-    }[];
-  };
+  analysis?: string;
 }
 
 export default function TranslatorPanel() {
@@ -58,7 +44,6 @@ export default function TranslatorPanel() {
   const [delay] = useDelay();
   const [keys] = useAPIKeys();
   const [apiHost] = useAPIHost();
-  const [apiHeaders] = useAPIHeaders();
   const [temperature] = useTemperature();
   const [multiLangSave] = useLocalStorage("multi_language_save", "none");
   const [batchProgress, setBatchProgress] = useState<
@@ -141,7 +126,6 @@ export default function TranslatorPanel() {
     const params = {
       apiKeys: keys,
       apiHost,
-      apiHeaders,
       model,
       prompt,
       lang,
@@ -478,39 +462,13 @@ export default function TranslatorPanel() {
               <div className="overflow-x-auto">
                 {selectedAnalysis && (
                   <div className="mb-4">
-                    <div className="mb-2">
-                      <div className="text-md font-semibold">
-                        {t("translate.context.title")}
-                      </div>
-                      <div className="mt-1">
-                        <div className="font-medium">
-                          {t("translate.context.plot_summary")}
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap">
-                          {selectedAnalysis.plotSummary}
-                        </p>
-                      </div>
-                      <div className="mt-2">
-                        <div className="font-medium">
-                          {t("translate.context.glossary")}
-                        </div>
-                        <ul className="text-sm list-disc pl-5">
-                          {selectedAnalysis.glossary?.map(
-                            (g: any, idx: number) => (
-                              <li key={idx}>
-                                <span className="font-semibold">{g.term}</span>
-                                {g.preferredTranslation
-                                  ? ` (${g.preferredTranslation})`
-                                  : ""}
-                                {g.category ? ` [${g.category}]` : ""}:{" "}
-                                {g.description}
-                                {g.notes ? ` (${g.notes})` : ""}
-                              </li>
-                            )
-                          )}
-                        </ul>
-                      </div>
+                    <div className="text-md font-semibold">
+                      {t("translate.context.title")}
                     </div>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {selectedAnalysis}
+                    </p>
+
                     <hr className="my-2" />
                   </div>
                 )}
