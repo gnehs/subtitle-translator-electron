@@ -63,6 +63,7 @@ export interface ElectronAPI {
   getSubtitlePreview(filePath: string): Promise<{ cues: SubtitleCuePreview[] }>;
   getAnalysis(filePath: string): Promise<string | null>;
   openExternal(url: string): Promise<void>;
+  setMenuLocale(locale: string): Promise<void>;
   onBatchProgress(listener: (data: BatchProgress) => void): () => void;
 }
 

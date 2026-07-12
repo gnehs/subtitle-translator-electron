@@ -34,6 +34,10 @@ const electronAPI = {
     return ipcRenderer.invoke("open-external", url);
   },
 
+  setMenuLocale(locale: string): Promise<void> {
+    return ipcRenderer.invoke("set-menu-locale", locale);
+  },
+
   onBatchProgress(listener: (data: BatchProgress) => void) {
     const handler = (_event: Electron.IpcRendererEvent, data: BatchProgress) => {
       listener(data);

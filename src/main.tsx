@@ -6,7 +6,13 @@ import store from "./store";
 import { Provider } from "react-redux";
 
 import { I18nProvider } from "@lingui/react";
-import { defaultLocale, dynamicActivate, i18n, locales } from "./i18n";
+import {
+  defaultLocale,
+  dynamicActivate,
+  i18n,
+  locales,
+  syncNativeMenuLocale,
+} from "./i18n";
 import DefaultLayout from "./layouts/default";
 import About from "./pages/about";
 import Translator from "./pages/translator";
@@ -24,18 +30,19 @@ const router = createHashRouter([
         path: "/settings",
         element: <Translator />,
       },
-      {
-        path: "/about",
-        element: <About />,
-      },
     ],
+  },
+  {
+    path: "/about",
+    element: <About />,
   },
 ]);
 const storedLocale = localStorage.getItem("language");
 const initialLocale = locales.find((locale) => locale === storedLocale) ?? defaultLocale;
 
 async function bootstrap() {
-  await dynamicActivate(initialLocale);
+  const activatedLocale = await dynamicActivate(initialLocale);
+  syncNativeMenuLocale(activatedLocale);
 
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <StrictMode>

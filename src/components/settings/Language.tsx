@@ -1,5 +1,12 @@
 import Title from "../Title";
-import { dynamicActivate, localeNames, locales, type Locale, useTranslation } from "@/i18n";
+import {
+  dynamicActivate,
+  localeNames,
+  locales,
+  syncNativeMenuLocale,
+  type Locale,
+  useTranslation,
+} from "@/i18n";
 import { useLocalStorage } from "usehooks-ts";
 import { useState, useEffect, useRef } from "react";
 import { Check, ChevronDown } from "lucide-react";
@@ -24,6 +31,7 @@ export default function Language() {
     setIsChanging(true);
     try {
       const activatedLocale = await dynamicActivate(newLanguage);
+      syncNativeMenuLocale(activatedLocale);
       setLanguage(activatedLocale);
       setIsOpen(false);
     } catch (error) {

@@ -33,6 +33,19 @@ export async function dynamicActivate(locale: string): Promise<Locale> {
   return nextLocale;
 }
 
+export function syncNativeMenuLocale(locale: Locale): void {
+  if (
+    typeof window === "undefined" ||
+    typeof window.electronAPI?.setMenuLocale !== "function"
+  ) {
+    return;
+  }
+
+  void window.electronAPI.setMenuLocale(locale).catch((error: unknown) => {
+    console.error("Failed to sync native menu locale:", error);
+  });
+}
+
 function getMessageDescriptor(id: string): MessageDescriptor {
   return (
     (messageDescriptors as Record<string, MessageDescriptor>)[id] ?? {

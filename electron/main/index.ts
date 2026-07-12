@@ -3,8 +3,10 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
   shell,
   type IpcMainInvokeEvent,
+  type MenuItemConstructorOptions,
   type WebFrameMain,
   type WebContents,
 } from "electron";
@@ -72,6 +74,7 @@ if (!app.requestSingleInstanceLock()) {
 // process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
 let win: BrowserWindow | null = null;
+let aboutWindow: BrowserWindow | null = null;
 // Here, you can also use other preload
 const preload = join(__dirname, "../preload/index.js");
 const url = process.env.VITE_DEV_SERVER_URL;
@@ -93,6 +96,9 @@ const allowedExternalHosts = new Set([
   "www.buymeacoffee.com",
 ]);
 const MAX_AUTOMATIC_TRANSLATION_ATTEMPTS = 3;
+const applicationLocaleSchema = z.enum(["en-US", "zh-TW", "zh-CN"]);
+type ApplicationLocale = z.infer<typeof applicationLocaleSchema>;
+let applicationLocale: ApplicationLocale | undefined;
 
 const subtitleFileSchema = z
   .object({
@@ -362,6 +368,167 @@ function sendProgress(sender: WebContents, progress: BatchProgress): void {
   sender.send("batch-progress", progress);
 }
 
+function getApplicationLocale(): ApplicationLocale {
+  if (applicationLocale) return applicationLocale;
+
+  const parsedLocale = applicationLocaleSchema.safeParse(app.getLocale());
+  applicationLocale = parsedLocale.success ? parsedLocale.data : "en-US";
+  return applicationLocale;
+}
+
+function getAboutLabel(): string {
+  switch (getApplicationLocale()) {
+    case "zh-TW":
+      return "關於 Subtitle Translator";
+    case "zh-CN":
+      return "关于 Subtitle Translator";
+    default:
+      return "About Subtitle Translator";
+  }
+}
+
+function getHelpLabel(): string {
+  switch (getApplicationLocale()) {
+    case "zh-TW":
+      return "說明";
+    case "zh-CN":
+      return "帮助";
+    default:
+      return "Help";
+  }
+}
+
+function setApplicationLocale(locale: unknown): void {
+  const nextLocale = applicationLocaleSchema.parse(locale);
+  if (applicationLocale === nextLocale) return;
+
+  applicationLocale = nextLocale;
+  createApplicationMenu();
+}
+
+function loadRenderer(browserWindow: BrowserWindow, hash?: string): void {
+  if (url) {
+    void browserWindow.loadURL(hash ? `${url}#${hash}` : url);
+  } else if (hash) {
+    void browserWindow.loadFile(indexHtml, { hash });
+  } else {
+    void browserWindow.loadFile(indexHtml);
+  }
+}
+
+function configureWindowNavigation(browserWindow: BrowserWindow): void {
+  browserWindow.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (isAllowedExternalUrl(targetUrl)) {
+      void shell.openExternal(targetUrl);
+    }
+    return { action: "deny" };
+  });
+
+  browserWindow.webContents.on("will-navigate", (event, navigationUrl) => {
+    let isAllowed = false;
+    try {
+      if (url) {
+        isAllowed =
+          new URL(navigationUrl).origin === new URL(url).origin;
+      } else {
+        const actualUrl = new URL(navigationUrl);
+        const expectedUrl = new URL(packagedIndexUrl);
+        isAllowed =
+          actualUrl.protocol === expectedUrl.protocol &&
+          actualUrl.pathname === expectedUrl.pathname;
+      }
+    } catch {
+      isAllowed = false;
+    }
+
+    if (!isAllowed) event.preventDefault();
+  });
+}
+
+function createAboutWindow(): void {
+  const nextAboutWindow = new BrowserWindow({
+    title: getAboutLabel(),
+    icon: join(process.env.PUBLIC, "favicon.ico"),
+    width: 600,
+    height: 720,
+    resizable: false,
+    show: false,
+    webPreferences: {
+      preload,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+    ...(process.platform === "darwin"
+      ? {
+          titleBarStyle: "default",
+        }
+      : {
+          titleBarOverlay: true,
+          autoHideMenuBar: true,
+          backgroundMaterial: "mica",
+        }),
+  });
+
+  aboutWindow = nextAboutWindow;
+  nextAboutWindow.on("closed", () => {
+    if (aboutWindow === nextAboutWindow) aboutWindow = null;
+  });
+
+  configureWindowNavigation(nextAboutWindow);
+  loadRenderer(nextAboutWindow, "/about");
+  nextAboutWindow.once("ready-to-show", () => nextAboutWindow.show());
+}
+
+function openAboutWindow(): void {
+  if (aboutWindow && !aboutWindow.isDestroyed()) {
+    if (aboutWindow.isMinimized()) aboutWindow.restore();
+    aboutWindow.focus();
+    return;
+  }
+
+  createAboutWindow();
+}
+
+function createApplicationMenu(): void {
+  const aboutLabel = getAboutLabel();
+  const helpLabel = getHelpLabel();
+  const template: MenuItemConstructorOptions[] = [];
+
+  if (process.platform === "darwin") {
+    template.push({
+      label: app.getName(),
+      submenu: [
+        { label: aboutLabel, click: openAboutWindow },
+        { type: "separator" },
+        { role: "services" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    });
+  }
+
+  template.push(
+    { role: "fileMenu" },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" }
+  );
+
+  if (process.platform !== "darwin") {
+    template.push({
+      label: helpLabel,
+      submenu: [{ label: aboutLabel, click: openAboutWindow }],
+    });
+  }
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 function createWindow() {
   win = new BrowserWindow({
     title: "Main window",
@@ -387,45 +554,20 @@ function createWindow() {
         }),
   });
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    void win.loadURL(url);
-    // Open devTool if the app is not packaged
-    // win.webContents.openDevTools()
-  } else {
-    void win.loadFile(indexHtml);
-  }
-
-  win.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
-    if (isAllowedExternalUrl(targetUrl)) {
-      void shell.openExternal(targetUrl);
-    }
-    return { action: "deny" };
-  });
-
-  win.webContents.on("will-navigate", (event, navigationUrl) => {
-    let isAllowed = false;
-    try {
-      if (url) {
-        isAllowed =
-          new URL(navigationUrl).origin === new URL(url).origin;
-      } else {
-        const actualUrl = new URL(navigationUrl);
-        const expectedUrl = new URL(packagedIndexUrl);
-        isAllowed =
-          actualUrl.protocol === expectedUrl.protocol &&
-          actualUrl.pathname === expectedUrl.pathname;
-      }
-    } catch {
-      isAllowed = false;
-    }
-
-    if (!isAllowed) event.preventDefault();
-  });
+  loadRenderer(win);
+  // Open devTool if the app is not packaged
+  // win.webContents.openDevTools()
+  configureWindowNavigation(win);
 }
 
-app.whenReady().then(createWindow).catch((error: unknown) => {
-  console.error("Failed to create application window:", error);
-});
+app.whenReady()
+  .then(() => {
+    createApplicationMenu();
+    createWindow();
+  })
+  .catch((error: unknown) => {
+    console.error("Failed to create application window:", error);
+  });
 
 app.on("window-all-closed", () => {
   win = null;
@@ -451,6 +593,11 @@ app.on("activate", () => {
 
 // Cache analysis per file so renderer can fetch it on demand
 const analysisCache = new Map<string, string>();
+
+ipcMain.handle("set-menu-locale", (event, locale: unknown) => {
+  assertTrustedSender(event);
+  setApplicationLocale(locale);
+});
 
 ipcMain.handle("open-external", (event, target: unknown) => {
   assertTrustedSender(event);
