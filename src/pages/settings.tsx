@@ -60,19 +60,19 @@ function getConnectionErrorKey(error: unknown) {
 
 const providerPresets = {
   openrouter: {
-    label: "OpenRouter",
+    label: "api.presets.openrouter",
     host: "https://openrouter.ai/api/v1",
   },
   openai: {
-    label: "OpenAI",
+    label: "api.presets.openai",
     host: "https://api.openai.com/v1",
   },
   "vercel-gateway": {
-    label: "Vercel AI Gateway",
+    label: "api.presets.vercel_gateway",
     host: "https://ai-gateway.vercel.sh/v1",
   },
   "openai-compatible": {
-    label: "OpenAI 相容（自訂）",
+    label: "api.presets.openai_compatible",
     host: "",
   },
 } as const;
@@ -156,7 +156,7 @@ export default function Settings() {
   };
 
   const resetAll = () => {
-    if (confirm("這將清除所有設定並恢復預設值，確定要繼續嗎？")) {
+    if (confirm(t("reset.prompt"))) {
       localStorage.clear();
       window.location.reload();
     }
@@ -165,17 +165,17 @@ export default function Settings() {
   return (
     <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-xl">
       <SheetHeader className="border-b px-6 py-5 pr-14">
-        <SheetTitle className="text-2xl">設定</SheetTitle>
-        <SheetDescription>管理介面、API 與翻譯相關工具。</SheetDescription>
+        <SheetTitle className="text-2xl">{t("settings")}</SheetTitle>
+        <SheetDescription>{t("settings.description")}</SheetDescription>
       </SheetHeader>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <FieldGroup>
           <div>
-            <h2 className="font-heading text-lg font-semibold">介面</h2>
-            <p className="mt-1 text-sm text-muted-foreground">選擇介面語言與工作偏好。</p>
+            <h2 className="font-heading text-lg font-semibold">{t("settings.interface.title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("settings.interface.description")}</p>
           </div>
           <Field>
-            <FieldLabel>語言</FieldLabel>
+            <FieldLabel>{t("language")}</FieldLabel>
             <Select value={language} onValueChange={(value) => void changeLanguage(value)}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -190,24 +190,24 @@ export default function Settings() {
           <Separator className="my-2" />
 
           <div>
-            <h2 className="font-heading text-lg font-semibold">API 連線</h2>
-            <p className="mt-1 text-sm text-muted-foreground">金鑰只會儲存在本機瀏覽器儲存空間。</p>
+            <h2 className="font-heading text-lg font-semibold">{t("settings.api.title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("settings.api.description")}</p>
           </div>
           <Field>
-            <FieldLabel>供應商</FieldLabel>
+            <FieldLabel>{t("settings.provider")}</FieldLabel>
             <Select value={provider} onValueChange={(value) => changeProvider(value as keyof typeof providerPresets)}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   {Object.entries(providerPresets).map(([value, item]) => (
-                    <SelectItem key={value} value={value}>{item.label}</SelectItem>
+                    <SelectItem key={value} value={value}>{t(item.label)}</SelectItem>
                   ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
           </Field>
           <Field>
-            <FieldLabel htmlFor="settings-api-key">API 金鑰</FieldLabel>
+            <FieldLabel htmlFor="settings-api-key">{t("api.key.name")}</FieldLabel>
             <Input
               id="settings-api-key"
               type="password"
@@ -218,7 +218,7 @@ export default function Settings() {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="settings-api-host">API 主機</FieldLabel>
+            <FieldLabel htmlFor="settings-api-host">{t("api.host.name")}</FieldLabel>
             <Input id="settings-api-host" value={host} onChange={(event) => setHost(event.target.value)} />
           </Field>
           <Field>
@@ -270,11 +270,11 @@ export default function Settings() {
           <Separator className="my-2" />
 
           <div>
-            <h2 className="font-heading text-lg font-semibold">翻譯</h2>
-            <p className="mt-1 text-sm text-muted-foreground">這些選項會套用到之後新增的任務。</p>
+            <h2 className="font-heading text-lg font-semibold">{t("settings.translation.title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("settings.translation.description")}</p>
           </div>
           <Field>
-            <FieldLabel>溫度</FieldLabel>
+            <FieldLabel>{t("temperature.title")}</FieldLabel>
             <div className="flex items-center gap-3">
               <input
                 type="range"
@@ -298,12 +298,12 @@ export default function Settings() {
             <FieldDescription>{t("temperature.description")}</FieldDescription>
           </Field>
           <Field>
-            <FieldLabel htmlFor="settings-delay">請求間隔（秒）</FieldLabel>
+            <FieldLabel htmlFor="settings-delay">{t("settings.delay.label")}</FieldLabel>
             <Input id="settings-delay" type="number" min="0" step="0.1" value={delay} onChange={(event) => setDelay(Number(event.target.value))} />
-            <FieldDescription>在每次請求之間暫停，降低供應商限流風險。</FieldDescription>
+            <FieldDescription>{t("settings.delay.description")}</FieldDescription>
           </Field>
           <Field>
-            <FieldLabel htmlFor="settings-rpm">每分鐘請求上限（RPM）</FieldLabel>
+            <FieldLabel htmlFor="settings-rpm">{t("settings.rpm.label")}</FieldLabel>
             <Input
               id="settings-rpm"
               type="number"
@@ -313,27 +313,30 @@ export default function Settings() {
               value={requestsPerMinute}
               onChange={(event) => setRequestsPerMinute(Number(event.target.value))}
             />
-            <FieldDescription>
-              同一批翻譯一分鐘內最多發出的 API 請求數；會與請求間隔共同套用。
-            </FieldDescription>
+            <FieldDescription>{t("settings.rpm.description")}</FieldDescription>
           </Field>
           <Field>
-            <FieldLabel>雙語字幕</FieldLabel>
+            <FieldLabel>{t("save.multi-language.name")}</FieldLabel>
             <Select value={multiLangSave} onValueChange={setMultiLangSave}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="none">僅儲存翻譯字幕</SelectItem>
-                  <SelectItem value="translate+original">翻譯字幕 + 原文字幕</SelectItem>
-                  <SelectItem value="original+translate">原文字幕 + 翻譯字幕</SelectItem>
+                  <SelectItem value="none">{t("save.multi-language.options.none")}</SelectItem>
+                  <SelectItem value="translate+original">{t("save.multi-language.options.translate+original")}</SelectItem>
+                  <SelectItem value="original+translate">{t("save.multi-language.options.original+translate")}</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
           </Field>
           <Field>
-            <FieldLabel htmlFor="settings-prompt">翻譯提示詞</FieldLabel>
+            <FieldLabel htmlFor="settings-prompt">{t("settings.prompt.label")}</FieldLabel>
             <Textarea id="settings-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="min-h-52 resize-y" />
-            <FieldDescription>保留 <code>{"{{lang}}"}</code> 與 <code>{"{{additional}}"}</code> 變數，新增任務時會自動帶入。</FieldDescription>
+            <FieldDescription>
+              {t("settings.prompt.description", {
+                lang: "{{lang}}",
+                additional: "{{additional}}",
+              })}
+            </FieldDescription>
           </Field>
 
           <Separator className="my-2" />
@@ -342,13 +345,13 @@ export default function Settings() {
             <div className="flex min-w-0 gap-3">
               <AlertTriangle className="mt-0.5 shrink-0 text-destructive" />
               <div>
-                <p className="font-medium">重設所有設定</p>
-                <p className="mt-1 text-sm text-muted-foreground">清除本機儲存的 API、任務與翻譯偏好。</p>
+                <p className="font-medium">{t("reset.name")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t("settings.reset.description")}</p>
               </div>
             </div>
             <Button variant="destructive" size="sm" onClick={resetAll}>
               <RotateCcw data-icon="inline-start" />
-              重設
+              {t("reset.title")}
             </Button>
           </div>
         </FieldGroup>

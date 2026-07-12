@@ -6,6 +6,7 @@ import assStringify from "ass-stringify";
 import { z } from "zod";
 import { generateText, Output, streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { translationErrorCodes } from "../../../src/types/electron-api";
 import type { RequestRateLimiter } from "./request-rate-limiter";
 
 export interface SubtitleCueData {
@@ -163,11 +164,11 @@ export function parseTranslationCache(
   try {
     value = JSON.parse(content) as unknown;
   } catch {
-    throw new Error("翻譯暫存 JSON 格式無效");
+    throw new Error(translationErrorCodes.invalidCheckpoint);
   }
 
   if (!isRecord(value)) {
-    throw new Error("翻譯暫存 JSON 格式無效");
+    throw new Error(translationErrorCodes.invalidCheckpoint);
   }
 
   const source = value.source;
@@ -181,7 +182,7 @@ export function parseTranslationCache(
     getSubtitleCues(value.subtitle).length === 0 ||
     (value.analysis !== undefined && typeof value.analysis !== "string")
   ) {
-    throw new Error("翻譯暫存 JSON 格式無效或版本不相容");
+    throw new Error(translationErrorCodes.incompatibleCheckpoint);
   }
 
   return value as unknown as TranslationCacheDocument;
@@ -249,7 +250,7 @@ async function translateSubtitleChunk(
   }
 ) {
   if (apiKeys.length === 0) {
-    throw new Error("No valid API keys provided");
+    throw new Error(translationErrorCodes.noValidApiKeys);
   }
 
   const ai = getAi({ apiKey: apiKeys[0], apiHost });
@@ -319,7 +320,7 @@ async function translateSubtitleSingle(
   }
 ) {
   if (apiKeys.length === 0) {
-    throw new Error("No valid API keys provided");
+    throw new Error(translationErrorCodes.noValidApiKeys);
   }
 
   const ai = getAi({ apiKey: apiKeys[0], apiHost });
@@ -386,7 +387,7 @@ function parseSubtitle(
       }) ?? [];
     return { full: parsedAssSubtitle, events };
   }
-  throw new Error("Unsupported file extension");
+  throw new Error(translationErrorCodes.unsupportedFileExtension);
 }
 
 function saveTranslated(
@@ -510,7 +511,7 @@ async function analyzeSubtitlesForContext(
   }
 ): Promise<string> {
   if (apiKeys.length === 0) {
-    throw new Error("No valid API keys provided");
+    throw new Error(translationErrorCodes.noValidApiKeys);
   }
   const ai = getAi({ apiKey: apiKeys[0], apiHost });
 

@@ -9,6 +9,7 @@ import useRPM from "@/hooks/useRPM";
 import useTranslationSuccessCount, {
   TRANSLATION_SUCCESS_THRESHOLD,
 } from "@/hooks/useTranslationSuccessCount";
+import { useTranslation } from "@/i18n";
 import { useAPIHost, useAPIKeys, useTemperature } from "@/hooks/useOpenAI";
 import { getFilePath } from "@/utils/filePath";
 import BuyMeACoffee from "@/components/BuyMeACoffee";
@@ -19,6 +20,7 @@ import type {
   SubtitleFile,
   TranslationParams,
 } from "@/types/electron-api";
+import { translationErrorCodes } from "@/types/electron-api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,13 +107,28 @@ type TranslatorPanelProps = {
 
 const supportedExtensions = [".ass", ".ssa", ".srt", ".vtt", ".json"];
 
-const statusCopy: Record<BatchProgress["status"], string> = {
-  pending: "等待中",
-  analyzing: "分析中",
-  translating: "翻譯中",
-  done: "已完成",
-  error: "失敗",
+type Translate = (id: string, values?: Record<string, unknown>) => string;
+
+const translationErrorMessageIds: Record<string, string> = {
+  [translationErrorCodes.unsupportedInputFile]: "error.unsupportedInputFile",
+  [translationErrorCodes.inputPathNotFile]: "error.inputPathNotFile",
+  [translationErrorCodes.unsupportedSubtitleFormat]: "error.unsupportedSubtitleFormat",
+  [translationErrorCodes.invalidCheckpoint]: "error.invalidCheckpoint",
+  [translationErrorCodes.incompatibleCheckpoint]: "error.incompatibleCheckpoint",
+  [translationErrorCodes.noValidApiKeys]: "error.noValidApiKeys",
+  [translationErrorCodes.unsupportedFileExtension]: "error.unsupportedFileExtension",
 };
+
+function getLocalizedError(error: unknown, fallbackId: string, t: Translate): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+  const messageId = translationErrorMessageIds[message];
+  return messageId ? t(messageId) : message || t(fallbackId);
+}
 
 function getStatusVariant(status: BatchProgress["status"]) {
   if (status === "error") return "destructive" as const;
@@ -120,12 +137,13 @@ function getStatusVariant(status: BatchProgress["status"]) {
   return "secondary" as const;
 }
 
-function getParentFolder(filePath: string) {
+function getParentFolder(filePath: string, fallback: string) {
   const parts = filePath.split(/[\\/]/).filter(Boolean);
-  return parts.at(-2) || "來源資料夾";
+  return parts.at(-2) || fallback;
 }
 
 export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps) {
+  const { i18n, t } = useTranslation();
   const [files, setFiles] = useFile();
   const [lang, setLang] = useLocalStorage("translate_lang", "");
   const [additional, setAdditional] = useLocalStorage("translate_additional", "");
@@ -164,6 +182,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [modelLoadError, setModelLoadError] = useState("");
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState("");
+  const statusCopy: Record<BatchProgress["status"], string> = {
+    pending: t("task.status.pending"),
+    analyzing: t("task.status.analyzing"),
+    translating: t("task.status.translating"),
+    done: t("task.status.done"),
+    error: t("task.status.error"),
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastPreviewUpdateRef = useRef(0);
   const handledAddTaskRequestRef = useRef(0);
@@ -192,16 +217,24 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       }
 
       if (data.status === "error") {
-        toast.error(`翻譯失敗：${data.error || data.filePath}`);
+        toast.error(
+          t("toast.translationFailed", {
+            error: getLocalizedError(data.error || data.filePath, "toast.unknownError", t),
+          })
+        );
       }
       if (data.status === "done") {
         incrementTranslationSuccessCount();
-        toast.success(`翻譯完成：${data.filePath.split(/[\\/]/).at(-1) || data.filePath}`);
+        toast.success(
+          t("toast.translationCompleted", {
+            file: data.filePath.split(/[\\/]/).at(-1) || data.filePath,
+          })
+        );
       }
     });
 
     return unsubscribe;
-  }, [detailOpen, incrementTranslationSuccessCount, selectedFile]);
+  }, [detailOpen, i18n.locale, incrementTranslationSuccessCount, selectedFile]);
 
   useEffect(() => {
     if (!addDialogOpen) {
@@ -221,7 +254,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     if (typeof window.electronAPI?.listModels !== "function") {
       setAvailableModels([]);
       setModelLoadStatus("error");
-      setModelLoadError("目前環境無法載入模型清單");
+      setModelLoadError(t("toast.modelListUnavailable"));
       return () => controller.abort();
     }
 
@@ -245,9 +278,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
 
         setAvailableModels([]);
         setModelLoadStatus("error");
-        setModelLoadError(
-          error instanceof Error ? error.message : "無法載入模型清單"
-        );
+        setModelLoadError(getLocalizedError(error, "toast.modelListFailed", t));
       });
 
     return () => controller.abort();
@@ -317,19 +348,19 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         }
         accepted.push({ path, name: file.name });
       } catch (error: unknown) {
-        toast.error(error instanceof Error ? error.message : "無法讀取檔案");
+        toast.error(getLocalizedError(error, "toast.fileReadFailed", t));
       }
     }
 
     if (rejectedCount > 0) {
-      toast.error(`已略過 ${rejectedCount} 個不支援的檔案`);
+      toast.error(t("toast.filesSkipped", { count: rejectedCount }));
     }
     return accepted;
   };
 
   const requestAddFiles = (selectedFiles: File[]) => {
     if (isTranslating) {
-      toast.info("翻譯進行中，請稍後再新增任務");
+      toast.info(t("toast.translationInProgress"));
       return;
     }
     const nextFiles = resolveSelectedFiles(selectedFiles);
@@ -341,7 +372,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
 
   const chooseOutputDirectory = async () => {
     if (!window.electronAPI?.selectDirectory) {
-      toast.error("目前環境無法選擇輸出資料夾");
+      toast.error(t("toast.outputDirectoryUnavailable"));
       return;
     }
 
@@ -352,9 +383,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       );
       if (selectedDirectory) setOutputDirectory(selectedDirectory);
     } catch (error: unknown) {
-      toast.error(
-        error instanceof Error ? error.message : "無法選擇輸出資料夾"
-      );
+      toast.error(getLocalizedError(error, "toast.outputDirectoryFailed", t));
     } finally {
       setIsChoosingOutputDirectory(false);
     }
@@ -365,7 +394,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       const preview = await window.electronAPI.getSubtitlePreview(filePath);
       setCues(preview.cues);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "無法載入字幕內容");
+      toast.error(getLocalizedError(error, "toast.subtitleLoadFailed", t));
     }
   };
 
@@ -406,7 +435,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       return next;
     });
     if (selectedFile?.path === filePath) closeDetails();
-    toast.success("任務已移除");
+    toast.success(t("toast.taskRemoved"));
   };
 
   const clearCompletedFiles = () => {
@@ -416,7 +445,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     setBatchProgress((previous) =>
       Object.fromEntries(Object.entries(previous).filter(([path]) => remaining.some((file) => file.path === path)))
     );
-    toast.success(`已清除 ${completedCount} 個已完成任務`);
+    toast.success(t("toast.completedCleared", { count: completedCount }));
   };
 
   const startBatchTranslation = async (
@@ -428,11 +457,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     );
     if (translatableFiles.length === 0) return;
     if (!lang.trim()) {
-      toast.error("請先填寫目標語言");
+      toast.error(t("toast.targetLanguageRequired"));
       return;
     }
     if (!keys.some((key) => key.trim().length > 0)) {
-      toast.error("請先在設定中加入 API 金鑰");
+      toast.error(t("toast.apiKeyRequired"));
       return;
     }
 
@@ -462,7 +491,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         },
       });
     } catch (error: unknown) {
-      toast.error(`翻譯工作失敗：${error instanceof Error ? error.message : "未知錯誤"}`);
+      toast.error(
+        t("toast.translationJobFailed", {
+          error: getLocalizedError(error, "toast.unknownError", t),
+        })
+      );
     } finally {
       setIsTranslating(false);
     }
@@ -473,11 +506,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     const translationModel = taskModel.trim();
     if (filesToTranslate.length === 0 || !translationModel) return;
     if (!lang.trim()) {
-      toast.error("請先填寫目標語言");
+      toast.error(t("toast.targetLanguageRequired"));
       return;
     }
     if (!keys.some((key) => key.trim().length > 0)) {
-      toast.error("請先在設定中加入 API 金鑰");
+      toast.error(t("toast.apiKeyRequired"));
       return;
     }
 
@@ -487,25 +520,30 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     setModelPickerOpen(false);
     setModelSearch("");
     setAddDialogOpen(false);
-    toast.success(`已加入 ${filesToTranslate.length} 個任務，開始翻譯`);
+    toast.success(t("toast.tasksAdded", { count: filesToTranslate.length }));
     void startBatchTranslation(filesToTranslate, translationModel);
   };
 
   const renderStatus = (file: SubtitleFile) => {
     const progress = batchProgress[file.path] || { progress: 0, status: "pending" as const };
     const progressValue = Math.max(0, Math.min(100, progress.progress || 0));
-    let detail = "等待開始";
-    if (progress.status === "analyzing") detail = "分析字幕脈絡";
+    let detail = t("task.progress.waiting");
+    if (progress.status === "analyzing") detail = t("task.progress.analyzing");
     if (progress.status === "translating") {
       detail = progress.currentCue && progress.totalCues
-        ? `第 ${progress.currentCue} / ${progress.totalCues} 段`
-        : "翻譯字幕內容";
+        ? t("task.progress.cue", {
+            current: progress.currentCue,
+            total: progress.totalCues,
+          })
+        : t("task.progress.translating");
     }
-    if (progress.status === "done") detail = "已輸出翻譯檔案";
+    if (progress.status === "done") detail = t("task.progress.done");
     if (progress.status === "error") {
       detail = progress.error
-        ? `${progress.error}；請按「重試」再次執行`
-        : "自動重試三次後失敗，請按「重試」再次執行";
+        ? t("task.progress.retryWithError", {
+            error: getLocalizedError(progress.error, "toast.unknownError", t),
+          })
+        : t("task.progress.retry");
     }
 
     return (
@@ -519,7 +557,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           </Badge>
           <span className="text-xs tabular-nums text-muted-foreground">{progressValue.toFixed(0)}%</span>
         </div>
-        <Progress value={progressValue} aria-label={`${file.name} ${progressValue}%`} />
+        <Progress
+          value={progressValue}
+          aria-label={t("tasks.aria.progress", {
+            file: file.name,
+            progress: progressValue,
+          })}
+        />
         <span className="truncate text-xs text-muted-foreground" title={detail}>{detail}</span>
       </div>
     );
@@ -559,40 +603,44 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             <EmptyMedia variant="icon" className="size-14 rounded-2xl [&_svg:not([class*='size-'])]:size-7">
               <FileStack />
             </EmptyMedia>
-            <EmptyTitle className="text-2xl">尚無任務</EmptyTitle>
-            <EmptyDescription className="text-base">新增任務後將會自動開始</EmptyDescription>
+            <EmptyTitle className="text-2xl">{t("tasks.empty.title")}</EmptyTitle>
+            <EmptyDescription className="text-base">{t("tasks.empty.description")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button size="lg" onClick={() => fileInputRef.current?.click()}>
               <FolderOpen data-icon="inline-start" />
-              選擇檔案
+              {t("tasks.empty.chooseFile")}
             </Button>
           </EmptyContent>
           {shouldShowCoffeeBanner && (
             <BuyMeACoffee dismissible className="w-full max-w-sm" />
           )}
           <p className="mt-auto pt-10 text-center text-xs text-muted-foreground">
-            支援格式：ass、ssa、srt、vtt，以及翻譯暫存 json。
+            {t("tasks.empty.formats")}
             <br />
-            翻譯失敗時會保留暫存檔，方便拖回繼續；成功後會自動刪除。
+            {t("tasks.empty.checkpoint")}
           </p>
         </Empty>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto">
           <div className="flex items-center justify-between border-b px-5 py-2.5 text-xs text-muted-foreground">
-            <span>{activeCount > 0 ? `${activeCount} 個任務正在處理` : "佇列已就緒"}</span>
+            <span>
+              {activeCount > 0
+                ? t("tasks.queue.active", { count: activeCount })
+                : t("tasks.queue.ready")}
+            </span>
             <div className="flex items-center gap-3">
-              <span>{completedCount} 個已完成</span>
+              <span>{t("tasks.queue.completed", { count: completedCount })}</span>
               {isTranslating && (
                 <Button variant="secondary" size="sm" disabled>
                   <LoaderCircle className="animate-spin" data-icon="inline-start" />
-                  翻譯中
+                  {t("tasks.queue.translating")}
                 </Button>
               )}
               {completedCount > 0 && (
                 <Button variant="ghost" size="sm" onClick={clearCompletedFiles}>
                   <Trash2 data-icon="inline-start" />
-                  清除已結束
+                  {t("tasks.queue.clearCompleted")}
                 </Button>
               )}
             </div>
@@ -601,11 +649,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[320px] px-5">檔案</TableHead>
-                  <TableHead className="min-w-[150px]">狀態</TableHead>
-                  <TableHead className="min-w-[260px]">進度</TableHead>
-                  <TableHead className="min-w-[180px]">設定</TableHead>
-                  <TableHead className="w-[112px] px-5 text-right">動作</TableHead>
+                  <TableHead className="min-w-[320px] px-5">{t("tasks.table.file")}</TableHead>
+                  <TableHead className="min-w-[150px]">{t("tasks.table.status")}</TableHead>
+                  <TableHead className="min-w-[260px]">{t("tasks.table.progress")}</TableHead>
+                  <TableHead className="min-w-[180px]">{t("tasks.table.settings")}</TableHead>
+                  <TableHead className="w-[112px] px-5 text-right">{t("tasks.table.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -615,7 +663,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                   <TableRow
                     key={file.path}
                     tabIndex={0}
-                    aria-label={`查看 ${file.name} 翻譯詳情`}
+                    aria-label={t("tasks.aria.viewDetails", { file: file.name })}
                     className="group cursor-pointer transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none"
                     onClick={() => void openDetails(file)}
                     onKeyDown={(event) => {
@@ -635,7 +683,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                         <FileAudio className="shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <p className="truncate font-medium" title={file.name}>{file.name}</p>
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground" title={file.path}>{getParentFolder(file.path)}</p>
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground" title={file.path}>{getParentFolder(file.path, t("task.sourceFolder"))}</p>
                         </div>
                       </div>
                     </TableCell>
@@ -645,8 +693,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                     <TableCell>{renderStatus(file)}</TableCell>
                     <TableCell className="min-w-0">
                       <div className="flex min-w-0 flex-col gap-0.5 text-sm">
-                      <span className="truncate font-medium" title={model}>{model || "尚未設定模型"}</span>
-                      <span className="truncate text-xs text-muted-foreground">{lang || "尚未設定目標語言"}</span>
+                      <span className="truncate font-medium" title={model}>{model || t("tasks.model.notSet")}</span>
+                      <span className="truncate text-xs text-muted-foreground">{lang || t("tasks.language.notSet")}</span>
                       </div>
                     </TableCell>
                     <TableCell className="px-5">
@@ -660,8 +708,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                               event.stopPropagation();
                               void startBatchTranslation([file], model.trim());
                             }}
-                            aria-label={`重試 ${file.name}`}
-                            title="重試翻譯"
+                            aria-label={t("tasks.aria.retry", { file: file.name })}
+                            title={t("tasks.aria.retry", { file: file.name })}
                           >
                             <RotateCcw />
                           </Button>
@@ -673,7 +721,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                             event.stopPropagation();
                             removeFile(file.path);
                           }}
-                          aria-label={`移除 ${file.name}`}
+                          aria-label={t("tasks.aria.remove", { file: file.name })}
                         >
                           <Trash2 />
                         </Button>
@@ -691,15 +739,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-h-[min(760px,calc(100vh-2rem))] sm:max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl">新增翻譯任務</DialogTitle>
-            <DialogDescription>
-              設定這批字幕的翻譯方式，確認後會加入任務並自動開始翻譯。
-            </DialogDescription>
+            <DialogTitle className="text-xl">{t("tasks.dialog.title")}</DialogTitle>
+            <DialogDescription>{t("tasks.dialog.description")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-2 md:grid-cols-2">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="task-model">翻譯模型</FieldLabel>
+                  <FieldLabel htmlFor="task-model">{t("tasks.model.label")}</FieldLabel>
                 <Popover
                   open={modelPickerOpen}
                   onOpenChange={handleModelPickerChange}
@@ -712,7 +758,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                       className="w-full justify-between font-normal"
                     >
                       <span className={cn("truncate", !taskModel && "text-muted-foreground")}>
-                        {taskModel || "選擇或輸入模型"}
+                        {taskModel || t("tasks.model.choose")}
                       </span>
                       <ChevronDown className="shrink-0 opacity-50" />
                     </Button>
@@ -736,36 +782,36 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                             selectModel(customModelValue);
                           }
                         }}
-                        placeholder="搜尋模型或輸入自訂模型 ID"
-                        aria-label="搜尋模型或輸入自訂模型 ID"
+                        placeholder={t("tasks.model.search")}
+                        aria-label={t("tasks.model.search")}
                       />
                       <CommandList>
                         {modelLoadStatus === "loading" && (
                           <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                             <LoaderCircle className="animate-spin" />
-                            正在載入 API 可用模型⋯
+                            {t("tasks.model.loading")}
                           </div>
                         )}
                         {modelLoadStatus === "error" && (
                           <div className="px-3 py-3 text-sm text-destructive" role="alert">
-                            {modelLoadError}；仍可使用自訂模型 ID。
+                            {t("tasks.model.loadError", { error: modelLoadError })}
                           </div>
                         )}
                         {hasCustomModelOption && (
-                          <CommandGroup heading="自訂模型">
+                          <CommandGroup heading={t("tasks.model.custom")}>
                             <CommandItem
                               value={`custom:${customModelValue}`}
                               onSelect={() => selectModel(customModelValue)}
                             >
                               <Plus />
                               <span className="min-w-0 truncate">
-                                使用「{customModelValue}」
+                                {t("tasks.model.useCustom", { model: customModelValue })}
                               </span>
                             </CommandItem>
                           </CommandGroup>
                         )}
                         {filteredModels.length > 0 && (
-                          <CommandGroup heading="可用模型">
+                          <CommandGroup heading={t("tasks.model.available")}>
                             {filteredModels.map((modelInfo) => (
                               <CommandItem
                                 key={modelInfo.id}
@@ -788,10 +834,10 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                           !hasCustomModelOption && (
                             <CommandEmpty>
                               {modelSearch.trim()
-                                ? "找不到模型，可以直接使用自訂模型 ID。"
+                                ? t("tasks.model.noMatch")
                                 : apiKey
-                                  ? "目前沒有可用模型。"
-                                  : "請先設定 API 金鑰，或輸入自訂模型 ID。"}
+                                  ? t("tasks.model.noneAvailable")
+                                  : t("tasks.model.apiKeyRequired")}
                             </CommandEmpty>
                           )}
                       </CommandList>
@@ -800,63 +846,63 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                 </Popover>
                 <FieldDescription>
                   {!apiKey
-                    ? "請先在設定中加入 API 金鑰，開啟此選單時會自動載入可用模型。"
+                    ? t("tasks.model.helpNoKey")
                     : modelLoadStatus === "loading"
-                      ? "正在載入 API 可用模型⋯"
+                      ? t("tasks.model.loading")
                       : modelLoadStatus === "error"
-                        ? `${modelLoadError}；仍可使用自訂模型 ID。`
+                        ? t("tasks.model.loadError", { error: modelLoadError })
                         : modelLoadStatus === "success"
-                          ? `已載入 ${availableModels.length} 個模型；也可使用自訂模型 ID。`
-                          : "開啟此選單時會自動載入可用模型。"}
+                          ? t("tasks.model.helpSuccess", { count: availableModels.length })
+                          : t("tasks.model.helpIdle")}
                 </FieldDescription>
               </Field>
               <Field>
-                <FieldLabel htmlFor="task-language">目標語言</FieldLabel>
+                <FieldLabel htmlFor="task-language">{t("tasks.language.label")}</FieldLabel>
                 <Input
                   id="task-language"
                   value={lang}
                   onChange={(event) => setLang(event.target.value)}
-                  placeholder="例如：繁體中文、English、日本語"
+                  placeholder={t("tasks.language.placeholder")}
                   autoFocus
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="task-additional">翻譯提示</FieldLabel>
+                <FieldLabel htmlFor="task-additional">{t("tasks.additional.label")}</FieldLabel>
                 <Textarea
                   id="task-additional"
                   value={additional}
                   onChange={(event) => setAdditional(event.target.value)}
-                  placeholder="例如：保留專有名詞，語氣自然。"
+                  placeholder={t("tasks.additional.placeholder")}
                   className="min-h-32 resize-none"
                 />
-                <FieldDescription>這段提示會套用到本批任務。</FieldDescription>
+                <FieldDescription>{t("tasks.additional.description")}</FieldDescription>
               </Field>
             </FieldGroup>
             <FieldGroup>
               <Field>
-                <FieldLabel>輸出格式</FieldLabel>
+                  <FieldLabel>{t("tasks.output.label")}</FieldLabel>
                 <Select value={multiLangSave} onValueChange={(value) => setMultiLangSave(value as TranslationParams["multiLangSave"])}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="none">僅輸出翻譯字幕</SelectItem>
-                      <SelectItem value="translate+original">翻譯字幕 + 原文字幕</SelectItem>
-                      <SelectItem value="original+translate">原文字幕 + 翻譯字幕</SelectItem>
+                      <SelectItem value="none">{t("tasks.output.none")}</SelectItem>
+                      <SelectItem value="translate+original">{t("tasks.output.translateOriginal")}</SelectItem>
+                      <SelectItem value="original+translate">{t("tasks.output.originalTranslate")}</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <FieldDescription>這個選項會套用到本批任務。</FieldDescription>
+                <FieldDescription>{t("tasks.output.description")}</FieldDescription>
               </Field>
               <Field>
-                <FieldLabel>輸出資料夾</FieldLabel>
+                  <FieldLabel>{t("tasks.output.directory")}</FieldLabel>
                 <div className="flex items-center gap-2">
                   <div
                     className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-input px-2.5 py-1.5 text-sm text-muted-foreground"
-                    title={outputDirectory || "與來源字幕檔案相同的資料夾"}
+                    title={outputDirectory || t("tasks.output.directoryFallback")}
                   >
                     <FolderOpen className="shrink-0" />
                     <span className="truncate">
-                      {outputDirectory || "與來源字幕檔案相同的資料夾"}
+                      {outputDirectory || t("tasks.output.directoryFallback")}
                     </span>
                   </div>
                   <Button
@@ -866,15 +912,15 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                     disabled={isChoosingOutputDirectory}
                   >
                     <FolderOpen data-icon="inline-start" />
-                    {isChoosingOutputDirectory ? "選擇中" : "選擇"}
+                    {isChoosingOutputDirectory ? t("tasks.output.selecting") : t("tasks.output.select")}
                   </Button>
                 </div>
-                <FieldDescription>未選擇時會輸出到來源字幕檔案所在資料夾。</FieldDescription>
+                <FieldDescription>{t("tasks.output.directoryDescription")}</FieldDescription>
               </Field>
               <div className="rounded-xl border bg-muted/20 p-4">
                 <div className="flex items-center gap-2 font-medium">
                   <FilePlus2 />
-                  已選取 {pendingFiles.length} 個檔案
+                  {t("tasks.output.selectedFiles", { count: pendingFiles.length })}
                 </div>
                 <div className="mt-3 max-h-36 overflow-y-auto text-sm text-muted-foreground">
                   {pendingFiles.map((file) => <p key={file.path} className="truncate py-0.5" title={file.path}>{file.name}</p>)}
@@ -884,10 +930,10 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           </div>
           <Separator />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>取消</Button>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>{t("cancel")}</Button>
             <Button onClick={addPendingTasks} disabled={pendingFiles.length === 0 || !lang.trim() || !taskModel.trim()}>
               <FilePlus2 data-icon="inline-start" />
-              新增任務
+              {t("navigation.addTask")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -897,7 +943,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-2xl">
           <SheetHeader className="border-b pr-14">
             <div className="flex items-center gap-2">
-              <SheetTitle className="truncate">任務詳情</SheetTitle>
+              <SheetTitle className="truncate">{t("tasks.details.title")}</SheetTitle>
               {selectedFile && <Badge variant={getStatusVariant(batchProgress[selectedFile.path]?.status || "pending")}>{statusCopy[batchProgress[selectedFile.path]?.status || "pending"]}</Badge>}
             </div>
             <SheetDescription className="truncate" title={selectedFile?.path}>{selectedFile?.name || ""}</SheetDescription>
@@ -906,7 +952,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="flex items-end justify-between gap-4 border-b px-5 py-5">
                 <div>
-                  <p className="text-sm text-muted-foreground">目前進度</p>
+                  <p className="text-sm text-muted-foreground">{t("tasks.details.progress")}</p>
                   <p className="mt-1 text-sm font-medium">{statusCopy[batchProgress[selectedFile.path]?.status || "pending"]}</p>
                 </div>
                 <p className="text-4xl font-semibold tabular-nums">{(batchProgress[selectedFile.path]?.progress || 0).toFixed(0)}%</p>
@@ -916,26 +962,26 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               </div>
               <div className="px-5 pb-5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />準備</span>
-                  <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />分析</span>
-                  <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />翻譯</span>
-                  <span className="flex items-center gap-2"><span className="size-2 rounded-full border" />整理</span>
+                  <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />{t("tasks.details.stage.prepare")}</span>
+                  <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />{t("tasks.details.stage.analyze")}</span>
+                  <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />{t("tasks.details.stage.translate")}</span>
+                  <span className="flex items-center gap-2"><span className="size-2 rounded-full border" />{t("tasks.details.stage.organize")}</span>
                 </div>
               </div>
               {selectedAnalysis && (
                 <div className="border-t px-5 py-5">
-                  <p className="font-medium">內容脈絡</p>
+                  <p className="font-medium">{t("tasks.details.context")}</p>
                   <MarkdownContent className="mt-2">{selectedAnalysis}</MarkdownContent>
                 </div>
               )}
               <div className="border-t">
                 <div className="flex items-center justify-between px-5 py-4">
-                  <p className="font-medium">即時逐字稿</p>
-                  <Badge variant="outline">{cues.length} 段</Badge>
+                  <p className="font-medium">{t("tasks.details.transcript")}</p>
+                  <Badge variant="outline">{t("tasks.details.cues", { count: cues.length })}</Badge>
                 </div>
                 <div>
                   {cues.length === 0 ? (
-                    <p className="px-5 pb-6 text-sm text-muted-foreground">尚未載入字幕內容。</p>
+                    <p className="px-5 pb-6 text-sm text-muted-foreground">{t("tasks.details.noCues")}</p>
                   ) : cues.map((cue, index) => (
                     <div key={`${cue.start}-${index}`} className="border-t px-5 py-3 text-sm leading-6">
                       <p>{cue.translatedText || cue.text}</p>
@@ -957,10 +1003,10 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                   }
                 >
                   <RotateCcw data-icon="inline-start" />
-                  重試
+                  {t("tasks.details.retry")}
                 </Button>
               )}
-            <Button variant="outline" onClick={closeDetails}><X data-icon="inline-start" />關閉</Button>
+            <Button variant="outline" onClick={closeDetails}><X data-icon="inline-start" />{t("translate.close")}</Button>
           </div>
         </SheetContent>
       </Sheet>

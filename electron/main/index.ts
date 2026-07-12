@@ -17,9 +17,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import pool from "tiny-async-pool";
 import { z } from "zod";
-import type {
-  BatchProgress,
-  BatchTranslationRequest,
+import {
+  translationErrorCodes,
+  type BatchProgress,
+  type BatchTranslationRequest,
 } from "../../src/types/electron-api";
 import {
   createTranslationCacheDocument,
@@ -148,12 +149,12 @@ function isSupportedInputPath(filePath: string): boolean {
 
 function assertTranslationInputFile(filePath: string): void {
   if (!isSupportedInputPath(filePath)) {
-    throw new Error("不支援的翻譯輸入檔案");
+    throw new Error(translationErrorCodes.unsupportedInputFile);
   }
 
   const fileInfo = fs.statSync(filePath);
   if (!fileInfo.isFile()) {
-    throw new Error("翻譯輸入路徑不是檔案");
+    throw new Error(translationErrorCodes.inputPathNotFile);
   }
 }
 
@@ -259,7 +260,7 @@ function readTranslationInput(filePath: string): TranslationInput {
   }
 
   if (!supportedExtensions.has(extension as SubtitleFileExtension)) {
-    throw new Error("不支援的字幕格式");
+    throw new Error(translationErrorCodes.unsupportedSubtitleFormat);
   }
 
   return {

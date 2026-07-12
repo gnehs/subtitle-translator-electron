@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { Sheet } from "@/components/ui/sheet";
 import { useVersion } from "@/hooks/useVersion";
+import { useTranslation } from "@/i18n";
 
 const dragRegionStyle = { appRegion: "drag" } as CSSProperties & {
   appRegion: "drag";
@@ -17,6 +18,7 @@ const noDragRegionStyle = { appRegion: "no-drag" } as CSSProperties & {
 };
 
 function CheckUpdate() {
+  const { i18n, t } = useTranslation();
   const version = useVersion();
   const [newVersion, setNewVersion] = useState<string | null>(null);
 
@@ -44,9 +46,9 @@ function CheckUpdate() {
 
   useEffect(() => {
     if (!version || !newVersion || version === newVersion) return;
-    toast.info(`有新的版本可用：${newVersion}`, {
+    toast.info(t("update.available", { version: newVersion }), {
       action: {
-        label: "查看更新",
+        label: t("update.view"),
         onClick: () => {
           void window.electronAPI.openExternal(
             "https://github.com/gnehs/subtitle-translator-electron/releases/latest"
@@ -54,12 +56,13 @@ function CheckUpdate() {
         },
       },
     });
-  }, [newVersion, version]);
+  }, [i18n.locale, newVersion, version]);
 
   return null;
 }
 
 export default function DefaultLayout() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const isSettingsOpen = location.pathname === "/settings";
@@ -78,17 +81,17 @@ export default function DefaultLayout() {
             style={noDragRegionStyle}
           >
             <FilePlus2 data-icon="inline-start" />
-            新增任務
+            {t("navigation.addTask")}
           </Button>
         )}
         <Button
           variant="outline"
           onClick={() => navigate(isSettingsOpen ? "/" : "/settings")}
           style={noDragRegionStyle}
-          aria-label={isSettingsOpen ? "關閉設定" : "開啟設定"}
+          aria-label={t(isSettingsOpen ? "navigation.closeSettings" : "navigation.openSettings")}
         >
           <Settings2 data-icon="inline-start" />
-          設定
+          {t("settings")}
         </Button>
       </header>
 

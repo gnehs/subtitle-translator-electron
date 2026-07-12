@@ -14,9 +14,89 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:146
+msgid "tasks.queue.completed"
+msgstr "{count} completed"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:200
+msgid "tasks.details.cues"
+msgstr "{count} cue(s)"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:191
+msgid "tasks.output.selectedFiles"
+msgstr "{count} file(s) selected"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:174
+msgid "tasks.model.helpSuccess"
+msgstr "{count} model(s) loaded; you can also use a custom model ID."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:144
+msgid "tasks.queue.active"
+msgstr "{count} task(s) in progress"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:137
+msgid "task.progress.retryWithError"
+msgstr "{error}; press Retry to run again"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:166
+msgid "tasks.model.loadError"
+msgstr "{error}; you can still use a custom model ID."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:156
+msgid "tasks.aria.progress"
+msgstr "{file} {progress}%"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:102
+msgid "update.available"
+msgstr "A new version is available: {version}"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:57
 msgid "about.title"
 msgstr "About"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:153
+msgid "tasks.table.actions"
+msgstr "Actions"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:172
+msgid "tasks.model.apiKeyRequired"
+msgstr "Add an API key first, or enter a custom model ID."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:216
+msgid "toast.apiKeyRequired"
+msgstr "Add an API key in Settings first."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:173
+msgid "tasks.model.helpNoKey"
+msgstr "Add an API key in Settings; available models load when you open this menu."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:99
+msgid "navigation.addTask"
+msgstr "Add task"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:160
+msgid "tasks.dialog.title"
+msgstr "Add translation task"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:219
+msgid "toast.tasksAdded"
+msgstr "Added {count} task(s) and started translation"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:70
@@ -29,14 +109,34 @@ msgid "translate.subtitleFilter.all"
 msgstr "All"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:195
+msgid "tasks.details.stage.analyze"
+msgstr "Analyze"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:128
+msgid "task.status.analyzing"
+msgstr "Analyzing"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:93
 msgid "translate.analyzing_context"
 msgstr "Analyzing context"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:133
+msgid "task.progress.analyzing"
+msgstr "Analyzing subtitle context"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:22
 msgid "api.title"
 msgstr "API & Host"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:107
+msgid "settings.api.title"
+msgstr "API connection"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:26
@@ -52,6 +152,16 @@ msgstr "API Key"
 #: src/i18n-messages.ts:88
 msgid "translate.exceeded"
 msgstr "API usage exceeded."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:169
+msgid "tasks.model.available"
+msgstr "Available models"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:175
+msgid "tasks.model.helpIdle"
+msgstr "Available models load when you open this menu."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:66
@@ -74,9 +184,39 @@ msgid "cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:189
+msgid "tasks.output.select"
+msgstr "Choose"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:141
+msgid "tasks.empty.chooseFile"
+msgstr "Choose files"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:163
+msgid "tasks.model.choose"
+msgstr "Choose or enter a model"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:106
+msgid "settings.interface.description"
+msgstr "Choose the interface language and work preferences."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:148
+msgid "tasks.queue.clearCompleted"
+msgstr "Clear completed"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:89
 msgid "translate.clear_completed"
 msgstr "Clear Completed"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:118
+msgid "settings.reset.description"
+msgstr "Clear locally stored API, task, and translation preferences."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:92
@@ -84,14 +224,29 @@ msgid "translate.cleared_files"
 msgstr "Cleared {count} completed file(s)"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:214
+msgid "toast.completedCleared"
+msgstr "Cleared {count} completed task(s)"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:94
 msgid "translate.close"
 msgstr "Close"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:101
+msgid "navigation.closeSettings"
+msgstr "Close settings"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:60
 msgid "about.commit_sha"
 msgstr "Commit SHA"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:130
+msgid "task.status.done"
+msgstr "Completed"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:13
@@ -134,6 +289,26 @@ msgid "translate.context.title"
 msgstr "Context"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:198
+msgid "tasks.details.context"
+msgstr "Context"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:135
+msgid "task.progress.cue"
+msgstr "Cue {current} / {total}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:193
+msgid "tasks.details.progress"
+msgstr "Current progress"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:167
+msgid "tasks.model.custom"
+msgstr "Custom model"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:20
 msgid "delay.title"
 msgstr "Delay"
@@ -152,6 +327,16 @@ msgstr "Done"
 #: src/i18n-messages.ts:73
 msgid "translate.file_description"
 msgstr "Drag and drop the subtitle file or click here to choose a file."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:177
+msgid "tasks.language.placeholder"
+msgstr "e.g. English, 繁體中文, 日本語"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:179
+msgid "tasks.additional.placeholder"
+msgstr "e.g. Keep proper nouns and use a natural tone."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:71
@@ -174,6 +359,11 @@ msgid "translate.target_description"
 msgstr "English, 繁體中文, 日本語, etc."
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:215
+msgid "toast.targetLanguageRequired"
+msgstr "Enter a target language first."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:37
 msgid "api.connection.missing"
 msgstr "Enter an API host and API key first."
@@ -184,13 +374,33 @@ msgid "enterModelName"
 msgstr "Enter model name"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:131
+msgid "task.status.error"
+msgstr "Failed"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:138
+msgid "task.progress.retry"
+msgstr "Failed after three automatic retries; press Retry to run again"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:77
 msgid "translate.failed_to_translate"
 msgstr "Failed to translate line: {text}"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:143
+msgid "tasks.empty.checkpoint"
+msgstr "Failed translations keep their checkpoint so you can drop them back in to continue; checkpoints are deleted after success."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:72
 msgid "translate.file"
+msgstr "File"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:149
+msgid "tasks.table.file"
 msgstr "File"
 
 #. js-lingui-explicit-id
@@ -214,6 +424,16 @@ msgid "translate.input"
 msgstr "input"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:105
+msgid "settings.interface.title"
+msgstr "Interface"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:117
+msgid "settings.prompt.description"
+msgstr "Keep the {lang} and {additional} variables; they are filled automatically when adding a task."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:7
 msgid "language"
 msgstr "Language"
@@ -224,9 +444,29 @@ msgid "translate.language"
 msgstr "Language"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:199
+msgid "tasks.details.transcript"
+msgstr "Live transcript"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:165
+msgid "tasks.model.loading"
+msgstr "Loading available API models…"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:104
+msgid "settings.description"
+msgstr "Manage interface, API, and translation tools."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:11
 msgid "manualInput"
 msgstr "Manual Input"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:115
+msgid "settings.rpm.description"
+msgstr "Maximum API requests per minute for one batch; combined with the request interval."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:8
@@ -249,9 +489,39 @@ msgid "translate.no_completed_files"
 msgstr "No completed files to clear"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:170
+msgid "tasks.model.noMatch"
+msgstr "No model found. You can use a custom model ID directly."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:154
+msgid "tasks.model.notSet"
+msgstr "No model selected"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:171
+msgid "tasks.model.noneAvailable"
+msgstr "No models are currently available."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:16
 msgid "noModelsFound"
 msgstr "No models found"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:155
+msgid "tasks.language.notSet"
+msgstr "No target language selected"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:139
+msgid "tasks.empty.title"
+msgstr "No tasks yet"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:124
+msgid "error.noValidApiKeys"
+msgstr "No valid API keys provided."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:98
@@ -262,6 +532,11 @@ msgstr "Not translated yet"
 #: src/i18n-messages.ts:25
 msgid "api.key.notify"
 msgstr "Note: Usage is billed by the chosen provider. Please ensure your account is active and has a valid payment method."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:100
+msgid "navigation.openSettings"
+msgstr "Open settings"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:41
@@ -279,14 +554,44 @@ msgid "api.presets.openrouter"
 msgstr "OpenRouter"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:197
+msgid "tasks.details.stage.organize"
+msgstr "Organize"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:53
 msgid "save.multi-language.options.original+translate"
 msgstr "Original + Translated"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:184
+msgid "tasks.output.originalTranslate"
+msgstr "Original subtitles + Translated subtitles"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:80
 msgid "translate.output"
 msgstr "output"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:186
+msgid "tasks.output.directory"
+msgstr "Output folder"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:181
+msgid "tasks.output.label"
+msgstr "Output format"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:113
+msgid "settings.delay.description"
+msgstr "Pause between requests to reduce provider rate-limit risk."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:127
+msgid "task.status.pending"
+msgstr "Pending"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:87
@@ -304,14 +609,34 @@ msgid "translate.context.plot_summary"
 msgstr "Plot summary"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:194
+msgid "tasks.details.stage.prepare"
+msgstr "Prepare"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:17
 msgid "pressEnterToUse"
 msgstr "Press Enter to use"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:151
+msgid "tasks.table.progress"
+msgstr "Progress"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:45
 msgid "prompt.title"
 msgstr "Prompt"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:109
+msgid "settings.provider"
+msgstr "Provider"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:145
+msgid "tasks.queue.ready"
+msgstr "Queue ready"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:39
@@ -324,9 +649,24 @@ msgid "translate.subtitleFilter.not_translated"
 msgstr "Remain"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:159
+msgid "tasks.aria.remove"
+msgstr "Remove {file}"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:63
 msgid "about.report_issue"
 msgstr "Report an Issue"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:112
+msgid "settings.delay.label"
+msgstr "Request interval (seconds)"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:114
+msgid "settings.rpm.label"
+msgstr "Requests per minute (RPM)"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:54
@@ -344,6 +684,21 @@ msgid "reset.name"
 msgstr "Reset all settings"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:202
+msgid "tasks.details.retry"
+msgstr "Retry"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:158
+msgid "tasks.aria.retry"
+msgstr "Retry translation for {file}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:187
+msgid "tasks.output.directoryFallback"
+msgstr "Same folder as source subtitle"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:19
 msgid "temperature.description"
 msgstr "Sampling temperature affects the randomness and determinism of text generated by language models. A lower temperature (like 0.2) produces more precise and deterministic text, suitable for formal documents; a higher temperature (like 0.8) makes the text more creative and varied, ideal for creative purposes. Adjusting this parameter properly can tailor the model's output to meet specific usage requirements."
@@ -359,6 +714,11 @@ msgid "translate.save"
 msgstr "Save"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:164
+msgid "tasks.model.search"
+msgstr "Search models or enter a custom model ID"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:15
 msgid "searchOrEnterModel"
 msgstr "Search or enter model name"
@@ -369,9 +729,34 @@ msgid "modelDescription"
 msgstr "Select a model or enter a custom model."
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:188
+msgid "tasks.output.selecting"
+msgstr "Selecting"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:161
+msgid "tasks.dialog.description"
+msgstr "Set how this batch of subtitles should be translated. It will be added and started after confirmation."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:6
 msgid "settings"
 msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:152
+msgid "tasks.table.settings"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:208
+msgid "toast.filesSkipped"
+msgstr "Skipped {count} unsupported file(s)"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:126
+msgid "task.sourceFolder"
+msgstr "Source folder"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:64
@@ -384,9 +769,44 @@ msgid "translate.start"
 msgstr "Start"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:150
+msgid "tasks.table.status"
+msgstr "Status"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:201
+msgid "tasks.details.noCues"
+msgstr "Subtitle content has not loaded yet."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:142
+msgid "tasks.empty.formats"
+msgstr "Supported formats: ass, ssa, srt, vtt, and translation checkpoint JSON."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:68
 msgid "translate.target"
 msgstr "Target language"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:176
+msgid "tasks.language.label"
+msgstr "Target language"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:192
+msgid "tasks.details.title"
+msgstr "Task details"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:213
+msgid "toast.taskRemoved"
+msgstr "Task removed"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:140
+msgid "tasks.empty.description"
+msgstr "Tasks start automatically after you add them"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:18
@@ -409,6 +829,16 @@ msgid "api.connection.invalidHost"
 msgstr "The API host must be a valid HTTP or HTTPS URL."
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:210
+msgid "toast.outputDirectoryUnavailable"
+msgstr "The current environment cannot choose an output folder."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:205
+msgid "toast.modelListUnavailable"
+msgstr "The current environment cannot load the model list."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:38
 msgid "api.connection.unavailable"
 msgstr "The current environment cannot test the API connection."
@@ -424,9 +854,39 @@ msgid "prompt.description"
 msgstr "The prompt used with ChatGPT. You can modify the prompt here. Additionally, <code>&#123;&#123;lang&#125;&#125;</code> is used to specify the language, and <code>&#123;&#123;additional&#125;&#125;</code> is used for additional notes. These fields will be automatically filled in during translation. When modifying the prompt, please make sure to keep these fields intact."
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:120
+msgid "error.inputPathNotFile"
+msgstr "The selected translation input path is not a file."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:123
+msgid "error.incompatibleCheckpoint"
+msgstr "The translation checkpoint JSON is invalid or incompatible."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:122
+msgid "error.invalidCheckpoint"
+msgstr "The translation checkpoint JSON is invalid."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:180
+msgid "tasks.additional.description"
+msgstr "These notes apply to this batch."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:111
+msgid "settings.translation.description"
+msgstr "These options apply to newly added tasks."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:27
 msgid "api.host.description"
 msgstr "This is typically used to bypass firewall blocking. If this application is functioning properly, there is no need to modify this setting."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:185
+msgid "tasks.output.description"
+msgstr "This option applies to this batch."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:56
@@ -444,6 +904,11 @@ msgid "translate.tokens"
 msgstr "tokens"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:196
+msgid "tasks.details.stage.translate"
+msgstr "Translate"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:52
 msgid "save.multi-language.options.translate+original"
 msgstr "Translated + Original"
@@ -454,9 +919,39 @@ msgid "save.multi-language.options.none"
 msgstr "Translated Only"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:183
+msgid "tasks.output.translateOriginal"
+msgstr "Translated subtitles + Original subtitles"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:182
+msgid "tasks.output.none"
+msgstr "Translated subtitles only"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:129
+msgid "task.status.translating"
+msgstr "Translating"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:147
+msgid "tasks.queue.translating"
+msgstr "Translating"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:134
+msgid "task.progress.translating"
+msgstr "Translating subtitle content"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:83
 msgid "translate.translating"
 msgstr "Translating..."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:110
+msgid "settings.translation.title"
+msgstr "Translation"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:86
@@ -464,9 +959,94 @@ msgid "translate.translation_completed"
 msgstr "Translation completed"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:204
+msgid "toast.translationCompleted"
+msgstr "Translation completed: {file}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:203
+msgid "toast.translationFailed"
+msgstr "Translation failed: {error}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:136
+msgid "task.progress.done"
+msgstr "Translation file exported"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:209
+msgid "toast.translationInProgress"
+msgstr "Translation is in progress. Please wait before adding another task."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:217
+msgid "toast.translationJobFailed"
+msgstr "Translation job failed: {error}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:162
+msgid "tasks.model.label"
+msgstr "Translation model"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:178
+msgid "tasks.additional.label"
+msgstr "Translation notes"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:116
+msgid "settings.prompt.label"
+msgstr "Translation prompt"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:211
+msgid "toast.outputDirectoryFailed"
+msgstr "Unable to choose the output folder"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:212
+msgid "toast.subtitleLoadFailed"
+msgstr "Unable to load subtitle content"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:206
+msgid "toast.modelListFailed"
+msgstr "Unable to load the model list"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:207
+msgid "toast.fileReadFailed"
+msgstr "Unable to read the file"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:218
+msgid "toast.unknownError"
+msgstr "Unknown error"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:125
+msgid "error.unsupportedFileExtension"
+msgstr "Unsupported file extension."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:121
+msgid "error.unsupportedSubtitleFormat"
+msgstr "Unsupported subtitle format."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:119
+msgid "error.unsupportedInputFile"
+msgstr "Unsupported translation input file."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:81
 msgid "translate.USD"
 msgstr "USD"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:168
+msgid "tasks.model.useCustom"
+msgstr "Use “{model}”"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:42
@@ -479,6 +1059,31 @@ msgid "about.version"
 msgstr "Version"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:157
+msgid "tasks.aria.viewDetails"
+msgstr "View translation details for {file}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:103
+msgid "update.view"
+msgstr "View update"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:132
+msgid "task.progress.waiting"
+msgstr "Waiting to start"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:190
+msgid "tasks.output.directoryDescription"
+msgstr "When not selected, files are saved in the source subtitle folder."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:24
 msgid "api.key.description"
 msgstr "You can obtain API keys at <a href=\"https://platform.openai.com/api-keys\" target=\"_blank\">https://platform.openai.com/api-keys</a>."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:108
+msgid "settings.api.description"
+msgstr "Your API key is stored only in this browser's local storage."

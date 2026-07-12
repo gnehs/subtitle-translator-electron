@@ -49,12 +49,32 @@ test("settings shows the API connection test control", async () => {
 
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    await page.getByRole("button", { name: "設定" }).click();
+    await page.getByRole("button", { name: "Settings" }).click();
 
-    await expect(page.getByRole("heading", { name: "API 連線" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "API connection" })).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Test connection" })
     ).toBeDisabled();
+  } finally {
+    await app.close();
+  }
+});
+
+test("switching language updates the active task and settings UI", async () => {
+  const app = await electron.launch({ args: [".", "--no-sandbox"] });
+  try {
+    const page = await app.firstWindow();
+
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.getByRole("button", { name: "Settings" }).click();
+
+    await page.getByRole("combobox").first().click();
+    await page.getByRole("option", { name: "简体中文" }).click();
+
+    await expect(page.getByRole("heading", { name: "API 连接" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "新增任务" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "关闭设置" })).toBeVisible();
   } finally {
     await app.close();
   }
@@ -72,7 +92,7 @@ test("coffee banner appears after more than ten successful translations", async 
     await page.reload();
 
     const bannerTitle = page.getByRole("heading", { name: "Buy Me a Coffee" });
-    const chooseFileButton = page.getByRole("button", { name: "選擇檔案" });
+    const chooseFileButton = page.getByRole("button", { name: "Choose files" });
     await expect(chooseFileButton).toBeVisible();
     await expect(bannerTitle).not.toBeVisible();
 
