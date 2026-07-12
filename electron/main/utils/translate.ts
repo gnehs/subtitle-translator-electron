@@ -6,7 +6,7 @@ import assStringify from "ass-stringify";
 import { z } from "zod";
 import { generateText, Output, streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { translationErrorCodes } from "../../../src/types/electron-api";
+import { translationErrorCodes } from "../../shared/translation-error-codes";
 import type { RequestRateLimiter } from "./request-rate-limiter";
 
 export interface SubtitleCueData {

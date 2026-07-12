@@ -10,6 +10,7 @@ import {
   type WebFrameMain,
   type WebContents,
 } from "electron";
+import { translationErrorCodes } from "../shared/translation-error-codes";
 import { release } from "node:os";
 import { join } from "node:path";
 import fs from "node:fs";
@@ -18,7 +19,6 @@ import { pathToFileURL } from "node:url";
 import pool from "tiny-async-pool";
 import { z } from "zod";
 import {
-  translationErrorCodes,
   type BatchProgress,
   type BatchTranslationRequest,
 } from "../../src/types/electron-api";
