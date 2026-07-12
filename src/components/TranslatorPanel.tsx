@@ -88,6 +88,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import MarkdownContent from "@/components/MarkdownContent";
 
 type FileProgress = Pick<BatchProgress, "progress" | "status"> &
   Partial<Omit<BatchProgress, "progress" | "status">>;
@@ -550,12 +551,12 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               <FileStack />
             </EmptyMedia>
             <EmptyTitle className="text-2xl">尚無任務</EmptyTitle>
-            <EmptyDescription className="text-base">新增檔案後會自動排隊。</EmptyDescription>
+            <EmptyDescription className="text-base">新增任務後將會自動開始</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button size="lg" onClick={() => fileInputRef.current?.click()}>
               <FolderOpen data-icon="inline-start" />
-              拖放或選取檔案
+              選擇檔案
             </Button>
           </EmptyContent>
           <p className="mt-auto pt-10 text-center text-xs text-muted-foreground">支援格式：ass、ssa、srt、vtt，以及翻譯暫存 json。翻譯失敗時會保留暫存檔，方便拖回繼續；成功後會自動刪除。</p>
@@ -877,7 +878,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       </Dialog>
 
       <Sheet open={detailOpen} onOpenChange={(open) => (open ? setDetailOpen(true) : closeDetails())}>
-        <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-2xl">
           <SheetHeader className="border-b pr-14">
             <div className="flex items-center gap-2">
               <SheetTitle className="truncate">任務詳情</SheetTitle>
@@ -908,7 +909,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               {selectedAnalysis && (
                 <div className="border-t px-5 py-5">
                   <p className="font-medium">內容脈絡</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{selectedAnalysis}</p>
+                  <MarkdownContent className="mt-2">{selectedAnalysis}</MarkdownContent>
                 </div>
               )}
               <div className="border-t">
