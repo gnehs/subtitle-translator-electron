@@ -84,6 +84,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
+  Eye,
   FileAudio,
   FilePlus2,
   FileStack,
@@ -98,9 +99,13 @@ import { cn } from "@/lib/utils";
 import MarkdownContent from "@/components/MarkdownContent";
 
 type FileProgress = Pick<BatchProgress, "progress" | "status"> &
-  Partial<Omit<BatchProgress, "progress" | "status">>;
+  Partial<Omit<BatchProgress, "progress" | "status">> & {
+    model?: string;
+    targetLanguage?: string;
+  };
 
 type ModelLoadStatus = "idle" | "loading" | "success" | "error";
+type PreviewLoadStatus = "idle" | "loading" | "success" | "error";
 
 type TranslatorPanelProps = {
   addTaskRequest: number;
@@ -126,6 +131,7 @@ const translationErrorMessageIds: Record<string, string> = {
   [translationErrorCodes.incompatibleCheckpoint]: "error.incompatibleCheckpoint",
   [translationErrorCodes.noValidApiKeys]: "error.noValidApiKeys",
   [translationErrorCodes.unsupportedFileExtension]: "error.unsupportedFileExtension",
+  [translationErrorCodes.outputPathConflict]: "error.outputPathConflict",
 };
 
 function getLocalizedError(error: unknown, fallbackId: string, t: Translate): string {
@@ -149,6 +155,32 @@ function getStatusVariant(status: BatchProgress["status"]) {
 function getParentFolder(filePath: string, fallback: string) {
   const parts = filePath.split(/[\\/]/).filter(Boolean);
   return parts.at(-2) || fallback;
+}
+
+function formatCueTime(value: SubtitleCuePreview["start"]): string {
+  if (typeof value === "string") {
+    return value.trim() || "—";
+  }
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return "—";
+  }
+
+  const totalMilliseconds = Math.round(value);
+  const milliseconds = totalMilliseconds % 1000;
+  const totalSeconds = Math.floor(totalMilliseconds / 1000);
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+
+  const wholeSeconds = [hours, minutes, seconds]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
+  return `${wholeSeconds}.${String(milliseconds).padStart(3, "0")}`;
+}
+
+function formatCueTimeRange(cue: SubtitleCuePreview): string {
+  return `${formatCueTime(cue.start)}–${formatCueTime(cue.end)}`;
 }
 
 export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps) {
@@ -187,6 +219,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [pendingFiles, setPendingFiles] = useState<SubtitleFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<SubtitleFile | null>(null);
   const [cues, setCues] = useState<SubtitleCuePreview[]>([]);
+  const [previewLoadStatus, setPreviewLoadStatus] =
+    useState<PreviewLoadStatus>("idle");
+  const [previewLoadError, setPreviewLoadError] = useState("");
   const [selectedAnalysis, setSelectedAnalysis] = useState<string | undefined>();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -206,6 +241,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   };
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastPreviewUpdateRef = useRef(0);
+  const previewRequestIdRef = useRef(0);
+  const detailRequestIdRef = useRef(0);
   const handledAddTaskRequestRef = useRef(0);
 
   useEffect(() => {
@@ -216,19 +253,30 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         [data.filePath]: {
           ...previous[data.filePath],
           ...data,
-          analysis: data.analysis ?? previous[data.filePath]?.analysis,
+          analysis:
+            data.analysis === undefined
+              ? previous[data.filePath]?.analysis
+              : data.analysis ?? undefined,
         },
       }));
+
+      if (
+        selectedFile?.path === data.filePath &&
+        data.analysis !== undefined
+      ) {
+        setSelectedAnalysis(data.analysis ?? undefined);
+      }
 
       const now = Date.now();
       if (
         detailOpen &&
         selectedFile?.path === data.filePath &&
+        previewLoadStatus === "success" &&
         (data.status === "translating" || data.status === "done") &&
         now - lastPreviewUpdateRef.current > 800
       ) {
         lastPreviewUpdateRef.current = now;
-        void loadCues(data.filePath);
+        void loadCues(data.filePath, false, data.outputPath);
       }
 
       if (data.status === "error") {
@@ -249,7 +297,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     });
 
     return unsubscribe;
-  }, [detailOpen, i18n.locale, incrementTranslationSuccessCount, selectedFile]);
+  }, [
+    detailOpen,
+    i18n.locale,
+    incrementTranslationSuccessCount,
+    previewLoadStatus,
+    selectedFile,
+  ]);
 
   useEffect(() => {
     if (!addDialogOpen) {
@@ -404,22 +458,50 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     }
   };
 
-  const loadCues = async (filePath: string) => {
+  const loadCues = async (
+    filePath: string,
+    showLoading = true,
+    outputPath?: string
+  ) => {
+    const requestId = ++previewRequestIdRef.current;
+    if (showLoading) {
+      setPreviewLoadStatus("loading");
+      setPreviewLoadError("");
+    }
+
     try {
-      const preview = await window.electronAPI.getSubtitlePreview(filePath);
+      const preview = await window.electronAPI.getSubtitlePreview({
+        filePath,
+        outputPath,
+      });
+      if (requestId !== previewRequestIdRef.current) return;
       setCues(preview.cues);
+      setPreviewLoadStatus("success");
+      setPreviewLoadError("");
     } catch (error: unknown) {
-      toast.error(getLocalizedError(error, "toast.subtitleLoadFailed", t));
+      if (requestId !== previewRequestIdRef.current) return;
+      if (!showLoading) return;
+      setPreviewLoadStatus("error");
+      setPreviewLoadError(
+        getLocalizedError(error, "toast.subtitleLoadFailed", t)
+      );
     }
   };
 
   const openDetails = async (file: SubtitleFile) => {
+    const detailRequestId = ++detailRequestIdRef.current;
     setSelectedFile(file);
-    setSelectedAnalysis(batchProgress[file.path]?.analysis);
+    setSelectedAnalysis(batchProgress[file.path]?.analysis ?? undefined);
+    setCues([]);
     setDetailOpen(true);
-    await loadCues(file.path);
+    await loadCues(
+      file.path,
+      true,
+      batchProgress[file.path]?.outputPath
+    );
     try {
       const analysis = await window.electronAPI.getAnalysis(file.path);
+      if (detailRequestId !== detailRequestIdRef.current) return;
       if (analysis) {
         setSelectedAnalysis(analysis);
         setBatchProgress((previous) => ({
@@ -436,10 +518,14 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   };
 
   const closeDetails = () => {
+    detailRequestIdRef.current += 1;
+    previewRequestIdRef.current += 1;
     setDetailOpen(false);
     setSelectedFile(null);
     setSelectedAnalysis(undefined);
     setCues([]);
+    setPreviewLoadStatus("idle");
+    setPreviewLoadError("");
   };
 
   const removeFile = (filePath: string) => {
@@ -484,7 +570,15 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     setBatchProgress((previous) => ({
       ...previous,
       ...Object.fromEntries(
-        translatableFiles.map((file) => [file.path, { progress: 0, status: "pending" as const }])
+        translatableFiles.map((file) => [
+          file.path,
+          {
+            progress: 0,
+            status: "pending" as const,
+            model: translationModel,
+            targetLanguage: lang,
+          },
+        ])
       ),
     }));
 
@@ -662,39 +756,23 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               )}
             </div>
           </div>
-          <div className="min-w-[900px]">
+          <div className="min-w-[760px]">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[320px] px-5">{t("tasks.table.file")}</TableHead>
-                  <TableHead className="min-w-[150px]">{t("tasks.table.status")}</TableHead>
                   <TableHead className="min-w-[260px]">{t("tasks.table.progress")}</TableHead>
-                  <TableHead className="min-w-[180px]">{t("tasks.table.settings")}</TableHead>
-                  <TableHead className="w-[112px] px-5 text-right">{t("tasks.table.actions")}</TableHead>
+                  <TableHead className="hidden min-w-[180px] xl:table-cell">
+                    {t("tasks.table.settings")}
+                  </TableHead>
+                  <TableHead className="w-[220px] px-5 text-right">{t("tasks.table.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
               {files.map((file) => {
                 const progress = batchProgress[file.path] || { progress: 0, status: "pending" as const };
                 return (
-                  <TableRow
-                    key={file.path}
-                    tabIndex={0}
-                    aria-label={t("tasks.aria.viewDetails", { file: file.name })}
-                    className="group cursor-pointer transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none"
-                    onClick={() => void openDetails(file)}
-                    onKeyDown={(event) => {
-                      if (
-                        event.target instanceof Element &&
-                        event.target.closest("button, a, input, textarea, select")
-                      ) {
-                        return;
-                      }
-                      if (event.key !== "Enter" && event.key !== " ") return;
-                      event.preventDefault();
-                      void openDetails(file);
-                    }}
-                  >
+                  <TableRow key={file.path}>
                     <TableCell className="min-w-[320px] px-5 py-4">
                       <div className="flex min-w-0 items-center gap-3">
                         <FileAudio className="shrink-0 text-muted-foreground" />
@@ -704,27 +782,49 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(progress.status)}>{statusCopy[progress.status]}</Badge>
-                    </TableCell>
                     <TableCell>{renderStatus(file)}</TableCell>
-                    <TableCell className="min-w-0">
+                    <TableCell className="hidden min-w-0 xl:table-cell">
                       <div className="flex min-w-0 flex-col gap-0.5 text-sm">
-                      <span className="truncate font-medium" title={model}>{model || t("tasks.model.notSet")}</span>
-                      <span className="truncate text-xs text-muted-foreground">{lang || t("tasks.language.notSet")}</span>
+                      <span
+                        className="truncate font-medium"
+                        title={progress.model || model}
+                      >
+                        {progress.model || model || t("tasks.model.notSet")}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {progress.targetLanguage ||
+                          lang ||
+                          t("tasks.language.notSet")}
+                      </span>
                       </div>
                     </TableCell>
                     <TableCell className="px-5">
                       <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void openDetails(file)}
+                          aria-label={t("tasks.aria.viewDetails", {
+                            file: file.name,
+                          })}
+                        >
+                          <Eye data-icon="inline-start" />
+                          {t("tasks.actions.viewDetails")}
+                        </Button>
                         {progress.status === "error" && (
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            disabled={isTranslating || !model.trim()}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void startBatchTranslation([file], model.trim());
-                            }}
+                            disabled={
+                              isTranslating ||
+                              !(progress.model || model).trim()
+                            }
+                            onClick={() =>
+                              void startBatchTranslation(
+                                [file],
+                                (progress.model || model).trim()
+                              )
+                            }
                             aria-label={t("tasks.aria.retry", { file: file.name })}
                             title={t("tasks.aria.retry", { file: file.name })}
                           >
@@ -734,10 +834,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            removeFile(file.path);
-                          }}
+                          onClick={() => removeFile(file.path)}
                           aria-label={t("tasks.aria.remove", { file: file.name })}
                         >
                           <Trash2 />
@@ -917,9 +1014,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             </FieldGroup>
             <FieldGroup>
               <Field>
-                  <FieldLabel>{t("tasks.output.label")}</FieldLabel>
+                <FieldLabel htmlFor="task-output-format">
+                  {t("tasks.output.label")}
+                </FieldLabel>
                 <Select value={multiLangSave} onValueChange={(value) => setMultiLangSave(value as TranslationParams["multiLangSave"])}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="task-output-format" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       <SelectItem value="none">{t("tasks.output.none")}</SelectItem>
@@ -995,7 +1096,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                 <p className="text-4xl font-semibold tabular-nums">{(batchProgress[selectedFile.path]?.progress || 0).toFixed(0)}%</p>
               </div>
               <div className="px-5 py-5">
-                <Progress value={batchProgress[selectedFile.path]?.progress || 0} />
+                <Progress
+                  value={batchProgress[selectedFile.path]?.progress || 0}
+                  aria-label={t("tasks.aria.progress", {
+                    file: selectedFile.name,
+                    progress: batchProgress[selectedFile.path]?.progress || 0,
+                  })}
+                />
               </div>
               <div className="px-5 pb-5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -1014,17 +1121,76 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               <div className="border-t">
                 <div className="flex items-center justify-between px-5 py-4">
                   <p className="font-medium">{t("tasks.details.transcript")}</p>
-                  <Badge variant="outline">{t("tasks.details.cues", { count: cues.length })}</Badge>
+                  {previewLoadStatus === "success" && (
+                    <Badge variant="outline">
+                      {t("tasks.details.cues", { count: cues.length })}
+                    </Badge>
+                  )}
                 </div>
                 <div>
-                  {cues.length === 0 ? (
-                    <p className="px-5 pb-6 text-sm text-muted-foreground">{t("tasks.details.noCues")}</p>
-                  ) : cues.map((cue, index) => (
-                    <div key={`${cue.start}-${index}`} className="border-t px-5 py-3 text-sm leading-6">
-                      <p>{cue.translatedText || cue.text}</p>
-                      {cue.translatedText && cue.translatedText !== cue.text && <p className="mt-1 text-muted-foreground">{cue.text}</p>}
-                    </div>
-                  ))}
+                  {previewLoadStatus === "loading" ? (
+                    <Empty className="border-t px-5 py-10" aria-live="polite">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <LoaderCircle className="animate-spin" />
+                        </EmptyMedia>
+                        <EmptyTitle>{t("tasks.details.previewLoading")}</EmptyTitle>
+                        <EmptyDescription>
+                          {t("tasks.details.previewLoadingDescription")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  ) : previewLoadStatus === "error" ? (
+                    <Empty className="border-t px-5 py-10">
+                      <EmptyHeader role="alert">
+                        <EmptyMedia variant="icon">
+                          <AlertCircle />
+                        </EmptyMedia>
+                        <EmptyTitle>{t("tasks.details.previewError")}</EmptyTitle>
+                        <EmptyDescription>{previewLoadError}</EmptyDescription>
+                      </EmptyHeader>
+                      <EmptyContent>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            void loadCues(
+                              selectedFile.path,
+                              true,
+                              batchProgress[selectedFile.path]?.outputPath
+                            )
+                          }
+                        >
+                          <RotateCcw data-icon="inline-start" />
+                          {t("tasks.details.previewRetry")}
+                        </Button>
+                      </EmptyContent>
+                    </Empty>
+                  ) : cues.length === 0 ? (
+                    <Empty className="border-t px-5 py-10">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <FileAudio />
+                        </EmptyMedia>
+                        <EmptyTitle>{t("tasks.details.noCues")}</EmptyTitle>
+                      </EmptyHeader>
+                    </Empty>
+                  ) : (
+                    cues.map((cue, index) => (
+                      <div
+                        key={`${cue.start}-${index}`}
+                        className="border-t px-5 py-3 text-sm leading-6"
+                      >
+                        <p className="font-mono text-xs tabular-nums text-muted-foreground">
+                          {formatCueTimeRange(cue)}
+                        </p>
+                        <p>{cue.translatedText || cue.text}</p>
+                        {cue.translatedText && cue.translatedText !== cue.text && (
+                          <p className="mt-1 text-muted-foreground">{cue.text}</p>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -1034,9 +1200,17 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               batchProgress[selectedFile.path]?.status === "error" && (
                 <Button
                   variant="outline"
-                  disabled={isTranslating || !model.trim()}
+                  disabled={
+                    isTranslating ||
+                    !(batchProgress[selectedFile.path]?.model || model).trim()
+                  }
                   onClick={() =>
-                    void startBatchTranslation([selectedFile], model.trim())
+                    void startBatchTranslation(
+                      [selectedFile],
+                      (
+                        batchProgress[selectedFile.path]?.model || model
+                      ).trim()
+                    )
                   }
                 >
                   <RotateCcw data-icon="inline-start" />

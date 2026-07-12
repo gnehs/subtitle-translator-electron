@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseSync, stringifySync } from "subtitle";
+import { parseSync, stringifySync, type NodeList } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import { z } from "zod";
-import { generateText, Output, streamText } from "ai";
+import { generateText, Output } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { translationErrorCodes } from "../../shared/translation-error-codes";
 import type { RequestRateLimiter } from "./request-rate-limiter";
+import { sampleSubtitlesForAnalysis } from "./subtitle-sampling";
+import type { TranslationSourceFingerprint } from "./translation-checkpoint";
 
 export interface SubtitleCueData {
   text: string;
@@ -52,17 +54,29 @@ export type MultiLanguageSave =
   | "translate+original"
   | "original+translate";
 
+export interface SubtitleTranslationChunk {
+  before: string[];
+  core: string[];
+  after: string[];
+}
+
 export interface TranslationCacheDocument {
-  version: 1;
+  version: 1 | 2;
   format: SubtitleFileExtension;
   source: {
     name: string;
+    fingerprint?: TranslationSourceFingerprint;
+  };
+  translation?: {
+    configFingerprint: string;
   };
   subtitle: ParsedSubtitle;
   analysis?: string;
 }
 
 const savedSubtitleSeparators = ["\r\n", "\n", "\\N", "\\n"] as const;
+const MAX_TRANSLATION_OUTPUT_TOKENS = 4_096;
+const MAX_ANALYSIS_OUTPUT_TOKENS = 2_048;
 
 /**
  * Recover the translation portion from a cue saved in bilingual mode.
@@ -105,6 +119,20 @@ function isSubtitleFileExtension(value: unknown): value is SubtitleFileExtension
   return value === "ass" || value === "ssa" || value === "srt" || value === "vtt";
 }
 
+function isSourceFingerprint(
+  value: unknown
+): value is TranslationSourceFingerprint {
+  return (
+    isRecord(value) &&
+    typeof value.size === "number" &&
+    Number.isSafeInteger(value.size) &&
+    value.size >= 0 &&
+    typeof value.mtimeMs === "number" &&
+    Number.isFinite(value.mtimeMs) &&
+    value.mtimeMs >= 0
+  );
+}
+
 function isSubtitleCueData(value: unknown): value is SubtitleCueData {
   if (!isRecord(value)) return false;
   if (typeof value.text !== "string") return false;
@@ -142,16 +170,29 @@ function isParsedSubtitle(value: unknown): value is ParsedSubtitle {
   );
 }
 
-export function createTranslationCacheDocument(
-  subtitle: ParsedSubtitle,
-  sourceName: string,
-  format: SubtitleFileExtension,
-  analysis?: string
-): TranslationCacheDocument {
+export function createTranslationCacheDocument({
+  subtitle,
+  sourceName,
+  format,
+  configFingerprint,
+  analysis,
+  sourceFingerprint,
+}: {
+  subtitle: ParsedSubtitle;
+  sourceName: string;
+  format: SubtitleFileExtension;
+  configFingerprint: string;
+  analysis?: string;
+  sourceFingerprint?: TranslationSourceFingerprint;
+}): TranslationCacheDocument {
   return {
-    version: 1,
+    version: 2,
     format,
-    source: { name: sourceName },
+    source: {
+      name: sourceName,
+      ...(sourceFingerprint ? { fingerprint: sourceFingerprint } : {}),
+    },
+    translation: { configFingerprint },
     subtitle,
     ...(analysis ? { analysis } : {}),
   };
@@ -173,11 +214,18 @@ export function parseTranslationCache(
 
   const source = value.source;
   if (
-    value.version !== 1 ||
+    (value.version !== 1 && value.version !== 2) ||
     !isSubtitleFileExtension(value.format) ||
     !isRecord(source) ||
     typeof source.name !== "string" ||
     source.name.trim().length === 0 ||
+    (source.fingerprint !== undefined &&
+      !isSourceFingerprint(source.fingerprint)) ||
+    (value.version === 2 &&
+      (!isRecord(value.translation) ||
+        typeof value.translation.configFingerprint !== "string" ||
+        !/^[a-f\d]{64}$/i.test(value.translation.configFingerprint))) ||
+    (value.version === 1 && value.translation !== undefined) ||
     !isParsedSubtitle(value.subtitle) ||
     getSubtitleCues(value.subtitle).length === 0 ||
     (value.analysis !== undefined && typeof value.analysis !== "string")
@@ -199,9 +247,6 @@ function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
     name: "openai",
     apiKey: apiKey,
     baseURL: apiHost,
-    // Output.object/array require the provider to send the JSON schema so the
-    // model returns the shape that the AI SDK validates.
-    supportsStructuredOutputs: true,
     headers: {
       // OpenRouter Headers
       "HTTP-Referer": "https://github.com/gnehs/subtitle-translator-electron",
@@ -210,25 +255,18 @@ function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
   });
 }
 
-function splitIntoChunk(array: SubtitleCue[], by = 5): SubtitleCue[][] {
-  const chunks: SubtitleCue[][] = [];
-  let chunk: SubtitleCue[] = [];
-  for (const cue of array) {
-    if (cue.data.translatedText) continue;
-    chunk.push(cue);
-    if (chunk.length === by) {
-      chunks.push(chunk);
-      chunk = [];
-    }
+function getFirstValidApiKey(apiKeys: readonly string[]): string {
+  const apiKey = apiKeys
+    .map((key) => key.trim())
+    .find((key) => key.length > 0);
+  if (!apiKey) {
+    throw new Error(translationErrorCodes.noValidApiKeys);
   }
-  if (chunk.length > 0) {
-    chunks.push(chunk);
-  }
-  return chunks;
+  return apiKey;
 }
 
 async function translateSubtitleChunk(
-  subtitles: string[],
+  { before, core, after }: SubtitleTranslationChunk,
   {
     apiKeys,
     apiHost,
@@ -249,109 +287,55 @@ async function translateSubtitleChunk(
     requestRateLimiter?: RequestRateLimiter;
   }
 ) {
-  if (apiKeys.length === 0) {
-    throw new Error(translationErrorCodes.noValidApiKeys);
-  }
+  if (core.length === 0) return [];
 
-  const ai = getAi({ apiKey: apiKeys[0], apiHost });
+  const ai = getAi({ apiKey: getFirstValidApiKey(apiKeys), apiHost });
 
   const systemPrompt = prompt
     .replaceAll("{{lang}}", lang)
     .replaceAll("{{additional}}", additional);
 
-  try {
-    await requestRateLimiter?.waitForSlot();
-    const result = streamText({
-      model: ai(model),
-      temperature,
-      system: systemPrompt,
-      output: Output.array({
-        element: z.string().describe("The translated subtitle"),
-        description:
-          "Return one translated subtitle per input subtitle in the same order.",
-      }),
-      prompt:
-        "Translate the following subtitles. Return an object with an `elements` array containing exactly one translated string per input subtitle, in the same order. Do not add any other properties.\n\n" +
-        JSON.stringify(subtitles),
-      maxRetries: 0,
-      onError({ error }) {
-        console.error("Subtitle chunk streaming error:", error);
-      },
-    });
-
-    const translated: string[] = [];
-    for await (const subtitle of result.elementStream) {
-      translated.push(subtitle);
-    }
-
-    // Validate the complete array as well as each streamed element.
-    const completeOutput = await result.output;
-    if (completeOutput.length !== translated.length) {
-      throw new Error(
-        "Translation output validation failed: structured translation stream produced inconsistent output"
-      );
-    }
-    return completeOutput;
-  } catch (e: unknown) {
-    throw e;
-  }
-}
-
-async function translateSubtitleSingle(
-  subtitle: string,
-  {
-    apiKeys,
-    apiHost,
-    model,
-    prompt,
-    lang,
-    additional,
+  await requestRateLimiter?.waitForSlot();
+  const maxOutputTokens = Math.min(
+    MAX_TRANSLATION_OUTPUT_TOKENS,
+    Math.max(
+      512,
+      core.reduce((characterCount, subtitle) => {
+        return characterCount + subtitle.length * 2;
+      }, 0)
+    )
+  );
+  const { output } = await generateText({
+    model: ai(model),
     temperature,
-    requestRateLimiter,
-  }: {
-    apiKeys: string[];
-    apiHost: string;
-    model: string;
-    prompt: string;
-    lang: string;
-    additional: string;
-    temperature: number;
-    requestRateLimiter?: RequestRateLimiter;
+    system: systemPrompt,
+    output: Output.array({
+      element: z.string().describe("The translated subtitle"),
+      description:
+        "Return one translated subtitle for each core subtitle, in the same order.",
+    }),
+    prompt:
+      `Translate only the \`core\` subtitles. Use \`before\` and \`after\` only as context. ` +
+      `Return a JSON object with one \`elements\` array containing exactly ${core.length} translated strings ` +
+      `in the same order as \`core\`, with no other properties.\n\n` +
+      JSON.stringify({ before, core, after }),
+    maxOutputTokens,
+    maxRetries: 0,
+  });
+
+  if (
+    output.length !== core.length ||
+    output.some(
+      (translation, index) =>
+        core[index].trim().length > 0 && translation.trim().length === 0
+    )
+  ) {
+    throw new Error(
+      `Translation output validation failed: expected ${core.length} non-empty subtitles, got ${output.length}`
+    );
   }
-) {
-  if (apiKeys.length === 0) {
-    throw new Error(translationErrorCodes.noValidApiKeys);
-  }
 
-  const ai = getAi({ apiKey: apiKeys[0], apiHost });
-
-  const systemPrompt = prompt
-    .replaceAll("{{lang}}", lang)
-    .replaceAll("{{additional}}", additional);
-
-  try {
-    await requestRateLimiter?.waitForSlot();
-    const result = streamText({
-      model: ai(model),
-      temperature,
-      system: systemPrompt,
-      output: Output.object({
-        schema: z.object({ result: z.string() }),
-      }),
-      prompt:
-        "Translate the following subtitle and return an object with a single `result` string property.\n\n" +
-        JSON.stringify(subtitle),
-      maxRetries: 0,
-      onError({ error }) {
-        console.error("Single subtitle streaming error:", error);
-      },
-    });
-
-    const { output } = result;
-    return (await output).result;
-  } catch (e: unknown) {
-    throw e;
-  }
+  return output;
 }
 
 function parseSubtitle(
@@ -416,22 +400,21 @@ function saveTranslated(
   let newSubtitle = "";
   if (Array.isArray(parsedSubtitle)) {
     const format = fileExtension === "vtt" ? "WebVTT" : "SRT";
-    newSubtitle = stringifySync(
-      parsedSubtitle.map((node) => {
-        if (!isCue(node)) return node;
-        return {
-          type: node.type,
-          data: {
-            ...node.data,
-            text: parseTranslatedText(
-              node.data.text,
-              node.data.translatedText || node.data.text
-            ),
-          },
-        };
-      }),
-      { format }
-    );
+    const translatedNodes = parsedSubtitle.map((node) => {
+      if (!isCue(node)) return node;
+      return {
+        type: node.type,
+        data: {
+          ...node.data,
+          text: parseTranslatedText(
+            node.data.text,
+            node.data.translatedText ?? node.data.text
+          ),
+        },
+      };
+    });
+    // SRT/WebVTT cues parsed by `subtitle` always use numeric timestamps.
+    newSubtitle = stringifySync(translatedNodes as NodeList, { format });
   } else {
     const { full, events } = parsedSubtitle;
     // Use sequential alignment with Events order instead of text matching to avoid misalignment
@@ -510,12 +493,11 @@ async function analyzeSubtitlesForContext(
     requestRateLimiter?: RequestRateLimiter;
   }
 ): Promise<string> {
-  if (apiKeys.length === 0) {
-    throw new Error(translationErrorCodes.noValidApiKeys);
-  }
-  const ai = getAi({ apiKey: apiKeys[0], apiHost });
+  const sampledSubtitles = sampleSubtitlesForAnalysis(subtitles);
+  if (sampledSubtitles.length === 0) return "";
 
-  //   tool calling (some providers are more reliable with tools)
+  const ai = getAi({ apiKey: getFirstValidApiKey(apiKeys), apiHost });
+
   try {
     await requestRateLimiter?.waitForSlot();
     const result = await generateText({
@@ -534,7 +516,7 @@ Analyze subtitle samples and return exactly two Markdown sections:
    - Avoid literal stitching of subtitles
 
 ## Glossary
-   - Up to 50 items
+   - Up to 20 items
    - Include rare words, character names, places, organizations, fictional elements, or jargon
    - Each entry must follow the schema:
      - term (required)
@@ -545,20 +527,19 @@ Analyze subtitle samples and return exactly two Markdown sections:
    - Do not add any other sections.  `,
       prompt:
         `Produce plot summary in ${lang} and glossary from this sample:\n` +
-        subtitles.join("\n"),
+        sampledSubtitles.join("\n"),
+      maxOutputTokens: MAX_ANALYSIS_OUTPUT_TOKENS,
       maxRetries: 0,
     });
     return result.text;
-  } catch (e) {
+  } catch {
     return "";
   }
 }
 
 export {
   translateSubtitleChunk,
-  translateSubtitleSingle,
   parseSubtitle,
   saveTranslated,
-  splitIntoChunk,
   analyzeSubtitlesForContext,
 };

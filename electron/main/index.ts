@@ -13,18 +13,19 @@ import {
 import { translationErrorCodes } from "../shared/translation-error-codes";
 import { release } from "node:os";
 import { join } from "node:path";
-import fs from "node:fs";
+import { randomUUID } from "node:crypto";
+import fs, { type Stats } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import pool from "tiny-async-pool";
 import { z } from "zod";
+import { APICallError } from "ai";
 import {
   type BatchProgress,
   type BatchTranslationRequest,
 } from "../../src/types/electron-api";
 import {
   createTranslationCacheDocument,
-  splitIntoChunk,
   parseSubtitle,
   parseTranslationCache,
   translateSubtitleChunk,
@@ -35,6 +36,22 @@ import {
 } from "./utils/translate";
 import { fetchAvailableModels } from "./utils/models";
 import { RequestRateLimiter } from "./utils/request-rate-limiter";
+import { isAllowedApiHost } from "./utils/api-host";
+import {
+  isSubtitleCueComplete,
+  splitIntoChunk,
+} from "./utils/subtitle-chunks";
+import { getRetryAfterMsFromHeaders } from "./utils/retry-after";
+import {
+  getPathClaimKey,
+  hasPathClaimConflict,
+} from "./utils/path-claims";
+import {
+  createTranslationConfigFingerprint,
+  hasMatchingCheckpointSource,
+  hasMatchingTranslationConfig,
+  type TranslationSourceFingerprint,
+} from "./utils/translation-checkpoint";
 import type {
   ParsedSubtitle,
   SubtitleCue,
@@ -97,9 +114,12 @@ const allowedExternalHosts = new Set([
   "www.buymeacoffee.com",
 ]);
 const MAX_AUTOMATIC_TRANSLATION_ATTEMPTS = 3;
+const MIN_CUES_FOR_CONTEXT_ANALYSIS = 40;
+const DEFAULT_CONTEXT_SIZE = 5;
 const applicationLocaleSchema = z.enum(["en-US", "zh-TW", "zh-CN"]);
 type ApplicationLocale = z.infer<typeof applicationLocaleSchema>;
 let applicationLocale: ApplicationLocale | undefined;
+const activeTranslationPathClaims = new Set<string>();
 
 const subtitleFileSchema = z
   .object({
@@ -116,7 +136,9 @@ const translationParamsSchema = z.object({
     .refine((keys) => keys.some((key) => key.trim().length > 0), {
       message: "At least one API key is required",
     }),
-  apiHost: z.string().min(1),
+  apiHost: z.string().trim().min(1).refine(isAllowedApiHost, {
+    message: "API host must use HTTPS unless it is a local server",
+  }),
   model: z.string().min(1),
   prompt: z.string(),
   lang: z.string(),
@@ -149,13 +171,22 @@ const batchTranslationRequestSchema = z.object({
   params: translationParamsSchema,
 });
 
+const subtitlePreviewRequestSchema = z.object({
+  filePath: z.string().min(1),
+  outputPath: z
+    .string()
+    .min(1)
+    .refine(path.isAbsolute, { message: "Output path must be absolute" })
+    .optional(),
+});
+
 function isSupportedInputPath(filePath: string): boolean {
   return supportedInputExtensions.has(
     path.extname(filePath).slice(1).toLowerCase()
   );
 }
 
-function assertTranslationInputFile(filePath: string): void {
+function assertTranslationInputFile(filePath: string): Stats {
   if (!isSupportedInputPath(filePath)) {
     throw new Error(translationErrorCodes.unsupportedInputFile);
   }
@@ -164,6 +195,8 @@ function assertTranslationInputFile(filePath: string): void {
   if (!fileInfo.isFile()) {
     throw new Error(translationErrorCodes.inputPathNotFile);
   }
+
+  return fileInfo;
 }
 
 function isTrustedSender(frame: WebFrameMain | null): boolean {
@@ -221,11 +254,7 @@ function getTranslationCachePath(
     return filePath;
   }
 
-  const basename = path.basename(sourceName, path.extname(sourceName));
-  return path.join(
-    path.dirname(filePath),
-    `${basename}.translation.json`
-  );
+  return path.join(path.dirname(filePath), `${sourceName}.translation.json`);
 }
 
 function getValidatedOutputDirectory(
@@ -244,26 +273,117 @@ function getValidatedOutputDirectory(
   return outputDirectory;
 }
 
+function claimTranslationPaths(
+  pathsToClaim: readonly string[],
+  batchPathClaims: Set<string>
+): () => void {
+  const keys = pathsToClaim.map((filePath) => {
+    const canonicalDirectory = fs.realpathSync.native(path.dirname(filePath));
+    return getPathClaimKey(
+      path.join(canonicalDirectory, path.basename(filePath))
+    );
+  });
+  if (
+    hasPathClaimConflict(
+      keys,
+      batchPathClaims,
+      activeTranslationPathClaims
+    )
+  ) {
+    throw new Error(translationErrorCodes.outputPathConflict);
+  }
+
+  for (const key of keys) {
+    batchPathClaims.add(key);
+    activeTranslationPathClaims.add(key);
+  }
+  return () => {
+    for (const key of keys) activeTranslationPathClaims.delete(key);
+  };
+}
+
 interface TranslationInput {
   parsed: ParsedSubtitle;
   sourceName: string;
   sourceExtension: SubtitleFileExtension;
   analysis?: string;
   cacheDocument?: TranslationCacheDocument;
+  sourceFingerprint?: TranslationSourceFingerprint;
+  checkpointPath: string;
+  shouldBackupCheckpoint: boolean;
 }
 
-function readTranslationInput(filePath: string): TranslationInput {
-  assertTranslationInputFile(filePath);
+function readMatchingCheckpoint(
+  checkpointPath: string,
+  sourceName: string,
+  sourceExtension: SubtitleFileExtension,
+  sourceFingerprint: TranslationSourceFingerprint,
+  configFingerprint?: string
+): TranslationCacheDocument | undefined {
+  try {
+    const checkpoint = parseTranslationCache(
+      fs.readFileSync(checkpointPath, "utf8")
+    );
+    return hasMatchingCheckpointSource(
+      checkpoint,
+      sourceName,
+      sourceExtension,
+      sourceFingerprint
+    ) &&
+      (!configFingerprint ||
+        hasMatchingTranslationConfig(checkpoint, configFingerprint))
+      ? checkpoint
+      : undefined;
+  } catch (error: unknown) {
+    const errorCode =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : undefined;
+    if (errorCode !== "ENOENT") {
+      console.warn("Ignoring an invalid translation checkpoint:", error);
+    }
+    return undefined;
+  }
+}
+
+function clearSavedTranslations(parsed: ParsedSubtitle): void {
+  for (const cue of getSubtitleCues(parsed)) {
+    delete cue.data.translatedText;
+  }
+}
+
+function readTranslationInput(
+  filePath: string,
+  configFingerprint?: string
+): TranslationInput {
+  const fileInfo = assertTranslationInputFile(filePath);
   const extension = path.extname(filePath).slice(1).toLowerCase();
 
   if (extension === "json") {
-    const cacheDocument = parseTranslationCache(fs.readFileSync(filePath, "utf8"));
+    const cacheDocument = parseTranslationCache(
+      fs.readFileSync(filePath, "utf8")
+    );
+    const hasMismatchedConfig = Boolean(
+      configFingerprint &&
+        cacheDocument.version === 2 &&
+        !hasMatchingTranslationConfig(cacheDocument, configFingerprint)
+    );
+    if (hasMismatchedConfig) clearSavedTranslations(cacheDocument.subtitle);
+
     return {
       parsed: cacheDocument.subtitle,
       sourceName: path.basename(cacheDocument.source.name),
       sourceExtension: cacheDocument.format,
-      analysis: cacheDocument.analysis,
+      analysis: hasMismatchedConfig ? undefined : cacheDocument.analysis,
       cacheDocument,
+      sourceFingerprint: cacheDocument.source.fingerprint,
+      checkpointPath: filePath,
+      // Explicitly selected v1 checkpoints remain resumable, but keep a copy
+      // before migrating them to the configuration-bound v2 format.
+      shouldBackupCheckpoint: Boolean(
+        configFingerprint &&
+          (cacheDocument.version === 1 || hasMismatchedConfig)
+      ),
     };
   }
 
@@ -271,15 +391,40 @@ function readTranslationInput(filePath: string): TranslationInput {
     throw new Error(translationErrorCodes.unsupportedSubtitleFormat);
   }
 
-  return {
-    parsed: parseSubtitle(fs.readFileSync(filePath, "utf8"), extension),
-    sourceName: path.basename(filePath),
-    sourceExtension: extension as SubtitleFileExtension,
+  const sourceName = path.basename(filePath);
+  const sourceExtension = extension as SubtitleFileExtension;
+  const sourceFingerprint = {
+    size: fileInfo.size,
+    mtimeMs: fileInfo.mtimeMs,
   };
-}
+  const checkpointPath = getTranslationCachePath(filePath, sourceName);
+  const checkpoint = readMatchingCheckpoint(
+    checkpointPath,
+    sourceName,
+    sourceExtension,
+    sourceFingerprint,
+    configFingerprint
+  );
 
-function isTranslatedCue(cue: SubtitleCue): boolean {
-  return typeof cue.data.translatedText === "string" && cue.data.translatedText.length > 0;
+  return checkpoint
+    ? {
+        parsed: checkpoint.subtitle,
+        sourceName,
+        sourceExtension,
+        analysis: checkpoint.analysis,
+        cacheDocument: checkpoint,
+        sourceFingerprint,
+        checkpointPath,
+        shouldBackupCheckpoint: false,
+      }
+    : {
+        parsed: parseSubtitle(fs.readFileSync(filePath, "utf8"), extension),
+        sourceName,
+        sourceExtension,
+        sourceFingerprint,
+        checkpointPath,
+        shouldBackupCheckpoint: fs.existsSync(checkpointPath),
+      };
 }
 
 function createCheckpointWriter(
@@ -292,7 +437,7 @@ function createCheckpointWriter(
     pending = pending
       .catch(() => undefined)
       .then(async () => {
-        const temporaryPath = `${checkpointPath}.${process.pid}.tmp`;
+        const temporaryPath = `${checkpointPath}.${process.pid}.${randomUUID()}.tmp`;
         const content = `${JSON.stringify(createDocument(), null, 2)}\n`;
         await fs.promises.writeFile(temporaryPath, content, "utf8");
         try {
@@ -310,6 +455,14 @@ function createCheckpointWriter(
     write,
     wait: () => pending,
   };
+}
+
+async function backupTranslationCheckpoint(
+  checkpointPath: string
+): Promise<string> {
+  const backupPath = `${checkpointPath}.${Date.now()}.${randomUUID()}.backup.json`;
+  await fs.promises.rename(checkpointPath, backupPath);
+  return backupPath;
 }
 
 async function removeTranslationCheckpoint(checkpointPath: string): Promise<void> {
@@ -359,7 +512,9 @@ function getErrorDetails(error: unknown): {
           ? cause.name
           : undefined,
     status:
-      typeof errorRecord.status === "number"
+      typeof errorRecord.statusCode === "number"
+        ? errorRecord.statusCode
+        : typeof errorRecord.status === "number"
         ? errorRecord.status
         : typeof response.status === "number"
           ? response.status
@@ -367,6 +522,24 @@ function getErrorDetails(error: unknown): {
             ? cause.status
             : undefined,
   };
+}
+
+function getRetryAfterMs(error: unknown): number {
+  if (!APICallError.isInstance(error) || !error.responseHeaders) return 0;
+  return getRetryAfterMsFromHeaders(error.responseHeaders);
+}
+
+function isRetryableTranslationError(error: unknown): boolean {
+  if (APICallError.isInstance(error)) return error.isRetryable;
+
+  const { message, status } = getErrorDetails(error);
+  if (status === 429 || (typeof status === "number" && status >= 500)) {
+    return true;
+  }
+
+  return /network|timeout|timed out|econnreset|econnrefused|enotfound|socket hang up/i.test(
+    message
+  );
 }
 
 function getErrorMessage(error: unknown): string {
@@ -636,7 +809,9 @@ ipcMain.handle("list-models", async (event, request: unknown) => {
   const { apiKey, apiHost } = z
     .object({
       apiKey: z.string().min(1),
-      apiHost: z.string().url(),
+      apiHost: z.string().trim().min(1).refine(isAllowedApiHost, {
+        message: "API host must use HTTPS unless it is a local server",
+      }),
     })
     .parse(request);
 
@@ -659,33 +834,17 @@ async function retryTranslate<TInput, TResult>(
       if (attempt === MAX_AUTOMATIC_TRANSLATION_ATTEMPTS) {
         throw error;
       }
-      // 判斷是否可重試（涵蓋 schema 不符、未產生物件 等訊息）
-      const { message: errorMessage, name, status } = getErrorDetails(error);
-      const msgLower = (errorMessage || "").toLowerCase();
+      if (!isRetryableTranslationError(error)) throw error;
 
-      const isRetryable =
-        msgLower.includes("network") ||
-        msgLower.includes("timeout") ||
-        msgLower.includes("rate limit") ||
-        msgLower.includes("no object generated") ||
-        msgLower.includes("did not match schema") ||
-        msgLower.includes("match schema") ||
-        msgLower.includes("validation") ||
-        name === "NoObjectGeneratedError" ||
-        name === "TypeValidationError" ||
-        (typeof status === "number" && (status >= 429 || status >= 500));
-
-      if (isRetryable) {
-        // 指數退避 + 輕微抖動
-        const backoff =
-          Math.max(0, delay) * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
-        console.warn(
-          `Translation attempt ${attempt} failed: ${errorMessage || name || "unknown error"}. Retrying in ${backoff}ms...`
-        );
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-      } else {
-        throw error; // 不可重試錯誤，直接拋出
-      }
+      const { message: errorMessage, name } = getErrorDetails(error);
+      const exponentialBackoff =
+        Math.max(0, delay) * 2 ** (attempt - 1) +
+        Math.floor(Math.random() * 250);
+      const backoff = Math.max(exponentialBackoff, getRetryAfterMs(error));
+      console.warn(
+        `Translation attempt ${attempt} failed: ${errorMessage || name || "unknown error"}. Retrying in ${backoff}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoff));
     }
   }
 
@@ -695,18 +854,34 @@ async function retryTranslate<TInput, TResult>(
 ipcMain.handle("batch-translate", async (event, request: unknown) => {
   assertTrustedSender(event);
   const { files, params } = batchTranslationRequestSchema.parse(request);
+  const translationConfigFingerprint = createTranslationConfigFingerprint({
+    apiHost: params.apiHost,
+    model: params.model,
+    prompt: params.prompt,
+    lang: params.lang,
+    additional: params.additional,
+    temperature: params.temperature,
+    contextSize: params.contextSize ?? DEFAULT_CONTEXT_SIZE,
+  });
   const requestRateLimiter = new RequestRateLimiter({
     requestsPerMinute: params.requestsPerMinute,
     minimumIntervalMs: params.delay,
   });
-
+  // Keep these claims for the whole request so later files cannot silently
+  // overwrite an earlier file after its active write lock has been released.
+  const batchPathClaims = new Set<string>();
   const processFile = async (file: BatchTranslationRequest["files"][number]) => {
+    let outputPath: string | undefined;
+    let releasePathClaims: (() => void) | undefined;
     try {
-      const input = readTranslationInput(file.path);
+      const input = readTranslationInput(
+        file.path,
+        translationConfigFingerprint
+      );
       const parsed = input.parsed;
       const subtitle = getSubtitleCues(parsed);
       const totalCues = subtitle.length;
-      let completedCues = subtitle.filter(isTranslatedCue).length;
+      let completedCues = subtitle.filter(isSubtitleCueComplete).length;
 
       // 建立原始索引對照，供後續「上下文視窗」策略使用
       const indexMap = new Map<SubtitleCue, number>();
@@ -715,26 +890,37 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       const outputDirectory = getValidatedOutputDirectory(
         params.outputDirectory
       );
-      const outputPath = getTranslatedPath(
+      const translatedOutputPath = getTranslatedPath(
         file.path,
         outputDirectory,
         input.sourceName,
         input.sourceExtension
       );
+      outputPath = translatedOutputPath;
       let analysisData = input.analysis;
-      const checkpointPath = getTranslationCachePath(
-        file.path,
-        input.sourceName
+      analysisCache.delete(file.path);
+      const checkpointPath = input.checkpointPath;
+      releasePathClaims = claimTranslationPaths(
+        [translatedOutputPath, checkpointPath],
+        batchPathClaims
       );
+      if (input.shouldBackupCheckpoint) {
+        const backupPath = await backupTranslationCheckpoint(checkpointPath);
+        console.warn(
+          `Preserved an incompatible translation checkpoint at: ${backupPath}`
+        );
+      }
       const checkpointWriter = createCheckpointWriter(
         checkpointPath,
         () =>
-          createTranslationCacheDocument(
-            parsed,
-            input.sourceName,
-            input.sourceExtension,
-            analysisData
-          )
+          createTranslationCacheDocument({
+            subtitle: parsed,
+            sourceName: input.sourceName,
+            format: input.sourceExtension,
+            configFingerprint: translationConfigFingerprint,
+            analysis: analysisData,
+            sourceFingerprint: input.sourceFingerprint,
+          })
       );
       const persistCheckpoint = async () => {
         try {
@@ -749,7 +935,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       const chunks = splitIntoChunk(subtitle, 20);
       if (chunks.length === 0) {
         saveTranslated(
-          outputPath,
+          translatedOutputPath,
           parsed,
           input.sourceExtension,
           params.multiLangSave || "none"
@@ -765,6 +951,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           totalCues,
           currentCue: totalCues,
           analysis: analysisData,
+          outputPath: translatedOutputPath,
         });
         return;
       }
@@ -775,6 +962,8 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         status: "analyzing",
         totalCues,
         currentCue: completedCues,
+        analysis: analysisData ?? null,
+        outputPath: translatedOutputPath,
       });
 
       // Build analysis context (plot summary + glossary) and attach to all requests
@@ -788,7 +977,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           combinedAdditional ? combinedAdditional + "\n\n" : ""
         }[Context]\n${analysisData}`;
         analysisCache.set(file.path, analysisData);
-      } else {
+      } else if (allTexts.length >= MIN_CUES_FOR_CONTEXT_ANALYSIS) {
         try {
           const analysis = await analyzeSubtitlesForContext(allTexts, {
             apiKeys: params.apiKeys || [],
@@ -799,21 +988,24 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
             temperature: 0.3,
             requestRateLimiter,
           });
-          combinedAdditional = `${
-            combinedAdditional ? combinedAdditional + "\n\n" : ""
-          }[Context]\n${analysis}`;
+          if (analysis) {
+            combinedAdditional = `${
+              combinedAdditional ? combinedAdditional + "\n\n" : ""
+            }[Context]\n${analysis}`;
 
-          analysisData = analysis;
-          analysisCache.set(file.path, analysis);
-          await persistCheckpoint();
-          sendProgress(event.sender, {
-            filePath: file.path,
-            progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
-            status: "analyzing",
-            totalCues,
-            currentCue: completedCues,
-            analysis,
-          });
+            analysisData = analysis;
+            analysisCache.set(file.path, analysis);
+            await persistCheckpoint();
+            sendProgress(event.sender, {
+              filePath: file.path,
+              progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
+              status: "analyzing",
+              totalCues,
+              currentCue: completedCues,
+              analysis,
+              outputPath: translatedOutputPath,
+            });
+          }
         } catch (analysisErr) {
           console.warn(
             "Context analysis failed, continue without it:",
@@ -828,14 +1020,17 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         status: "translating",
         totalCues,
         currentCue: completedCues,
-        analysis: analysisData,
+        analysis: analysisData ?? null,
+        outputPath: translatedOutputPath,
       });
 
       // Translate
-      const chunkProcessor = async (block) => {
+      const chunkProcessor = async (block: SubtitleCue[]) => {
         // 以原始索引建立「核心段」和「上下文視窗」
         const contextSize =
-          typeof params.contextSize === "number" ? params.contextSize : 5;
+          typeof params.contextSize === "number"
+            ? params.contextSize
+            : DEFAULT_CONTEXT_SIZE;
 
         const coreIndices = block
           .map((cue) => indexMap.get(cue))
@@ -850,15 +1045,20 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         const contextStart = Math.max(0, coreStart - contextSize);
         const contextEnd = Math.min(subtitle.length - 1, coreEnd + contextSize);
 
-        const windowCues = subtitle.slice(contextStart, contextEnd + 1);
-        const windowText = windowCues.map((cue) =>
-          cue.data.text.replaceAll(/\n/g, " ").trim()
-        );
+        const normalizeCueText = (cue: SubtitleCue) =>
+          cue.data.text.replaceAll(/\n/g, " ").trim();
+        const translationChunk = {
+          before: subtitle.slice(contextStart, coreStart).map(normalizeCueText),
+          core: block.map(normalizeCueText),
+          after: subtitle
+            .slice(coreEnd + 1, contextEnd + 1)
+            .map(normalizeCueText),
+        };
 
         // 每個區塊最多自動嘗試三次；失敗後直接交由使用者手動重試。
         const translatedWindow = await retryTranslate(
-          async (chunkText) => {
-            const result = await translateSubtitleChunk(chunkText, {
+          async (chunkInput) => {
+            const result = await translateSubtitleChunk(chunkInput, {
               ...params,
               apiKeys: params.apiKeys || [],
               apiHost: params.apiHost || "https://api.openai.com/v1",
@@ -873,25 +1073,21 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
               requestRateLimiter,
             });
 
-            if (!Array.isArray(result) || result.length !== windowText.length) {
+            if (!Array.isArray(result) || result.length !== block.length) {
               throw new Error(
-                `Translation output validation failed: expected ${windowText.length} subtitles, got ${Array.isArray(result) ? result.length : "a non-array result"}`
+                `Translation output validation failed: expected ${block.length} subtitles, got ${Array.isArray(result) ? result.length : "a non-array result"}`
               );
             }
 
             return result;
           },
-          windowText
+          translationChunk
         );
 
-        // 只回寫核心段的翻譯（丟棄上下文前後行），以避免割裂感
+        // The model receives surrounding context but returns only the core block.
         let chunkCompleted = 0;
-        for (const cue of block) {
-          const idx = indexMap.get(cue);
-          if (typeof idx !== "number") continue;
-          const offset = idx - contextStart;
-          const t = translatedWindow[offset] ?? "";
-          cue.data.translatedText = t;
+        for (const [index, cue] of block.entries()) {
+          cue.data.translatedText = translatedWindow[index] ?? "";
           chunkCompleted++;
         }
 
@@ -904,13 +1100,14 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           status: "translating",
           totalCues,
           currentCue,
-          analysis: analysisData,
+          analysis: analysisData ?? null,
+          outputPath: translatedOutputPath,
         });
 
         // 寫入部分成果供即時預覽
         try {
           saveTranslated(
-            outputPath,
+            translatedOutputPath,
             parsed,
             input.sourceExtension,
             params.multiLangSave || "none"
@@ -922,13 +1119,32 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         await persistCheckpoint();
       };
 
-      for await (const _ of pool(params.concurrency, chunks, chunkProcessor)) {
-        // Process chunks with the configured per-file concurrency.
+      const activeChunkProcessors = new Set<Promise<void>>();
+      const trackedChunkProcessor = (block: SubtitleCue[]) => {
+        const processing = chunkProcessor(block).finally(() => {
+          activeChunkProcessors.delete(processing);
+        });
+        activeChunkProcessors.add(processing);
+        return processing;
+      };
+
+      try {
+        for await (const _ of pool(
+          params.concurrency,
+          chunks,
+          trackedChunkProcessor
+        )) {
+          // Process chunks with the configured per-file concurrency.
+        }
+      } catch (error: unknown) {
+        await Promise.allSettled([...activeChunkProcessors]);
+        await checkpointWriter.wait().catch(() => undefined);
+        throw error;
       }
 
       // Final write
       saveTranslated(
-        outputPath,
+        translatedOutputPath,
         parsed,
         input.sourceExtension,
         params.multiLangSave || "none"
@@ -937,14 +1153,15 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         console.warn("Failed to finish translation checkpoint:", error);
       });
       await removeTranslationCheckpoint(checkpointPath);
-      console.log(`Saved translated file to: ${outputPath}`);
+      console.log(`Saved translated file to: ${translatedOutputPath}`);
       sendProgress(event.sender, {
         filePath: file.path,
         progress: 100,
         status: "done",
         totalCues,
         currentCue: totalCues,
-        analysis: analysisData,
+        analysis: analysisData ?? null,
+        outputPath: translatedOutputPath,
       });
     } catch (e: unknown) {
       console.error(`Batch translation error for ${file.path}:`, e);
@@ -953,7 +1170,10 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         progress: 0,
         status: "error",
         error: getErrorMessage(e),
+        outputPath,
       });
+    } finally {
+      releasePathClaims?.();
     }
   };
 
@@ -970,39 +1190,29 @@ ipcMain.handle("get-analysis", async (event, filePath: unknown) => {
   return analysisCache.get(validatedPath) ?? null;
 });
 
-ipcMain.handle("get-subtitle-preview", async (event, filePath: unknown) => {
+ipcMain.handle("get-subtitle-preview", async (event, request: unknown) => {
   assertTrustedSender(event);
-  const validatedPath = z.string().min(1).parse(filePath);
+  const { filePath: validatedPath, outputPath } =
+    subtitlePreviewRequestSchema.parse(request);
   const input = readTranslationInput(validatedPath);
+  if (
+    outputPath &&
+    path.extname(outputPath).slice(1).toLowerCase() !== input.sourceExtension
+  ) {
+    throw new Error(translationErrorCodes.unsupportedFileExtension);
+  }
   const parsed = input.parsed;
   const subtitle = getSubtitleCues(parsed);
-
-  const makeKey = (
-    start: number | string | undefined,
-    end: number | string | undefined
-  ) => {
-    const norm = (value: number | string | undefined) =>
-      typeof value === "number" ? Math.round(value) : String(value ?? "").trim();
-    return `${norm(start)}|${norm(end)}`;
-  };
 
   const makePreview = (translatedSubtitle?: SubtitleCue[]) => {
     const translatedCuesArray = translatedSubtitle?.map(
       (cue) => cue.data.translatedText || cue.data.text
     );
-    const translatedMap = translatedSubtitle
-      ? new Map(
-          translatedSubtitle.map((cue) => [
-            makeKey(cue.data.start, cue.data.end),
-            cue.data.translatedText || cue.data.text,
-          ])
-        )
-      : null;
 
     return subtitle.map((cue, index) => {
-      const key = makeKey(cue.data.start, cue.data.end);
-      const savedTranslation =
-        translatedMap?.get(key) ?? translatedCuesArray?.[index];
+      // Translation and checkpoint writes preserve cue order. Sequential
+      // alignment also keeps distinct cues that intentionally share timestamps.
+      const savedTranslation = translatedCuesArray?.[index];
       return {
         text: cue.data.text,
         translatedText:
@@ -1024,26 +1234,27 @@ ipcMain.handle("get-subtitle-preview", async (event, filePath: unknown) => {
     input.sourceName
   );
   let translatedSubtitle: SubtitleCue[] | undefined;
-  if (fs.existsSync(checkpointPath)) {
-    try {
-      const checkpoint = parseTranslationCache(
-        fs.readFileSync(checkpointPath, "utf8")
-      );
-      if (checkpoint.format === input.sourceExtension) {
-        translatedSubtitle = getSubtitleCues(checkpoint.subtitle);
-      }
-    } catch {
-      // Ignore an invalid checkpoint and fall back to the translated subtitle.
-    }
+  const matchingCheckpoint = input.sourceFingerprint
+    ? readMatchingCheckpoint(
+        checkpointPath,
+        input.sourceName,
+        input.sourceExtension,
+        input.sourceFingerprint
+      )
+    : undefined;
+  if (matchingCheckpoint) {
+    translatedSubtitle = getSubtitleCues(matchingCheckpoint.subtitle);
   }
 
   if (!translatedSubtitle) {
-    const translatedPath = getTranslatedPath(
-      validatedPath,
-      undefined,
-      input.sourceName,
-      input.sourceExtension
-    );
+    const translatedPath =
+      outputPath ??
+      getTranslatedPath(
+        validatedPath,
+        undefined,
+        input.sourceName,
+        input.sourceExtension
+      );
 
     if (fs.existsSync(translatedPath)) {
       const translatedContent = fs.readFileSync(translatedPath, "utf8");

@@ -48,7 +48,13 @@ export interface BatchProgress {
   error?: string;
   totalCues?: number;
   currentCue?: number;
-  analysis?: string;
+  analysis?: string | null;
+  outputPath?: string;
+}
+
+export interface SubtitlePreviewRequest {
+  filePath: string;
+  outputPath?: string;
 }
 
 export interface SubtitleCuePreview {
@@ -66,7 +72,9 @@ export interface ElectronAPI {
     apiHost: string;
   }): Promise<AvailableModel[]>;
   translateBatch(request: BatchTranslationRequest): Promise<{ success: true }>;
-  getSubtitlePreview(filePath: string): Promise<{ cues: SubtitleCuePreview[] }>;
+  getSubtitlePreview(
+    request: SubtitlePreviewRequest
+  ): Promise<{ cues: SubtitleCuePreview[] }>;
   getAnalysis(filePath: string): Promise<string | null>;
   openExternal(url: string): Promise<void>;
   setMenuLocale(locale: string): Promise<void>;

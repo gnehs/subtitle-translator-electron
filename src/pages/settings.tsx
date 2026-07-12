@@ -57,7 +57,7 @@ function getConnectionErrorKey(error: unknown) {
   if (/timeout|timed out|aborted/i.test(message)) {
     return "api.connection.timeout";
   }
-  if (/valid URL|HTTP or HTTPS/i.test(message)) {
+  if (/valid URL|HTTP or HTTPS|HTTPS unless|contain credentials/i.test(message)) {
     return "api.connection.invalidHost";
   }
   return "api.connection.failed";

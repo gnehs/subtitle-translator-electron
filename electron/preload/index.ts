@@ -3,6 +3,7 @@ import type {
   AvailableModel,
   BatchProgress,
   BatchTranslationRequest,
+  SubtitlePreviewRequest,
 } from "../../src/types/electron-api";
 
 const electronAPI = {
@@ -22,8 +23,8 @@ const electronAPI = {
     return ipcRenderer.invoke("batch-translate", request);
   },
 
-  getSubtitlePreview(filePath: string) {
-    return ipcRenderer.invoke("get-subtitle-preview", filePath);
+  getSubtitlePreview(request: SubtitlePreviewRequest) {
+    return ipcRenderer.invoke("get-subtitle-preview", request);
   },
 
   getAnalysis(filePath: string) {

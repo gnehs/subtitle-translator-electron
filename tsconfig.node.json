@@ -1,15 +1,18 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "target": "es2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "lib": ["DOM", "ESNext"],
+    "noEmit": true
   },
   "include": [
+    "electron/**/*.ts",
+    "electron/**/*.d.ts",
+    "shared/**/*.ts",
+    "types/**/*.d.ts",
+    "src/types/electron-api.ts",
     "vite.config.ts",
-    "package.json",
-    "electron"
+    "lingui.config.ts",
+    "playwright.config.ts",
+    "e2e/**/*.ts"
   ]
 }

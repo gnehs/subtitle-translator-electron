@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AvailableModel } from "../../../src/types/electron-api";
+import { parseAllowedApiHost } from "./api-host";
 
 const modelListSchema = z.object({
   data: z.array(
@@ -13,16 +14,7 @@ const modelListSchema = z.object({
 });
 
 function getModelsUrl(apiHost: string): string {
-  let baseUrl: URL;
-  try {
-    baseUrl = new URL(apiHost);
-  } catch {
-    throw new Error("API host must be a valid URL");
-  }
-
-  if (baseUrl.protocol !== "http:" && baseUrl.protocol !== "https:") {
-    throw new Error("API host must use HTTP or HTTPS");
-  }
+  const baseUrl = parseAllowedApiHost(apiHost);
 
   baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/, "")}/models`;
   baseUrl.search = "";

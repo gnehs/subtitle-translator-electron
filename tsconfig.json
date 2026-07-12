@@ -28,11 +28,7 @@
   "include": [
     "src",
     "src/types",
+    "electron/shared",
     "postcss.config.js"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
   ]
 }

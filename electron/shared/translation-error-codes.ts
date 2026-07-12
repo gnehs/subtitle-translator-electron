@@ -6,4 +6,5 @@ export const translationErrorCodes = {
   incompatibleCheckpoint: "ERR_INCOMPATIBLE_TRANSLATION_CHECKPOINT",
   noValidApiKeys: "ERR_NO_VALID_API_KEYS",
   unsupportedFileExtension: "ERR_UNSUPPORTED_FILE_EXTENSION",
+  outputPathConflict: "ERR_TRANSLATION_OUTPUT_PATH_CONFLICT",
 } as const;
