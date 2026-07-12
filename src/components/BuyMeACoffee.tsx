@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "@/i18n";
-import { Coffee, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUpRight, Coffee, X } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface BuyMeACoffeeProps {
@@ -24,46 +24,54 @@ export default function BuyMeACoffee({
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       className={cn(
-        "relative m-2 overflow-hidden rounded-lg border border-border/70 bg-muted/40",
+        "relative m-2 overflow-hidden rounded-2xl border border-border/70 bg-linear-to-br from-muted/60 via-card to-card shadow-sm",
         className
       )}
     >
       <div
         className={cn(
-          "flex items-center gap-3 px-3 py-2.5",
-          dismissible ? "pr-11" : "pr-3"
+          "relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5",
+          dismissible && "pr-12"
         )}
       >
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-          <Coffee size={17} aria-hidden="true" />
-        </div>
-        <div className="min-w-0 flex-1 text-left">
-          <h2 className="text-sm font-semibold">{t("about.buy_me_a_coffee")}</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-            {t("about.buy_me_a_coffee_description")}
-          </p>
+        <div className="flex min-w-0 flex-1 items-center gap-3.5 text-left">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+            <Coffee size={24} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold tracking-tight">
+              {t("about.buy_me_a_coffee")}
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              {t("about.buy_me_a_coffee_description")}
+            </p>
+          </div>
         </div>
         <a
           href="https://www.buymeacoffee.com/gnehs"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex shrink-0 items-center justify-center gap-1 rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-sm transition-colors hover:bg-foreground/85"
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "w-full gap-2 px-4 shadow-sm sm:w-auto"
+          )}
         >
-          <Coffee size={15} aria-hidden="true" />
+          <Coffee data-icon="inline-start" aria-hidden="true" />
           {t("about.buy_me_a_coffee")}
+          <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
         </a>
       </div>
       {dismissible && (
         <Button
           type="button"
           variant="ghost"
-          size="icon-xs"
-          className="absolute right-1 top-1"
+          size="icon-sm"
+          className="absolute top-2 right-2 rounded-full text-muted-foreground"
           onClick={() => setIsVisible(false)}
           aria-label={t("translate.close")}
           title={t("translate.close")}
         >
-          <X />
+          <X aria-hidden="true" />
         </Button>
       )}
     </motion.div>
