@@ -3,6 +3,11 @@ export interface SubtitleFile {
   name: string;
 }
 
+export interface AvailableModel {
+  id: string;
+  ownedBy?: string;
+}
+
 export type TranslationStatus =
   | "pending"
   | "analyzing"
@@ -20,6 +25,7 @@ export interface TranslationParams {
   temperature: number;
   multiLangSave: "none" | "translate+original" | "original+translate";
   delay: number;
+  outputDirectory?: string;
   contextSize?: number;
 }
 
@@ -47,6 +53,11 @@ export interface SubtitleCuePreview {
 
 export interface ElectronAPI {
   getFilePath(file: File): string;
+  selectDirectory(defaultPath?: string): Promise<string | null>;
+  listModels(request: {
+    apiKey: string;
+    apiHost: string;
+  }): Promise<AvailableModel[]>;
   translateBatch(request: BatchTranslationRequest): Promise<{ success: true }>;
   getSubtitlePreview(filePath: string): Promise<{ cues: SubtitleCuePreview[] }>;
   getAnalysis(filePath: string): Promise<string | null>;

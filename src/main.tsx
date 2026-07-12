@@ -9,7 +9,6 @@ import "./i18n";
 import DefaultLayout from "./layouts/default";
 import About from "./pages/about";
 import Translator from "./pages/translator";
-import Settings from "./pages/settings";
 import "./index.css";
 const router = createHashRouter([
   {
@@ -22,7 +21,7 @@ const router = createHashRouter([
       },
       {
         path: "/settings",
-        element: <Settings />,
+        element: <Translator />,
       },
       {
         path: "/about",

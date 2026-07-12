@@ -1,49 +1,34 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { useEffect, useState, type CSSProperties } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "usehooks-ts";
-import { useState, useEffect, type CSSProperties } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "sonner";
+import { FilePlus2, Settings2 } from "lucide-react";
+import Settings from "@/pages/settings";
+import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
+import { Sheet } from "@/components/ui/sheet";
 import { useVersion } from "@/hooks/useVersion";
-import {
-  ArrowLeftRight,
-  ArrowUp,
-  Info,
-  Settings,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 const dragRegionStyle = { appRegion: "drag" } as CSSProperties & {
   appRegion: "drag";
 };
-function NavItem({ to, icon: Icon }: { to: string; icon: LucideIcon }) {
-  const isActive = useLocation().pathname === to;
-  return (
-    <Link
-      to={to}
-      className={`flex items-center justify-center text-[24px] ${
-        isActive ? `bg-black/10` : `hover:bg-black/5`
-      } group p-2 rounded-lg transition-colors duration-200 cursor-pointer`}
-    >
-      <Icon
-        size={24}
-        aria-hidden="true"
-        className="group-active:scale-90 transition-all duration-200"
-      />
-    </Link>
-  );
-}
+
+const noDragRegionStyle = { appRegion: "no-drag" } as CSSProperties & {
+  appRegion: "no-drag";
+};
+
 function CheckUpdate() {
   const version = useVersion();
   const [newVersion, setNewVersion] = useState<string | null>(null);
+
   useEffect(() => {
     const controller = new AbortController();
-
     fetch(
       "https://api.github.com/repos/gnehs/subtitle-translator-electron/releases/latest",
       { signal: controller.signal }
     )
-      .then((res) => (res.ok ? res.json() : null))
+      .then((response) => (response.ok ? response.json() : null))
       .then((release: unknown) => {
         if (
           release &&
@@ -54,80 +39,76 @@ function CheckUpdate() {
           setNewVersion(release.tag_name);
         }
       })
-      .catch(() => {
-        // Update checks are optional and should not interrupt the app.
-      });
+      .catch(() => undefined);
 
     return () => controller.abort();
   }, []);
-  useEffect(() => {
-  if (version && newVersion && version !== newVersion) {
-      toast.info(`New version (${newVersion})`, {
-        onClick: () => {
-          void window.electronAPI
-            .openExternal(
-              "https://github.com/gnehs/subtitle-translator-electron/releases/latest"
-            )
-            .catch(() => undefined);
-        },
-        position: "bottom-center",
-        closeButton: false,
-        className: "bg-slate-700 text-white cursor-pointer",
-      });
-    }
-  }, [version, newVersion]);
 
-    if (version && newVersion && version !== newVersion) {
-    return (
-      <a
-        href="https://github.com/gnehs/subtitle-translator-electron/releases/latest"
-        target="_blank"
-        rel="noreferrer"
-        className={`flex items-center justify-center text-[24px] text-white group p-2 rounded-lg bg-gradient-to-b from-slate-700 to-slate-500 hover:from-slate-900 hover:to-slate-700`}
-      >
-        <ArrowUp
-          size={24}
-          aria-hidden="true"
-          className="group-active:scale-95 transition-all duration-200"
-        />
-      </a>
-    );
-  } else {
-    return <></>;
-  }
+  useEffect(() => {
+    if (!version || !newVersion || version === newVersion) return;
+    toast.info(`有新的版本可用：${newVersion}`, {
+      action: {
+        label: "查看更新",
+        onClick: () => {
+          void window.electronAPI.openExternal(
+            "https://github.com/gnehs/subtitle-translator-electron/releases/latest"
+          );
+        },
+      },
+    });
+  }, [newVersion, version]);
+
+  return null;
 }
-function DefaultLayout() {
-  // change language
+
+export default function DefaultLayout() {
   const [language] = useLocalStorage("language", "en-US");
   const { i18n } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isSettingsOpen = location.pathname === "/settings";
+  const isTaskSurface = location.pathname === "/" || isSettingsOpen;
+  const [addTaskRequest, setAddTaskRequest] = useState(0);
+
   useEffect(() => {
     if (language !== i18n.language) void i18n.changeLanguage(language);
   }, [i18n, language]);
 
   return (
-    <div className="flex flex-col h-[100vh] p-2 gap-2 bg-white/75">
-      <div
-        className="text-center shrink-0"
-        style={dragRegionStyle}
-      >
-        Subtitle translator
-      </div>
-      <div className="flex flex-1">
-        <div className="flex flex-col w-[52px] h-full pr-2 gap-0.5">
-          <NavItem to="/" icon={ArrowLeftRight} />
-          <div className="flex-1"></div>
-          <CheckUpdate />
-          <NavItem to="/settings" icon={Settings} />
-          <NavItem to="/about" icon={Info} />
-        </div>
-        <div className="drop-shadow-xl w-full h-full bg-white/90 rounded-md">
-          <main className=" overflow-hidden w-full h-full rounded-md   ">
-            <Outlet />
-          </main>
-        </div>
-        <ToastContainer position="bottom-center" newestOnTop />
-      </div>
+    <div className="flex h-screen flex-col overflow-hidden bg-muted/30">
+      <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur" style={dragRegionStyle}>
+        <div className="w-10 shrink-0" aria-hidden="true" />
+        <span className="font-heading text-base font-semibold tracking-tight">Subtitle Translator</span>
+        <div className="flex-1" />
+        {isTaskSurface && (
+          <Button
+            onClick={() => setAddTaskRequest((request) => request + 1)}
+            style={noDragRegionStyle}
+          >
+            <FilePlus2 data-icon="inline-start" />
+            新增任務
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          onClick={() => navigate(isSettingsOpen ? "/" : "/settings")}
+          style={noDragRegionStyle}
+          aria-label={isSettingsOpen ? "關閉設定" : "開啟設定"}
+        >
+          <Settings2 data-icon="inline-start" />
+          設定
+        </Button>
+      </header>
+
+      <main className="min-h-0 flex-1 overflow-hidden bg-background">
+        <Outlet context={{ addTaskRequest }} />
+      </main>
+
+      <Sheet open={isSettingsOpen} onOpenChange={(open) => !open && navigate("/")}>
+        <Settings />
+      </Sheet>
+      <CheckUpdate />
+      <Toaster position="bottom-center" richColors />
     </div>
   );
 }
-export default DefaultLayout;

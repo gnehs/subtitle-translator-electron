@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type {
+  AvailableModel,
   BatchProgress,
   BatchTranslationRequest,
 } from "../../src/types/electron-api";
@@ -7,6 +8,14 @@ import type {
 const electronAPI = {
   getFilePath(file: File): string {
     return webUtils.getPathForFile(file);
+  },
+
+  selectDirectory(defaultPath?: string): Promise<string | null> {
+    return ipcRenderer.invoke("select-directory", defaultPath);
+  },
+
+  listModels(request: { apiKey: string; apiHost: string }): Promise<AvailableModel[]> {
+    return ipcRenderer.invoke("list-models", request);
   },
 
   translateBatch(request: BatchTranslationRequest) {

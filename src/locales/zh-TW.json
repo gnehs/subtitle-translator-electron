@@ -32,6 +32,19 @@
         "name": "API 主機",
         "description": "這通常用於繞過防火牆封鎖，若這個應用程式可以正常運作，則不需要更改此設定。"
       },
+      "connection": {
+        "test": "測試連線",
+        "testing": "測試中…",
+        "success": "連線成功，可取得 {{count}} 個模型。",
+        "successEmpty": "連線成功，但沒有可用模型。",
+        "failed": "連線失敗，請檢查 API 主機與金鑰。",
+        "unauthorized": "連線失敗，API 金鑰無效或沒有權限。",
+        "rateLimited": "連線失敗，請求過於頻繁，請稍後再試。",
+        "timeout": "連線逾時，請檢查網路或 API 主機。",
+        "invalidHost": "API 主機必須是有效的 HTTP 或 HTTPS 網址。",
+        "missing": "請先填寫 API 主機與 API 金鑰。",
+        "unavailable": "目前環境無法測試 API 連線。"
+      },
       "presets": {
         "title": "快速預設",
         "openrouter": "OpenRouter",

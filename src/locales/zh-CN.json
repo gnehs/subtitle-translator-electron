@@ -32,6 +32,19 @@
         "name": "API 主机",
         "description": "这通常用于绕过防火墙封锁，若这个应用程序可以正常运作，则不需要更改此设定。"
       },
+      "connection": {
+        "test": "测试连接",
+        "testing": "测试中…",
+        "success": "连接成功，可取得 {{count}} 个模型。",
+        "successEmpty": "连接成功，但没有可用模型。",
+        "failed": "连接失败，请检查 API 主机与密钥。",
+        "unauthorized": "连接失败，API 密钥无效或没有权限。",
+        "rateLimited": "连接失败，请求过于频繁，请稍后再试。",
+        "timeout": "连接超时，请检查网络或 API 主机。",
+        "invalidHost": "API 主机必须是有效的 HTTP 或 HTTPS 网址。",
+        "missing": "请先填写 API 主机与 API 密钥。",
+        "unavailable": "当前环境无法测试 API 连接。"
+      },
       "presets": {
         "title": "快速预设",
         "openrouter": "OpenRouter",

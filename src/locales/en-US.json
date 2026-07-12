@@ -32,6 +32,19 @@
         "name": "API Host",
         "description": "This is typically used to bypass firewall blocking. If this application is functioning properly, there is no need to modify this setting."
       },
+      "connection": {
+        "test": "Test connection",
+        "testing": "Testing…",
+        "success": "Connection successful. {{count}} model(s) available.",
+        "successEmpty": "Connection successful, but no models are available.",
+        "failed": "Connection failed. Check the API host and key.",
+        "unauthorized": "Connection failed. The API key is invalid or unauthorized.",
+        "rateLimited": "Connection failed because the request was rate limited. Try again later.",
+        "timeout": "Connection timed out. Check your network or API host.",
+        "invalidHost": "The API host must be a valid HTTP or HTTPS URL.",
+        "missing": "Enter an API host and API key first.",
+        "unavailable": "The current environment cannot test the API connection."
+      },
       "presets": {
         "title": "Quick Presets",
         "openrouter": "OpenRouter",

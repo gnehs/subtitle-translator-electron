@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   shell,
   type IpcMainInvokeEvent,
@@ -27,6 +28,7 @@ import {
   analyzeSubtitlesForContext,
   getSubtitleCues,
 } from "./utils/translate";
+import { fetchAvailableModels } from "./utils/models";
 import type {
   ParsedSubtitle,
   SubtitleCue,
@@ -100,6 +102,7 @@ const translationParamsSchema = z.object({
   temperature: z.number().finite().min(0).max(2),
   multiLangSave: z.enum(["none", "translate+original", "original+translate"]),
   delay: z.number().finite().min(0),
+  outputDirectory: z.string().optional(),
   contextSize: z.number().int().min(0).max(100).optional(),
 });
 
@@ -157,10 +160,32 @@ function isAllowedExternalUrl(target: string): boolean {
   }
 }
 
-function getTranslatedPath(filePath: string): string {
+function getTranslatedPath(
+  filePath: string,
+  outputDirectory?: string
+): string {
   const extension = path.extname(filePath).slice(1).toLowerCase();
   const basename = path.basename(filePath, path.extname(filePath));
-  return path.join(path.dirname(filePath), `${basename}.translated.${extension}`);
+  return path.join(
+    outputDirectory ?? path.dirname(filePath),
+    `${basename}.translated.${extension}`
+  );
+}
+
+function getValidatedOutputDirectory(
+  outputDirectory?: string
+): string | undefined {
+  if (!outputDirectory) return undefined;
+  if (!path.isAbsolute(outputDirectory)) {
+    throw new Error("Output directory must be an absolute path");
+  }
+
+  const directoryInfo = fs.statSync(outputDirectory);
+  if (!directoryInfo.isDirectory()) {
+    throw new Error("Output path is not a directory");
+  }
+
+  return outputDirectory;
 }
 
 function getErrorDetails(error: unknown): {
@@ -314,6 +339,31 @@ ipcMain.handle("open-external", (event, target: unknown) => {
   return shell.openExternal(target);
 });
 
+ipcMain.handle("select-directory", async (event, defaultPath: unknown) => {
+  assertTrustedSender(event);
+
+  const validatedDefaultPath = z.string().min(1).optional().parse(defaultPath);
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ["openDirectory", "createDirectory"],
+    ...(validatedDefaultPath ? { defaultPath: validatedDefaultPath } : {}),
+  });
+
+  return canceled ? null : filePaths[0] ?? null;
+});
+
+ipcMain.handle("list-models", async (event, request: unknown) => {
+  assertTrustedSender(event);
+
+  const { apiKey, apiHost } = z
+    .object({
+      apiKey: z.string().min(1),
+      apiHost: z.string().url(),
+    })
+    .parse(request);
+
+  return fetchAvailableModels({ apiKey, apiHost });
+});
+
 async function retryTranslate<TInput, TResult>(
   fn: (input: TInput) => Promise<TResult>,
   input: TInput,
@@ -389,7 +439,10 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       });
 
       // Prepare output path early so we can write partial updates during translation
-      const outputPath = getTranslatedPath(file.path);
+      const outputDirectory = getValidatedOutputDirectory(
+        params.outputDirectory
+      );
+      const outputPath = getTranslatedPath(file.path, outputDirectory);
 
       // Build analysis context (plot summary + glossary) and attach to all requests
       const allTexts = subtitle
