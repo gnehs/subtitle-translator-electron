@@ -23,7 +23,6 @@ import {
   splitIntoChunk,
   parseSubtitle,
   translateSubtitleChunk,
-  translateSubtitleSingle,
   saveTranslated,
   analyzeSubtitlesForContext,
   getSubtitleCues,
@@ -78,6 +77,7 @@ const allowedExternalHosts = new Set([
   "www.github.com",
   "www.buymeacoffee.com",
 ]);
+const MAX_AUTOMATIC_TRANSLATION_ATTEMPTS = 3;
 
 const subtitleFileSchema = z
   .object({
@@ -367,14 +367,17 @@ ipcMain.handle("list-models", async (event, request: unknown) => {
 async function retryTranslate<TInput, TResult>(
   fn: (input: TInput) => Promise<TResult>,
   input: TInput,
-  maxRetries = 5,
   delay = 1000
 ): Promise<TResult> {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (
+    let attempt = 1;
+    attempt <= MAX_AUTOMATIC_TRANSLATION_ATTEMPTS;
+    attempt++
+  ) {
     try {
       return await fn(input);
     } catch (error: unknown) {
-      if (attempt === maxRetries) {
+      if (attempt === MAX_AUTOMATIC_TRANSLATION_ATTEMPTS) {
         throw error;
       }
       // 判斷是否可重試（涵蓋 schema 不符、未產生物件 等訊息）
@@ -406,6 +409,8 @@ async function retryTranslate<TInput, TResult>(
       }
     }
   }
+
+  throw new Error("Automatic translation retry loop exited unexpectedly");
 }
 
 ipcMain.handle("batch-translate", async (event, request: unknown) => {
@@ -520,71 +525,33 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           cue.data.text.replaceAll(/\n/g, " ").trim()
         );
 
-        // 多次嘗試整塊翻譯（利用隨機性），若三次仍未對齊，改用逐句翻譯（僅針對核心段）
-        let translatedWindow: Array<string | null> | null = null;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          const baseTemp =
-            typeof params.temperature === "number" ? params.temperature : 1;
-          const attemptTemp = Math.max(
-            0.1,
-            Math.min(2, baseTemp + (Math.random() - 0.5) * 0.4)
-          );
-          const attemptResult = await retryTranslate(
-            async (chunkText) =>
-              translateSubtitleChunk(chunkText, {
-                ...params,
-                apiKeys: params.apiKeys || [],
-                apiHost: params.apiHost || "https://api.openai.com/v1",
-                model: params.model || "",
-                prompt: params.prompt || "",
-                lang: params.lang || "",
-                additional: combinedAdditional || "",
-                temperature: attemptTemp,
-              }),
-            windowText
-          );
-          if (attempt > 1) {
-            console.log(
-              `Chunk attempt ${attempt} (context window) done, temp=${attemptTemp}`
-            );
-          }
-          if (
-            Array.isArray(attemptResult) &&
-            attemptResult.length === windowText.length
-          ) {
-            translatedWindow = attemptResult;
-            break;
-          }
-        }
+        // 每個區塊最多自動嘗試三次；失敗後直接交由使用者手動重試。
+        const translatedWindow = await retryTranslate(
+          async (chunkText) => {
+            const result = await translateSubtitleChunk(chunkText, {
+              ...params,
+              apiKeys: params.apiKeys || [],
+              apiHost: params.apiHost || "https://api.openai.com/v1",
+              model: params.model || "",
+              prompt: params.prompt || "",
+              lang: params.lang || "",
+              additional: combinedAdditional || "",
+              temperature:
+                typeof params.temperature === "number"
+                  ? params.temperature
+                  : 1,
+            });
 
-        // 逐句 fallback：僅翻譯核心行，並填回對應視窗位置
-        if (!translatedWindow) {
-          translatedWindow = new Array<string | null>(windowText.length).fill(
-            null
-          );
-          for (let i = 0; i < coreIndices.length; i++) {
-            const idx = coreIndices[i];
-            const lineText = subtitle[idx]?.data.text ?? "";
-            const single = await retryTranslate(
-              async (singleText) =>
-                translateSubtitleSingle(singleText, {
-                  ...params,
-                  apiKeys: params.apiKeys || [],
-                  apiHost: params.apiHost || "https://api.openai.com/v1",
-                  model: params.model || "",
-                  prompt: params.prompt || "",
-                  lang: params.lang || "",
-                  additional: combinedAdditional || "",
-                  temperature:
-                    typeof params.temperature === "number"
-                      ? params.temperature
-                      : 1,
-                }),
-              lineText
-            );
-            translatedWindow[idx - contextStart] = single;
-          }
-        }
+            if (!Array.isArray(result) || result.length !== windowText.length) {
+              throw new Error(
+                `Translation output validation failed: expected ${windowText.length} subtitles, got ${Array.isArray(result) ? result.length : "a non-array result"}`
+              );
+            }
+
+            return result;
+          },
+          windowText
+        );
 
         // 只回寫核心段的翻譯（丟棄上下文前後行），以避免割裂感
         let chunkCompleted = 0;
@@ -592,12 +559,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           const idx = indexMap.get(cue);
           if (typeof idx !== "number") continue;
           const offset = idx - contextStart;
-          const t =
-            translatedWindow &&
-            translatedWindow[offset] != null &&
-            typeof translatedWindow[offset] === "string"
-              ? translatedWindow[offset]
-              : "";
+          const t = translatedWindow[offset] ?? "";
           cue.data.translatedText = t;
           chunkCompleted++;
         }
@@ -629,59 +591,6 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
 
       for await (const _ of pool(10, chunks, chunkProcessor)) {
         // Process chunks in parallel with concurrency 2
-      }
-
-      // Fallback for untranslated
-      const untranslated = subtitle.filter((line) => !line.data.translatedText);
-      for (let k = 0; k < untranslated.length; k++) {
-        const cue = untranslated[k];
-        cue.data.translatedText = await retryTranslate(
-          async (singleText) =>
-            translateSubtitleSingle(singleText, {
-              ...params,
-              apiKeys: params.apiKeys || [],
-              apiHost: params.apiHost || "https://api.openai.com/v1",
-              model: params.model || "",
-              prompt: params.prompt || "",
-              lang: params.lang || "",
-              additional: combinedAdditional || "",
-              temperature: params.temperature || 1,
-            }),
-          cue.data.text
-        );
-        const currentCueIndex = subtitle.indexOf(cue);
-        if (currentCueIndex !== -1) {
-            completedCues++;
-            const progress =
-              90 +
-              ((completedCues - subtitle.length + untranslated.length) /
-                untranslated.length) *
-                10;
-            const currentCue = completedCues;
-            sendProgress(event.sender, {
-              filePath: file.path,
-              progress: Math.min(100, progress),
-              status: "translating",
-              totalCues,
-              currentCue,
-              analysis: analysisData,
-            });
-
-            // Write partial translated file after single-line fallback updates
-            try {
-              saveTranslated(
-                outputPath,
-                parsed,
-                ext,
-                params.multiLangSave || "none"
-              );
-            } catch (e) {
-              console.warn(
-                "Failed to write partial translated file (fallback):",
-                e
-              );
-            }
-        }
       }
 
       // Final write

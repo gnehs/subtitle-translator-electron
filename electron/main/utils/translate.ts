@@ -63,6 +63,9 @@ function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
     name: "openai",
     apiKey: apiKey,
     baseURL: apiHost,
+    // Output.object/array require the provider to send the JSON schema so the
+    // model returns the shape that the AI SDK validates.
+    supportsStructuredOutputs: true,
     headers: {
       // OpenRouter Headers
       "HTTP-Referer": "https://github.com/gnehs/subtitle-translator-electron",
@@ -125,11 +128,13 @@ async function translateSubtitleChunk(
       system: systemPrompt,
       output: Output.array({
         element: z.string().describe("The translated subtitle"),
+        description:
+          "Return one translated subtitle per input subtitle in the same order.",
       }),
       prompt:
-        "Translate the following subtitles as an array of strings with the exact same length and order as input.\n\n" +
+        "Translate the following subtitles. Return an object with an `elements` array containing exactly one translated string per input subtitle, in the same order. Do not add any other properties.\n\n" +
         JSON.stringify(subtitles),
-      maxRetries: 3,
+      maxRetries: 0,
       onError({ error }) {
         console.error("Subtitle chunk streaming error:", error);
       },
@@ -144,7 +149,7 @@ async function translateSubtitleChunk(
     const completeOutput = await result.output;
     if (completeOutput.length !== translated.length) {
       throw new Error(
-        "Structured translation stream produced inconsistent output"
+        "Translation output validation failed: structured translation stream produced inconsistent output"
       );
     }
     return completeOutput;
@@ -194,7 +199,7 @@ async function translateSubtitleSingle(
       prompt:
         "Translate the following subtitle and return an object with a single `result` string property.\n\n" +
         JSON.stringify(subtitle),
-      maxRetries: 3,
+      maxRetries: 0,
       onError({ error }) {
         console.error("Single subtitle streaming error:", error);
       },
@@ -392,7 +397,7 @@ Analyze subtitle samples and return two outputs:
       prompt:
         `Produce plot summary in ${lang} and glossary from this sample:\n` +
         subtitles.join("\n"),
-      maxRetries: 2,
+      maxRetries: 0,
     });
     return result.text;
   } catch (e) {

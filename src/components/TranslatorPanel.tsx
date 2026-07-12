@@ -54,7 +54,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -82,6 +82,7 @@ import {
   FolderOpen,
   LoaderCircle,
   Plus,
+  RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
@@ -488,7 +489,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         : "翻譯字幕內容";
     }
     if (progress.status === "done") detail = "已輸出翻譯檔案";
-    if (progress.status === "error") detail = progress.error || "請重試此任務";
+    if (progress.status === "error") {
+      detail = progress.error
+        ? `${progress.error}；請按「重試」再次執行`
+        : "自動重試三次後失敗，請按「重試」再次執行";
+    }
 
     return (
       <div className="flex min-w-44 flex-col gap-1.5">
@@ -580,7 +585,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                   <TableHead className="min-w-[150px]">狀態</TableHead>
                   <TableHead className="min-w-[260px]">進度</TableHead>
                   <TableHead className="min-w-[180px]">設定</TableHead>
-                  <TableHead className="w-[72px] px-5 text-right">動作</TableHead>
+                  <TableHead className="w-[112px] px-5 text-right">動作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -626,6 +631,21 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                     </TableCell>
                     <TableCell className="px-5">
                       <div className="flex justify-end gap-1">
+                        {progress.status === "error" && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={isTranslating || !model.trim()}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void startBatchTranslation([file], model.trim());
+                            }}
+                            aria-label={`重試 ${file.name}`}
+                            title="重試翻譯"
+                          >
+                            <RotateCcw />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -798,9 +818,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                 <Select value={multiLangSave} onValueChange={(value) => setMultiLangSave(value as TranslationParams["multiLangSave"])}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">僅輸出翻譯字幕</SelectItem>
-                    <SelectItem value="translate+original">翻譯字幕 + 原文字幕</SelectItem>
-                    <SelectItem value="original+translate">原文字幕 + 翻譯字幕</SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="none">僅輸出翻譯字幕</SelectItem>
+                      <SelectItem value="translate+original">翻譯字幕 + 原文字幕</SelectItem>
+                      <SelectItem value="original+translate">原文字幕 + 翻譯字幕</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 <FieldDescription>這個選項會套用到本批任務。</FieldDescription>
@@ -904,7 +926,20 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               </div>
             </div>
           )}
-          <div className="flex shrink-0 justify-end border-t p-4">
+          <div className="flex shrink-0 justify-end gap-2 border-t p-4">
+            {selectedFile &&
+              batchProgress[selectedFile.path]?.status === "error" && (
+                <Button
+                  variant="outline"
+                  disabled={isTranslating || !model.trim()}
+                  onClick={() =>
+                    void startBatchTranslation([selectedFile], model.trim())
+                  }
+                >
+                  <RotateCcw data-icon="inline-start" />
+                  重試
+                </Button>
+              )}
             <Button variant="outline" onClick={closeDetails}><X data-icon="inline-start" />關閉</Button>
           </div>
         </SheetContent>

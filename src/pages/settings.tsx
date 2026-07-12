@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -176,9 +177,11 @@ export default function Settings() {
             <Select value={language} onValueChange={(value) => void changeLanguage(value)}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="zh-TW">繁體中文</SelectItem>
-                <SelectItem value="zh-CN">简体中文</SelectItem>
-                <SelectItem value="en-US">English</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="zh-TW">繁體中文</SelectItem>
+                  <SelectItem value="zh-CN">简体中文</SelectItem>
+                  <SelectItem value="en-US">English</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </Field>
@@ -193,9 +196,11 @@ export default function Settings() {
             <Select value={provider} onValueChange={(value) => changeProvider(value as keyof typeof providerPresets)}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(providerPresets).map(([value, item]) => (
-                  <SelectItem key={value} value={value}>{item.label}</SelectItem>
-                ))}
+                <SelectGroup>
+                  {Object.entries(providerPresets).map(([value, item]) => (
+                    <SelectItem key={value} value={value}>{item.label}</SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </Field>
@@ -299,9 +304,11 @@ export default function Settings() {
             <Select value={multiLangSave} onValueChange={setMultiLangSave}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">僅儲存翻譯字幕</SelectItem>
-                <SelectItem value="translate+original">翻譯字幕 + 原文字幕</SelectItem>
-                <SelectItem value="original+translate">原文字幕 + 翻譯字幕</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="none">僅儲存翻譯字幕</SelectItem>
+                  <SelectItem value="translate+original">翻譯字幕 + 原文字幕</SelectItem>
+                  <SelectItem value="original+translate">原文字幕 + 翻譯字幕</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </Field>
