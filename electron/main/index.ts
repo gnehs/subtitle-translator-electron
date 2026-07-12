@@ -297,6 +297,20 @@ function createCheckpointWriter(
   };
 }
 
+async function removeTranslationCheckpoint(checkpointPath: string): Promise<void> {
+  try {
+    await fs.promises.unlink(checkpointPath);
+  } catch (error: unknown) {
+    const errorCode =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : undefined;
+    if (errorCode !== "ENOENT") {
+      console.warn("Failed to remove translation checkpoint:", error);
+    }
+  }
+}
+
 function getErrorDetails(error: unknown): {
   message: string;
   name?: string;
@@ -587,6 +601,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         await checkpointWriter.wait().catch((error: unknown) => {
           console.warn("Failed to finish translation checkpoint:", error);
         });
+        await removeTranslationCheckpoint(checkpointPath);
         sendProgress(event.sender, {
           filePath: file.path,
           progress: 100,
@@ -765,6 +780,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       await checkpointWriter.wait().catch((error: unknown) => {
         console.warn("Failed to finish translation checkpoint:", error);
       });
+      await removeTranslationCheckpoint(checkpointPath);
       console.log(`Saved translated file to: ${outputPath}`);
       sendProgress(event.sender, {
         filePath: file.path,
