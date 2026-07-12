@@ -4,7 +4,7 @@ import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import { z } from "zod";
-import { generateText, Output, tool } from "ai";
+import { generateText, Output, streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 export interface SubtitleCueData {
@@ -119,58 +119,35 @@ async function translateSubtitleChunk(
     .replaceAll("{{additional}}", additional);
 
   try {
-    // tool calling
-    let toolTranslated: string[] | null = null;
-    const tools = {
-      submit_translation: tool({
-        description:
-          "Provide the final translated subtitles. Keep order and length identical to input.",
-        inputSchema: z
-          .object({
-            translated: z.array(
-              z.string().describe("Translated subtitle at the same index")
-            ),
-          })
-          .strict(),
-        execute: async ({ translated }) => {
-          toolTranslated = translated;
-          return JSON.stringify(translated);
-        },
-      }),
-    } as const;
-
-    await generateText({
+    const result = streamText({
       model: ai(model),
       temperature,
-      tools,
-      toolChoice: "required",
-      system:
-        systemPrompt +
-        "\nReturn ONLY using the tool, do not include any extra text.",
-      prompt:
-        "Translate the following subtitles. Return the result via the tool as an array of strings with the exact same length and order as input.\n\n" +
-        JSON.stringify(subtitles),
-      maxRetries: 2,
-    });
-
-    if (toolTranslated && Array.isArray(toolTranslated)) {
-      return toolTranslated;
-    }
-
-    // Fallback 2: JSON object generation
-    const { output } = await generateText({
-      model: ai(model),
-      temperature,
+      system: systemPrompt,
       output: Output.array({
         element: z.string().describe("The translated subtitle"),
       }),
       prompt:
-        systemPrompt +
-        "\nOutput must be valid JSON that matches the requested schema. Return only JSON.\n\n" +
+        "Translate the following subtitles as an array of strings with the exact same length and order as input.\n\n" +
         JSON.stringify(subtitles),
       maxRetries: 3,
+      onError({ error }) {
+        console.error("Subtitle chunk streaming error:", error);
+      },
     });
-    return output;
+
+    const translated: string[] = [];
+    for await (const subtitle of result.elementStream) {
+      translated.push(subtitle);
+    }
+
+    // Validate the complete array as well as each streamed element.
+    const completeOutput = await result.output;
+    if (completeOutput.length !== translated.length) {
+      throw new Error(
+        "Structured translation stream produced inconsistent output"
+      );
+    }
+    return completeOutput;
   } catch (e: unknown) {
     throw e;
   }
@@ -207,51 +184,24 @@ async function translateSubtitleSingle(
     .replaceAll("{{additional}}", additional);
 
   try {
-    // tool calling
-    let toolSingle: string | null = null;
-    const tools = {
-      submit_single_translation: tool({
-        description: "Provide the final translated text only.",
-        inputSchema: z.object({ result: z.string() }).strict(),
-        execute: async ({ result }) => {
-          toolSingle = result;
-          return result;
-        },
-      }),
-    } as const;
-
-    await generateText({
+    const result = streamText({
       model: ai(model),
       temperature,
-      tools,
-      toolChoice: "required",
-      system:
-        systemPrompt +
-        "\nReturn ONLY using the tool, do not include any extra text.",
-      prompt:
-        "Translate the following subtitle. Return the result via the tool as plain text only.\n\n" +
-        JSON.stringify(subtitle),
-      maxRetries: 2,
-    });
-
-    if (typeof toolSingle === "string") {
-      return toolSingle;
-    }
-
-    // Fallback 2: JSON object generation
-    const { output } = await generateText({
-      model: ai(model),
-      temperature,
+      system: systemPrompt,
       output: Output.object({
         schema: z.object({ result: z.string() }),
       }),
       prompt:
-        systemPrompt +
-        "\nOutput must be valid JSON that matches the requested schema. Return only JSON.\n\n" +
+        "Translate the following subtitle and return an object with a single `result` string property.\n\n" +
         JSON.stringify(subtitle),
       maxRetries: 3,
+      onError({ error }) {
+        console.error("Single subtitle streaming error:", error);
+      },
     });
-    return output.result;
+
+    const { output } = result;
+    return (await output).result;
   } catch (e: unknown) {
     throw e;
   }
