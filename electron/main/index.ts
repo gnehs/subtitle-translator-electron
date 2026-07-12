@@ -26,8 +26,10 @@ import {
   saveTranslated,
   analyzeSubtitlesForContext,
   getSubtitleCues,
+  getTranslatedPreviewText,
 } from "./utils/translate";
 import { fetchAvailableModels } from "./utils/models";
+import { RequestRateLimiter } from "./utils/request-rate-limiter";
 import type {
   ParsedSubtitle,
   SubtitleCue,
@@ -102,6 +104,14 @@ const translationParamsSchema = z.object({
   temperature: z.number().finite().min(0).max(2),
   multiLangSave: z.enum(["none", "translate+original", "original+translate"]),
   delay: z.number().finite().min(0),
+  requestsPerMinute: z
+    .number()
+    .finite()
+    .safe()
+    .int()
+    .min(1)
+    .max(100_000)
+    .default(60),
   outputDirectory: z.string().optional(),
   contextSize: z.number().int().min(0).max(100).optional(),
 });
@@ -255,7 +265,7 @@ function createWindow() {
       ? {
           vibrancy: "fullscreen-ui",
           titleBarStyle: "hiddenInset",
-          trafficLightPosition: { x: 10, y: 12 },
+          trafficLightPosition: { x: 10, y: 20 },
         }
       : {
           titleBarOverlay: true,
@@ -416,6 +426,10 @@ async function retryTranslate<TInput, TResult>(
 ipcMain.handle("batch-translate", async (event, request: unknown) => {
   assertTrustedSender(event);
   const { files, params } = batchTranslationRequestSchema.parse(request);
+  const requestRateLimiter = new RequestRateLimiter({
+    requestsPerMinute: params.requestsPerMinute,
+    minimumIntervalMs: params.delay,
+  });
 
   const processFile = async (file: BatchTranslationRequest["files"][number]) => {
     try {
@@ -464,6 +478,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           model: params.model || "",
           lang: params.lang || "",
           temperature: 0.3,
+          requestRateLimiter,
         });
         combinedAdditional = `${
           combinedAdditional ? combinedAdditional + "\n\n" : ""
@@ -540,6 +555,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
                 typeof params.temperature === "number"
                   ? params.temperature
                   : 1,
+              requestRateLimiter,
             });
 
             if (!Array.isArray(result) || result.length !== windowText.length) {
@@ -662,13 +678,13 @@ ipcMain.handle("get-subtitle-preview", async (event, filePath: unknown) => {
     const translatedSubtitle = getSubtitleCues(translatedParsed);
 
     translatedCuesArray = translatedSubtitle.map(
-      (cue) => cue.data.translatedText || cue.data.text
+      (cue) => cue.data.translatedText ?? cue.data.text
     );
 
     translatedMap = new Map<string, string>();
     translatedSubtitle.forEach((cue) => {
       const key = makeKey(cue.data.start, cue.data.end);
-      translatedMap!.set(key, cue.data.translatedText || cue.data.text);
+      translatedMap!.set(key, cue.data.translatedText ?? cue.data.text);
     });
   }
 
@@ -678,9 +694,13 @@ ipcMain.handle("get-subtitle-preview", async (event, filePath: unknown) => {
     const byIndex = translatedCuesArray
       ? translatedCuesArray[index]
       : undefined;
+    const savedTranslation = byTime ?? byIndex;
     return {
       text: cue.data.text,
-      translatedText: byTime ?? byIndex,
+      translatedText:
+        typeof savedTranslation === "string"
+          ? getTranslatedPreviewText(savedTranslation, cue.data.text)
+          : undefined,
       start: cue.data.start,
       end: cue.data.end,
     };

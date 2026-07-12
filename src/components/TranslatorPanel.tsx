@@ -5,6 +5,7 @@ import useFile from "@/hooks/useFile";
 import useModel from "@/hooks/useModel";
 import usePrompt from "@/hooks/usePrompt";
 import useDelay from "@/hooks/useDelay";
+import useRPM from "@/hooks/useRPM";
 import { useAPIHost, useAPIKeys, useTemperature } from "@/hooks/useOpenAI";
 import { getFilePath } from "@/utils/filePath";
 import type {
@@ -131,6 +132,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [temperature] = useTemperature();
   const apiKey = keys.find((key) => key.trim().length > 0)?.trim() || "";
   const normalizedApiHost = apiHost.trim();
+  const [requestsPerMinute] = useRPM();
   const [multiLangSave, setMultiLangSave] = useLocalStorage<TranslationParams["multiLangSave"]>(
     "multi_language_save",
     "none"
@@ -445,6 +447,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           temperature,
           multiLangSave,
           delay: delay * 1000,
+          requestsPerMinute,
           outputDirectory: outputDirectory || undefined,
         },
       });

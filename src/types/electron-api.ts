@@ -25,6 +25,7 @@ export interface TranslationParams {
   temperature: number;
   multiLangSave: "none" | "translate+original" | "original+translate";
   delay: number;
+  requestsPerMinute: number;
   outputDirectory?: string;
   contextSize?: number;
 }

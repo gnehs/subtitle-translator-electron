@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "usehooks-ts";
 import { useAPIHost, useAPIKeys, useAPIProvider, useTemperature } from "@/hooks/useOpenAI";
 import useDelay from "@/hooks/useDelay";
+import useRPM from "@/hooks/useRPM";
 import usePrompt from "@/hooks/usePrompt";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,6 +85,7 @@ export default function Settings() {
   const [host, setHost] = useAPIHost();
   const [temperature, setTemperature] = useTemperature();
   const [delay, setDelay] = useDelay();
+  const [requestsPerMinute, setRequestsPerMinute] = useRPM();
   const [prompt, setPrompt] = usePrompt();
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
@@ -293,11 +295,27 @@ export default function Settings() {
                 className="w-20"
               />
             </div>
+            <FieldDescription>{t("temperature.description")}</FieldDescription>
           </Field>
           <Field>
             <FieldLabel htmlFor="settings-delay">請求間隔（秒）</FieldLabel>
             <Input id="settings-delay" type="number" min="0" step="0.1" value={delay} onChange={(event) => setDelay(Number(event.target.value))} />
             <FieldDescription>在每次請求之間暫停，降低供應商限流風險。</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="settings-rpm">每分鐘請求上限（RPM）</FieldLabel>
+            <Input
+              id="settings-rpm"
+              type="number"
+              min="1"
+              max="100000"
+              step="1"
+              value={requestsPerMinute}
+              onChange={(event) => setRequestsPerMinute(Number(event.target.value))}
+            />
+            <FieldDescription>
+              同一批翻譯一分鐘內最多發出的 API 請求數；會與請求間隔共同套用。
+            </FieldDescription>
           </Field>
           <Field>
             <FieldLabel>雙語字幕</FieldLabel>

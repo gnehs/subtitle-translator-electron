@@ -77,7 +77,7 @@ export default function DefaultLayout() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-muted/30">
       <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur" style={dragRegionStyle}>
-        <div className="w-10 shrink-0" aria-hidden="true" />
+        <div className="w-14 shrink-0" aria-hidden="true" />
         <span className="font-heading text-base font-semibold tracking-tight">Subtitle Translator</span>
         <div className="flex-1" />
         {isTaskSurface && (

@@ -6,6 +6,7 @@ import assStringify from "ass-stringify";
 import { z } from "zod";
 import { generateText, Output, streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import type { RequestRateLimiter } from "./request-rate-limiter";
 
 export interface SubtitleCueData {
   text: string;
@@ -47,6 +48,37 @@ export type MultiLanguageSave =
   | "none"
   | "translate+original"
   | "original+translate";
+
+const savedSubtitleSeparators = ["\r\n", "\n", "\\N", "\\n"] as const;
+
+/**
+ * Recover the translation portion from a cue saved in bilingual mode.
+ *
+ * Bilingual output is serialized into one cue so subtitle timing stays
+ * aligned. The preview needs the two logical values separately again.
+ */
+export function getTranslatedPreviewText(
+  savedText: string,
+  originalText: string
+): string {
+  if (!savedText || !originalText || savedText === originalText) {
+    return savedText;
+  }
+
+  for (const separator of savedSubtitleSeparators) {
+    const originalFirst = `${originalText}${separator}`;
+    if (savedText.startsWith(originalFirst)) {
+      return savedText.slice(originalFirst.length);
+    }
+
+    const originalLast = `${separator}${originalText}`;
+    if (savedText.endsWith(originalLast)) {
+      return savedText.slice(0, -originalLast.length);
+    }
+  }
+
+  return savedText;
+}
 
 function isCue(node: SubtitleCue | SubtitleHeader): node is SubtitleCue {
   return node.type === "cue";
@@ -101,6 +133,7 @@ async function translateSubtitleChunk(
     lang,
     additional,
     temperature,
+    requestRateLimiter,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -109,6 +142,7 @@ async function translateSubtitleChunk(
     lang: string;
     additional: string;
     temperature: number;
+    requestRateLimiter?: RequestRateLimiter;
   }
 ) {
   if (apiKeys.length === 0) {
@@ -122,6 +156,7 @@ async function translateSubtitleChunk(
     .replaceAll("{{additional}}", additional);
 
   try {
+    await requestRateLimiter?.waitForSlot();
     const result = streamText({
       model: ai(model),
       temperature,
@@ -168,6 +203,7 @@ async function translateSubtitleSingle(
     lang,
     additional,
     temperature,
+    requestRateLimiter,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -176,6 +212,7 @@ async function translateSubtitleSingle(
     lang: string;
     additional: string;
     temperature: number;
+    requestRateLimiter?: RequestRateLimiter;
   }
 ) {
   if (apiKeys.length === 0) {
@@ -189,6 +226,7 @@ async function translateSubtitleSingle(
     .replaceAll("{{additional}}", additional);
 
   try {
+    await requestRateLimiter?.waitForSlot();
     const result = streamText({
       model: ai(model),
       temperature,
@@ -355,12 +393,14 @@ async function analyzeSubtitlesForContext(
     model,
     lang,
     temperature = 0.3,
+    requestRateLimiter,
   }: {
     apiKeys: string[];
     apiHost: string;
     model: string;
     lang: string;
     temperature?: number;
+    requestRateLimiter?: RequestRateLimiter;
   }
 ): Promise<string> {
   if (apiKeys.length === 0) {
@@ -370,6 +410,7 @@ async function analyzeSubtitlesForContext(
 
   //   tool calling (some providers are more reliable with tools)
   try {
+    await requestRateLimiter?.waitForSlot();
     const result = await generateText({
       model: ai(model),
       temperature,
