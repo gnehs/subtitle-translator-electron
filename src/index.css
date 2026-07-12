@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 code {
   @apply text-gray-800 bg-gray-200 p-1 rounded-sm;
 }

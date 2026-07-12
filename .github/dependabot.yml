@@ -5,7 +5,8 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
+  # Dependabot uses the npm ecosystem key for pnpm manifests and lockfiles.
+  - package-ecosystem: "npm"
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"

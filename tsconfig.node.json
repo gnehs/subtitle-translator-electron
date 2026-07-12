@@ -3,7 +3,7 @@
     "composite": true,
     "target": "es2022",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true
   },

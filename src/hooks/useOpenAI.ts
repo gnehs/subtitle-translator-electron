@@ -1,6 +1,6 @@
 import { useLocalStorage } from "usehooks-ts";
 import { z } from "zod";
-import { generateObject, generateText, tool } from "ai";
+import { generateText, Output, tool } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import usePrompt from "./usePrompt";
 import useModel from "./useModel";
@@ -77,18 +77,20 @@ export function useTranslate() {
           return { translated: toolTranslated } as any;
         }
 
-        const { object } = await generateObject({
+        const { output } = await generateText({
           model: ai(model),
           temperature,
-          schema: z.array(z.string().describe("The translated subtitles")),
+          output: Output.array({
+            element: z.string().describe("The translated subtitle"),
+          }),
           prompt:
             systemPrompt +
-            "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+            "\nOutput must be valid JSON that matches the requested schema. Return only JSON.\n\n" +
             JSON.stringify(subtitles),
           abortSignal: opts?.abortSignal,
           maxRetries: 3,
         });
-        return { translated: object } as any;
+        return { translated: output } as any;
       } catch (e: any) {
         // bubble up details for UI to stop translation with context
         throw e;
@@ -138,18 +140,20 @@ export function useTranslate() {
           return { translated: toolSingle } as any;
         }
 
-        const { object } = await generateObject({
+        const { output } = await generateText({
           model: ai(model),
           temperature,
-          schema: z.object({ result: z.string() }),
+          output: Output.object({
+            schema: z.object({ result: z.string() }),
+          }),
           prompt:
             systemPrompt +
-            "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+            "\nOutput must be valid JSON that matches the requested schema. Return only JSON.\n\n" +
             JSON.stringify(subtitle),
           abortSignal: opts?.abortSignal,
           maxRetries: 3,
         });
-        return { translated: object.result } as any;
+        return { translated: output.result } as any;
       } catch (e: any) {
         throw e;
       }

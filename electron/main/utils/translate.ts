@@ -4,7 +4,7 @@ import { parseSync, stringifySync } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import { z } from "zod";
-import { generateObject, generateText, tool } from "ai";
+import { generateText, Output, tool } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
@@ -107,17 +107,19 @@ async function translateSubtitleChunk(
     }
 
     // Fallback 2: JSON object generation
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: ai(model),
       temperature,
-      schema: z.array(z.string().describe("The translated subtitles")),
+      output: Output.array({
+        element: z.string().describe("The translated subtitle"),
+      }),
       prompt:
         systemPrompt +
-        "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+        "\nOutput must be valid JSON that matches the requested schema. Return only JSON.\n\n" +
         JSON.stringify(subtitles),
       maxRetries: 3,
     });
-    return object;
+    return output;
   } catch (e: any) {
     throw e;
   }
@@ -186,17 +188,19 @@ async function translateSubtitleSingle(
     }
 
     // Fallback 2: JSON object generation
-    const { object } = await generateObject({
+    const { output } = await generateText({
       model: ai(model),
       temperature,
-      schema: z.object({ result: z.string() }),
+      output: Output.object({
+        schema: z.object({ result: z.string() }),
+      }),
       prompt:
         systemPrompt +
-        "\nOutput must be valid json. Respond with a JSON object that matches the schema. Return only JSON.\n\n" +
+        "\nOutput must be valid JSON that matches the requested schema. Return only JSON.\n\n" +
         JSON.stringify(subtitle),
       maxRetries: 3,
     });
-    return object.result;
+    return output.result;
   } catch (e: any) {
     throw e;
   }

@@ -6,6 +6,7 @@
   "author": "gnehs",
   "license": "MIT",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
   "debug": {
     "env": {
       "VITE_DEV_SERVER_URL": "http://127.0.0.1:7777/"
@@ -19,45 +20,45 @@
     "e2e": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
-    "@types/react": "^18.3.24",
-    "@types/react-dom": "^18.3.7",
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/vite": "^4.3.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "@types/tiny-async-pool": "^2.0.3",
-    "@vitejs/plugin-react": "^4.7.0",
-    "autoprefixer": "^10.4.21",
-    "electron": "^38.1.0",
-    "electron-builder": "^26.0.20",
-    "postcss": "^8.5.6",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "sass": "^1.92.1",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.9.2",
-    "vite": "^7.1.5",
+    "@vitejs/plugin-react": "^6.0.3",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sass": "^1.101.0",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.4",
     "vite-electron-plugin": "^0.8.3",
-    "vite-plugin-electron": "^0.29.0",
-    "vite-plugin-electron-renderer": "^0.14.6"
+    "vite-plugin-electron": "^1.1.0",
+    "vite-plugin-electron-renderer": "^1.0.0"
   },
   "engines": {
-    "node": "^14.18.0 || >=16.0.0"
+    "node": ">=22.12.0"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^1.0.17",
-    "@reduxjs/toolkit": "^2.9.0",
-    "ai": "^5.0.44",
+    "@ai-sdk/openai-compatible": "^3.0.7",
+    "@reduxjs/toolkit": "^2.12.0",
+    "ai": "^7.0.22",
     "ass-parser": "^0.2.0",
     "ass-stringify": "^0.1.3",
-    "framer-motion": "^12.23.12",
-    "i18next": "^25.5.2",
+    "framer-motion": "^12.42.2",
+    "i18next": "^26.3.6",
     "normalize.css": "^8.0.1",
-    "react-i18next": "^14.1.3",
-    "react-redux": "^9.2.0",
-    "react-router-dom": "^6.30.1",
-    "react-toastify": "^10.0.6",
-    "subtitle": "^4.2.1",
-    "tailwind-merge": "^2.6.0",
+    "react-i18next": "^17.0.9",
+    "react-redux": "^9.3.0",
+    "react-router-dom": "^7.18.1",
+    "react-toastify": "^11.1.0",
+    "subtitle": "^4.2.2",
+    "tailwind-merge": "^3.6.0",
     "tiny-async-pool": "^2.1.0",
     "usehooks-ts": "^3.1.1",
-    "zod": "^4.1.8"
+    "zod": "^4.4.3"
   }
 }
