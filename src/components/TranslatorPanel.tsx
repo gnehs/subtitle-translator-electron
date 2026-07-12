@@ -98,7 +98,7 @@ type TranslatorPanelProps = {
   addTaskRequest: number;
 };
 
-const supportedExtensions = [".ass", ".ssa", ".srt", ".vtt"];
+const supportedExtensions = [".ass", ".ssa", ".srt", ".vtt", ".json"];
 
 const statusCopy: Record<BatchProgress["status"], string> = {
   pending: "等待中",
@@ -558,7 +558,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               拖放或選取檔案
             </Button>
           </EmptyContent>
-          <p className="mt-auto pt-10 text-xs text-muted-foreground">支援格式：ass、ssa、srt、vtt</p>
+          <p className="mt-auto pt-10 text-center text-xs text-muted-foreground">支援格式：ass、ssa、srt、vtt，以及翻譯暫存 json。翻譯途中會在來源資料夾保留暫存檔，方便中斷後繼續。</p>
         </Empty>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto">

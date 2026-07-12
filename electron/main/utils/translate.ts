@@ -20,6 +20,8 @@ export interface SubtitleCue {
   data: SubtitleCueData;
 }
 
+export type SubtitleFileExtension = "ass" | "ssa" | "srt" | "vtt";
+
 interface SubtitleHeader {
   type: "header";
   data: string;
@@ -48,6 +50,16 @@ export type MultiLanguageSave =
   | "none"
   | "translate+original"
   | "original+translate";
+
+export interface TranslationCacheDocument {
+  version: 1;
+  format: SubtitleFileExtension;
+  source: {
+    name: string;
+  };
+  subtitle: ParsedSubtitle;
+  analysis?: string;
+}
 
 const savedSubtitleSeparators = ["\r\n", "\n", "\\N", "\\n"] as const;
 
@@ -82,6 +94,97 @@ export function getTranslatedPreviewText(
 
 function isCue(node: SubtitleCue | SubtitleHeader): node is SubtitleCue {
   return node.type === "cue";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isSubtitleFileExtension(value: unknown): value is SubtitleFileExtension {
+  return value === "ass" || value === "ssa" || value === "srt" || value === "vtt";
+}
+
+function isSubtitleCueData(value: unknown): value is SubtitleCueData {
+  if (!isRecord(value)) return false;
+  if (typeof value.text !== "string") return false;
+  if (typeof value.start !== "number" && typeof value.start !== "string") return false;
+  if (typeof value.end !== "number" && typeof value.end !== "string") return false;
+  return value.translatedText === undefined || typeof value.translatedText === "string";
+}
+
+function isSubtitleCueNode(value: unknown): value is SubtitleCue {
+  return (
+    isRecord(value) &&
+    value.type === "cue" &&
+    isSubtitleCueData(value.data)
+  );
+}
+
+function isParsedSubtitle(value: unknown): value is ParsedSubtitle {
+  if (Array.isArray(value)) {
+    return value.every((node) => {
+      if (isSubtitleCueNode(node)) return true;
+      return (
+        isRecord(node) &&
+        node.type === "header" &&
+        typeof node.data === "string"
+      );
+    });
+  }
+
+  return (
+    isRecord(value) &&
+    Array.isArray(value.full) &&
+    value.full.every(isRecord) &&
+    Array.isArray(value.events) &&
+    value.events.every(isSubtitleCueNode)
+  );
+}
+
+export function createTranslationCacheDocument(
+  subtitle: ParsedSubtitle,
+  sourceName: string,
+  format: SubtitleFileExtension,
+  analysis?: string
+): TranslationCacheDocument {
+  return {
+    version: 1,
+    format,
+    source: { name: sourceName },
+    subtitle,
+    ...(analysis ? { analysis } : {}),
+  };
+}
+
+export function parseTranslationCache(
+  content: string
+): TranslationCacheDocument {
+  let value: unknown;
+  try {
+    value = JSON.parse(content) as unknown;
+  } catch {
+    throw new Error("翻譯暫存 JSON 格式無效");
+  }
+
+  if (!isRecord(value)) {
+    throw new Error("翻譯暫存 JSON 格式無效");
+  }
+
+  const source = value.source;
+  if (
+    value.version !== 1 ||
+    !isSubtitleFileExtension(value.format) ||
+    !isRecord(source) ||
+    typeof source.name !== "string" ||
+    source.name.trim().length === 0 ||
+    !isParsedSubtitle(value.subtitle) ||
+    getSubtitleCues(value.subtitle).length === 0 ||
+    (value.analysis !== undefined && typeof value.analysis !== "string")
+  ) {
+    throw new Error("翻譯暫存 JSON 格式無效或版本不相容");
+  }
+
+  return value as unknown as TranslationCacheDocument;
 }
 
 export function getSubtitleCues(parsedSubtitle: ParsedSubtitle): SubtitleCue[] {
@@ -335,36 +438,39 @@ function saveTranslated(
     newSubtitle = assStringify(
       full.map((section) => {
         if (section.section === "Events" && section.body) {
-          section.body = section.body.map((line) => {
-            if (line.key === "Dialogue") {
-              const currentEvent = events[dialogueIndex++];
-              const translatedText =
-                currentEvent &&
-                currentEvent.data.translatedText &&
-                typeof line.value === "object" &&
-                line.value !== null
-                  ? currentEvent.data.translatedText
-                  : typeof line.value === "object" && line.value !== null
-                    ? line.value.Text ?? ""
-                    : "";
-              const value =
-                typeof line.value === "object" && line.value !== null
-                  ? line.value
-                  : {};
-              return {
-                key: "Dialogue",
-                value: {
-                  ...value,
-                  Text: parseTranslatedText(
-                    value.Text,
-                    translatedText,
-                    "\\n"
-                  ),
-                },
-              };
-            }
-            return line;
-          });
+          return {
+            ...section,
+            body: section.body.map((line) => {
+              if (line.key === "Dialogue") {
+                const currentEvent = events[dialogueIndex++];
+                const translatedText =
+                  currentEvent &&
+                  currentEvent.data.translatedText &&
+                  typeof line.value === "object" &&
+                  line.value !== null
+                    ? currentEvent.data.translatedText
+                    : typeof line.value === "object" && line.value !== null
+                      ? line.value.Text ?? ""
+                      : "";
+                const value =
+                  typeof line.value === "object" && line.value !== null
+                    ? line.value
+                    : {};
+                return {
+                  key: "Dialogue",
+                  value: {
+                    ...value,
+                    Text: parseTranslatedText(
+                      value.Text,
+                      translatedText,
+                      "\\n"
+                    ),
+                  },
+                };
+              }
+              return line;
+            }),
+          };
         }
         return section;
       })

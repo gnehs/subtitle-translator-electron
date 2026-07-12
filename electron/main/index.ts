@@ -20,8 +20,10 @@ import type {
   BatchTranslationRequest,
 } from "../../src/types/electron-api";
 import {
+  createTranslationCacheDocument,
   splitIntoChunk,
   parseSubtitle,
+  parseTranslationCache,
   translateSubtitleChunk,
   saveTranslated,
   analyzeSubtitlesForContext,
@@ -33,6 +35,8 @@ import { RequestRateLimiter } from "./utils/request-rate-limiter";
 import type {
   ParsedSubtitle,
   SubtitleCue,
+  SubtitleFileExtension,
+  TranslationCacheDocument,
 } from "./utils/translate";
 
 // The built directory structure
@@ -73,7 +77,16 @@ const preload = join(__dirname, "../preload/index.js");
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(process.env.DIST, "index.html");
 const packagedIndexUrl = pathToFileURL(indexHtml).href;
-const supportedExtensions = new Set(["ass", "ssa", "srt", "vtt"]);
+const supportedExtensions = new Set<SubtitleFileExtension>([
+  "ass",
+  "ssa",
+  "srt",
+  "vtt",
+]);
+const supportedInputExtensions = new Set<string>([
+  ...supportedExtensions,
+  "json",
+]);
 const allowedExternalHosts = new Set([
   "github.com",
   "www.github.com",
@@ -86,8 +99,8 @@ const subtitleFileSchema = z
     path: z.string().min(1),
     name: z.string().min(1),
   })
-  .refine(({ path: filePath }) => isSupportedSubtitlePath(filePath), {
-    message: "Unsupported subtitle file",
+  .refine(({ path: filePath }) => isSupportedInputPath(filePath), {
+    message: "Unsupported translation input file",
   });
 
 const translationParamsSchema = z.object({
@@ -121,18 +134,20 @@ const batchTranslationRequestSchema = z.object({
   params: translationParamsSchema,
 });
 
-function isSupportedSubtitlePath(filePath: string): boolean {
-  return supportedExtensions.has(path.extname(filePath).slice(1).toLowerCase());
+function isSupportedInputPath(filePath: string): boolean {
+  return supportedInputExtensions.has(
+    path.extname(filePath).slice(1).toLowerCase()
+  );
 }
 
-function assertSubtitleFile(filePath: string): void {
-  if (!isSupportedSubtitlePath(filePath)) {
-    throw new Error("Unsupported subtitle file");
+function assertTranslationInputFile(filePath: string): void {
+  if (!isSupportedInputPath(filePath)) {
+    throw new Error("不支援的翻譯輸入檔案");
   }
 
   const fileInfo = fs.statSync(filePath);
   if (!fileInfo.isFile()) {
-    throw new Error("Subtitle path is not a file");
+    throw new Error("翻譯輸入路徑不是檔案");
   }
 }
 
@@ -172,13 +187,29 @@ function isAllowedExternalUrl(target: string): boolean {
 
 function getTranslatedPath(
   filePath: string,
-  outputDirectory?: string
+  outputDirectory?: string,
+  sourceName = path.basename(filePath),
+  sourceExtension = path.extname(filePath).slice(1).toLowerCase()
 ): string {
-  const extension = path.extname(filePath).slice(1).toLowerCase();
-  const basename = path.basename(filePath, path.extname(filePath));
+  const basename = path.basename(sourceName, path.extname(sourceName));
   return path.join(
     outputDirectory ?? path.dirname(filePath),
-    `${basename}.translated.${extension}`
+    `${basename}.translated.${sourceExtension}`
+  );
+}
+
+function getTranslationCachePath(
+  filePath: string,
+  sourceName = path.basename(filePath)
+): string {
+  if (path.extname(filePath).toLowerCase() === ".json") {
+    return filePath;
+  }
+
+  const basename = path.basename(sourceName, path.extname(sourceName));
+  return path.join(
+    path.dirname(filePath),
+    `${basename}.translation.json`
   );
 }
 
@@ -196,6 +227,74 @@ function getValidatedOutputDirectory(
   }
 
   return outputDirectory;
+}
+
+interface TranslationInput {
+  parsed: ParsedSubtitle;
+  sourceName: string;
+  sourceExtension: SubtitleFileExtension;
+  analysis?: string;
+  cacheDocument?: TranslationCacheDocument;
+}
+
+function readTranslationInput(filePath: string): TranslationInput {
+  assertTranslationInputFile(filePath);
+  const extension = path.extname(filePath).slice(1).toLowerCase();
+
+  if (extension === "json") {
+    const cacheDocument = parseTranslationCache(fs.readFileSync(filePath, "utf8"));
+    return {
+      parsed: cacheDocument.subtitle,
+      sourceName: path.basename(cacheDocument.source.name),
+      sourceExtension: cacheDocument.format,
+      analysis: cacheDocument.analysis,
+      cacheDocument,
+    };
+  }
+
+  if (!supportedExtensions.has(extension as SubtitleFileExtension)) {
+    throw new Error("不支援的字幕格式");
+  }
+
+  return {
+    parsed: parseSubtitle(fs.readFileSync(filePath, "utf8"), extension),
+    sourceName: path.basename(filePath),
+    sourceExtension: extension as SubtitleFileExtension,
+  };
+}
+
+function isTranslatedCue(cue: SubtitleCue): boolean {
+  return typeof cue.data.translatedText === "string" && cue.data.translatedText.length > 0;
+}
+
+function createCheckpointWriter(
+  checkpointPath: string,
+  createDocument: () => TranslationCacheDocument
+): { write: () => Promise<void>; wait: () => Promise<void> } {
+  let pending = Promise.resolve();
+
+  const write = () => {
+    pending = pending
+      .catch(() => undefined)
+      .then(async () => {
+        const temporaryPath = `${checkpointPath}.${process.pid}.tmp`;
+        const content = `${JSON.stringify(createDocument(), null, 2)}\n`;
+        await fs.promises.writeFile(temporaryPath, content, "utf8");
+        try {
+          await fs.promises.rename(temporaryPath, checkpointPath);
+        } catch {
+          await fs.promises.writeFile(checkpointPath, content, "utf8");
+          await fs.promises.unlink(temporaryPath).catch(() => undefined);
+        }
+      });
+
+    return pending;
+  };
+
+  return {
+    write,
+    wait: () => pending,
+  };
 }
 
 function getErrorDetails(error: unknown): {
@@ -433,35 +532,79 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
 
   const processFile = async (file: BatchTranslationRequest["files"][number]) => {
     try {
-      sendProgress(event.sender, {
-        filePath: file.path,
-        progress: 0,
-        status: "translating",
-        totalCues: 0,
-      });
-      const ext = path.extname(file.path).slice(1).toLowerCase();
-      const content = fs.readFileSync(file.path, "utf8");
-      const parsed: ParsedSubtitle = parseSubtitle(content, ext);
+      const input = readTranslationInput(file.path);
+      const parsed = input.parsed;
       const subtitle = getSubtitleCues(parsed);
       const totalCues = subtitle.length;
+      let completedCues = subtitle.filter(isTranslatedCue).length;
 
       // 建立原始索引對照，供後續「上下文視窗」策略使用
       const indexMap = new Map<SubtitleCue, number>();
       subtitle.forEach((cue, idx) => indexMap.set(cue, idx));
 
-      sendProgress(event.sender, {
-        filePath: file.path,
-        progress: 1,
-        status: "analyzing",
-        totalCues,
-        currentCue: 0,
-      });
-
-      // Prepare output path early so we can write partial updates during translation
       const outputDirectory = getValidatedOutputDirectory(
         params.outputDirectory
       );
-      const outputPath = getTranslatedPath(file.path, outputDirectory);
+      const outputPath = getTranslatedPath(
+        file.path,
+        outputDirectory,
+        input.sourceName,
+        input.sourceExtension
+      );
+      let analysisData = input.analysis;
+      const checkpointPath = getTranslationCachePath(
+        file.path,
+        input.sourceName
+      );
+      const checkpointWriter = createCheckpointWriter(
+        checkpointPath,
+        () =>
+          createTranslationCacheDocument(
+            parsed,
+            input.sourceName,
+            input.sourceExtension,
+            analysisData
+          )
+      );
+      const persistCheckpoint = async () => {
+        try {
+          await checkpointWriter.write();
+        } catch (error: unknown) {
+          console.warn("Failed to write translation checkpoint:", error);
+        }
+      };
+
+      await persistCheckpoint();
+
+      const chunks = splitIntoChunk(subtitle, 20);
+      if (chunks.length === 0) {
+        saveTranslated(
+          outputPath,
+          parsed,
+          input.sourceExtension,
+          params.multiLangSave || "none"
+        );
+        await checkpointWriter.wait().catch((error: unknown) => {
+          console.warn("Failed to finish translation checkpoint:", error);
+        });
+        sendProgress(event.sender, {
+          filePath: file.path,
+          progress: 100,
+          status: "done",
+          totalCues,
+          currentCue: totalCues,
+          analysis: analysisData,
+        });
+        return;
+      }
+
+      sendProgress(event.sender, {
+        filePath: file.path,
+        progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
+        status: "analyzing",
+        totalCues,
+        currentCue: completedCues,
+      });
 
       // Build analysis context (plot summary + glossary) and attach to all requests
       const allTexts = subtitle
@@ -469,54 +612,55 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         .filter((t: string) => t && t.length > 0);
 
       let combinedAdditional = params.additional || "";
-      let analysisData: string | null = null;
-      try {
-        const analysis = await analyzeSubtitlesForContext(allTexts, {
-          apiKeys: params.apiKeys || [],
-          apiHost: params.apiHost || "https://api.openai.com/v1",
-
-          model: params.model || "",
-          lang: params.lang || "",
-          temperature: 0.3,
-          requestRateLimiter,
-        });
+      if (analysisData) {
         combinedAdditional = `${
           combinedAdditional ? combinedAdditional + "\n\n" : ""
-        }[Context]\n${analysis}`;
+        }[Context]\n${analysisData}`;
+        analysisCache.set(file.path, analysisData);
+      } else {
+        try {
+          const analysis = await analyzeSubtitlesForContext(allTexts, {
+            apiKeys: params.apiKeys || [],
+            apiHost: params.apiHost || "https://api.openai.com/v1",
 
-        analysisData = analysis;
-        // Save in cache for renderer retrieval
-        analysisCache.set(file.path, analysis);
-        // Notify renderer with analysis result so UI can display it
-        sendProgress(event.sender, {
-          filePath: file.path,
-          progress: 4,
-          status: "analyzing",
-          totalCues,
-          currentCue: 0,
-          analysis,
-        });
-      } catch (analysisErr) {
-        console.warn(
-          "Context analysis failed, continue without it:",
-          analysisErr
-        );
+            model: params.model || "",
+            lang: params.lang || "",
+            temperature: 0.3,
+            requestRateLimiter,
+          });
+          combinedAdditional = `${
+            combinedAdditional ? combinedAdditional + "\n\n" : ""
+          }[Context]\n${analysis}`;
+
+          analysisData = analysis;
+          analysisCache.set(file.path, analysis);
+          await persistCheckpoint();
+          sendProgress(event.sender, {
+            filePath: file.path,
+            progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
+            status: "analyzing",
+            totalCues,
+            currentCue: completedCues,
+            analysis,
+          });
+        } catch (analysisErr) {
+          console.warn(
+            "Context analysis failed, continue without it:",
+            analysisErr
+          );
+        }
       }
 
       sendProgress(event.sender, {
         filePath: file.path,
-        progress: 5,
+        progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
         status: "translating",
         totalCues,
-        currentCue: 0,
+        currentCue: completedCues,
         analysis: analysisData,
       });
 
       // Translate
-      const chunks = splitIntoChunk(subtitle, 20);
-
-      let completedCues = 0;
-
       const chunkProcessor = async (block) => {
         // 以原始索引建立「核心段」和「上下文視窗」
         const contextSize =
@@ -581,11 +725,11 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         }
 
         completedCues += chunkCompleted;
-        const progress = 10 + (completedCues / totalCues) * 90;
+        const progress = totalCues > 0 ? (completedCues / totalCues) * 100 : 100;
         const currentCue = Math.min(completedCues, totalCues);
         sendProgress(event.sender, {
           filePath: file.path,
-          progress: Math.min(progress, 90),
+          progress,
           status: "translating",
           totalCues,
           currentCue,
@@ -597,12 +741,14 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           saveTranslated(
             outputPath,
             parsed,
-            ext,
+            input.sourceExtension,
             params.multiLangSave || "none"
           );
         } catch (e) {
           console.warn("Failed to write partial translated file:", e);
         }
+
+        await persistCheckpoint();
       };
 
       for await (const _ of pool(10, chunks, chunkProcessor)) {
@@ -610,7 +756,15 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       }
 
       // Final write
-      saveTranslated(outputPath, parsed, ext, params.multiLangSave || "none");
+      saveTranslated(
+        outputPath,
+        parsed,
+        input.sourceExtension,
+        params.multiLangSave || "none"
+      );
+      await checkpointWriter.wait().catch((error: unknown) => {
+        console.warn("Failed to finish translation checkpoint:", error);
+      });
       console.log(`Saved translated file to: ${outputPath}`);
       sendProgress(event.sender, {
         filePath: file.path,
@@ -647,18 +801,9 @@ ipcMain.handle("get-analysis", async (event, filePath: unknown) => {
 ipcMain.handle("get-subtitle-preview", async (event, filePath: unknown) => {
   assertTrustedSender(event);
   const validatedPath = z.string().min(1).parse(filePath);
-  assertSubtitleFile(validatedPath);
-
-  const ext = path.extname(validatedPath).slice(1).toLowerCase();
-  const content = fs.readFileSync(validatedPath, "utf8");
-  const parsed: ParsedSubtitle = parseSubtitle(content, ext);
+  const input = readTranslationInput(validatedPath);
+  const parsed = input.parsed;
   const subtitle = getSubtitleCues(parsed);
-
-  const translatedPath = getTranslatedPath(validatedPath);
-
-  // Prefer time-based alignment to avoid index drift; fallback to index-based if needed
-  let translatedCuesArray: string[] | null = null;
-  let translatedMap: Map<string, string> | null = null;
 
   const makeKey = (
     start: number | string | undefined,
@@ -669,42 +814,74 @@ ipcMain.handle("get-subtitle-preview", async (event, filePath: unknown) => {
     return `${norm(start)}|${norm(end)}`;
   };
 
-  if (fs.existsSync(translatedPath)) {
-    const translatedContent = fs.readFileSync(translatedPath, "utf8");
-    const translatedParsed: ParsedSubtitle = parseSubtitle(
-      translatedContent,
-      ext
+  const makePreview = (translatedSubtitle?: SubtitleCue[]) => {
+    const translatedCuesArray = translatedSubtitle?.map(
+      (cue) => cue.data.translatedText || cue.data.text
     );
-    const translatedSubtitle = getSubtitleCues(translatedParsed);
+    const translatedMap = translatedSubtitle
+      ? new Map(
+          translatedSubtitle.map((cue) => [
+            makeKey(cue.data.start, cue.data.end),
+            cue.data.translatedText || cue.data.text,
+          ])
+        )
+      : null;
 
-    translatedCuesArray = translatedSubtitle.map(
-      (cue) => cue.data.translatedText ?? cue.data.text
-    );
-
-    translatedMap = new Map<string, string>();
-    translatedSubtitle.forEach((cue) => {
+    return subtitle.map((cue, index) => {
       const key = makeKey(cue.data.start, cue.data.end);
-      translatedMap!.set(key, cue.data.translatedText ?? cue.data.text);
+      const savedTranslation =
+        translatedMap?.get(key) ?? translatedCuesArray?.[index];
+      return {
+        text: cue.data.text,
+        translatedText:
+          typeof savedTranslation === "string"
+            ? getTranslatedPreviewText(savedTranslation, cue.data.text)
+            : undefined,
+        start: cue.data.start,
+        end: cue.data.end,
+      };
     });
+  };
+
+  if (input.cacheDocument) {
+    return { cues: makePreview(subtitle) };
   }
 
-  const cues = subtitle.map((cue, index) => {
-    const key = makeKey(cue.data.start, cue.data.end);
-    const byTime = translatedMap ? translatedMap.get(key) : undefined;
-    const byIndex = translatedCuesArray
-      ? translatedCuesArray[index]
-      : undefined;
-    const savedTranslation = byTime ?? byIndex;
-    return {
-      text: cue.data.text,
-      translatedText:
-        typeof savedTranslation === "string"
-          ? getTranslatedPreviewText(savedTranslation, cue.data.text)
-          : undefined,
-      start: cue.data.start,
-      end: cue.data.end,
-    };
-  });
+  const checkpointPath = getTranslationCachePath(
+    validatedPath,
+    input.sourceName
+  );
+  let translatedSubtitle: SubtitleCue[] | undefined;
+  if (fs.existsSync(checkpointPath)) {
+    try {
+      const checkpoint = parseTranslationCache(
+        fs.readFileSync(checkpointPath, "utf8")
+      );
+      if (checkpoint.format === input.sourceExtension) {
+        translatedSubtitle = getSubtitleCues(checkpoint.subtitle);
+      }
+    } catch {
+      // Ignore an invalid checkpoint and fall back to the translated subtitle.
+    }
+  }
 
-  return { cues };
+  if (!translatedSubtitle) {
+    const translatedPath = getTranslatedPath(
+      validatedPath,
+      undefined,
+      input.sourceName,
+      input.sourceExtension
+    );
+
+    if (fs.existsSync(translatedPath)) {
+      const translatedContent = fs.readFileSync(translatedPath, "utf8");
+      const translatedParsed: ParsedSubtitle = parseSubtitle(
+        translatedContent,
+        input.sourceExtension
+      );
+      translatedSubtitle = getSubtitleCues(translatedParsed);
+    }
+  }
+
+  return { cues: makePreview(translatedSubtitle) };
 });
