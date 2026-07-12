@@ -724,7 +724,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             </Button>
           </EmptyContent>
           {shouldShowCoffeeBanner && (
-            <BuyMeACoffee dismissible className="w-full max-w-sm" />
+            <BuyMeACoffee dismissible className="w-full max-w-2xl" />
           )}
           <p className="mt-auto pt-10 text-center text-xs text-muted-foreground">
             {t("tasks.empty.formats")}

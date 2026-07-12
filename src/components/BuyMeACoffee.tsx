@@ -24,14 +24,14 @@ export default function BuyMeACoffee({
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       className={cn(
-        "relative m-2 overflow-hidden rounded-2xl border border-border/70 bg-linear-to-br from-muted/60 via-card to-card shadow-sm",
+        "@container relative m-2 overflow-hidden rounded-2xl border border-border/70 bg-linear-to-br from-muted/60 via-card to-card shadow-sm",
         className
       )}
     >
       <div
         className={cn(
-          "relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5",
-          dismissible && "pr-12"
+          "relative flex flex-col gap-4 p-4 @md:flex-row @md:items-center @md:gap-5 @md:p-5",
+          dismissible && "pr-12 @md:pr-12"
         )}
       >
         <div className="flex min-w-0 flex-1 items-center gap-3.5 text-left">
@@ -53,7 +53,7 @@ export default function BuyMeACoffee({
           rel="noreferrer"
           className={cn(
             buttonVariants({ size: "lg" }),
-            "w-full gap-2 px-4 shadow-sm sm:w-auto"
+            "w-full gap-2 px-4 shadow-sm @md:w-auto"
           )}
         >
           <Coffee data-icon="inline-start" aria-hidden="true" />
