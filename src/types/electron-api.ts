@@ -10,6 +10,9 @@ export interface AvailableModel {
 
 export { translationErrorCodes } from "../../electron/shared/translation-error-codes";
 
+export const translationConcurrencyOptions = [1, 2, 5, 10] as const;
+export type TranslationConcurrency = (typeof translationConcurrencyOptions)[number];
+
 export type TranslationStatus =
   | "pending"
   | "analyzing"
@@ -26,6 +29,7 @@ export interface TranslationParams {
   additional: string;
   temperature: number;
   multiLangSave: "none" | "translate+original" | "original+translate";
+  concurrency: TranslationConcurrency;
   delay: number;
   requestsPerMinute: number;
   outputDirectory?: string;

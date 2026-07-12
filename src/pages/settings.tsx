@@ -4,7 +4,12 @@ import { useLocalStorage } from "usehooks-ts";
 import { useAPIHost, useAPIKeys, useAPIProvider, useTemperature } from "@/hooks/useOpenAI";
 import useDelay from "@/hooks/useDelay";
 import useRPM from "@/hooks/useRPM";
+import useTranslationConcurrency from "@/hooks/useTranslationConcurrency";
 import usePrompt from "@/hooks/usePrompt";
+import {
+  translationConcurrencyOptions,
+  type TranslationConcurrency,
+} from "@/types/electron-api";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -86,6 +91,7 @@ export default function Settings() {
   const [temperature, setTemperature] = useTemperature();
   const [delay, setDelay] = useDelay();
   const [requestsPerMinute, setRequestsPerMinute] = useRPM();
+  const [concurrency, setConcurrency] = useTranslationConcurrency();
   const [prompt, setPrompt] = usePrompt();
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
@@ -314,6 +320,27 @@ export default function Settings() {
               onChange={(event) => setRequestsPerMinute(Number(event.target.value))}
             />
             <FieldDescription>{t("settings.rpm.description")}</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="settings-concurrency">{t("settings.concurrency.label")}</FieldLabel>
+            <Select
+              value={String(concurrency)}
+              onValueChange={(value) => setConcurrency(Number(value) as TranslationConcurrency)}
+            >
+              <SelectTrigger id="settings-concurrency" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {translationConcurrencyOptions.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option === 1
+                        ? t("settings.concurrency.options.sequential")
+                        : t("settings.concurrency.options.parallel", { count: option })}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FieldDescription>{t("settings.concurrency.description")}</FieldDescription>
           </Field>
           <Field>
             <FieldLabel>{t("save.multi-language.name")}</FieldLabel>

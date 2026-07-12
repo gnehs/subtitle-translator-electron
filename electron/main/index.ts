@@ -123,6 +123,14 @@ const translationParamsSchema = z.object({
   additional: z.string(),
   temperature: z.number().finite().min(0).max(2),
   multiLangSave: z.enum(["none", "translate+original", "original+translate"]),
+  concurrency: z
+    .union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(5),
+      z.literal(10),
+    ])
+    .default(10),
   delay: z.number().finite().min(0),
   requestsPerMinute: z
     .number()
@@ -914,8 +922,8 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         await persistCheckpoint();
       };
 
-      for await (const _ of pool(10, chunks, chunkProcessor)) {
-        // Process chunks in parallel with concurrency 2
+      for await (const _ of pool(params.concurrency, chunks, chunkProcessor)) {
+        // Process chunks with the configured per-file concurrency.
       }
 
       // Final write

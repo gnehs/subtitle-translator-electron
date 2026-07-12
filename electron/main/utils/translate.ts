@@ -526,14 +526,14 @@ async function analyzeSubtitlesForContext(
 You are a subtitle content analyst assisting a translation and glossary extraction system.
 
 ## Task
-Analyze subtitle samples and return two outputs:
-1. **Plot Summary**
+Analyze subtitle samples and return exactly two Markdown sections:
+## Plot Summary
    - Language: ${lang}
    - Length: 5–10 sentences
    - Must be clear, coherent, and written in natural ${lang}
    - Avoid literal stitching of subtitles
 
-2. **Glossary**
+## Glossary
    - Up to 50 items
    - Include rare words, character names, places, organizations, fictional elements, or jargon
    - Each entry must follow the schema:
@@ -541,7 +541,8 @@ Analyze subtitle samples and return two outputs:
      - description (required)
      - category (optional: person, place, organization, jargon, fictional, other)
      - preferredTranslation (optional)
-     - notes (optional)  `,
+     - notes (optional)
+   - Do not add any other sections.  `,
       prompt:
         `Produce plot summary in ${lang} and glossary from this sample:\n` +
         subtitles.join("\n"),

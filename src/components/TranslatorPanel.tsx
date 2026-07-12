@@ -6,6 +6,7 @@ import useModel from "@/hooks/useModel";
 import usePrompt from "@/hooks/usePrompt";
 import useDelay from "@/hooks/useDelay";
 import useRPM from "@/hooks/useRPM";
+import useTranslationConcurrency from "@/hooks/useTranslationConcurrency";
 import useTranslationSuccessCount, {
   TRANSLATION_SUCCESS_THRESHOLD,
 } from "@/hooks/useTranslationSuccessCount";
@@ -106,6 +107,14 @@ type TranslatorPanelProps = {
 };
 
 const supportedExtensions = [".ass", ".ssa", ".srt", ".vtt", ".json"];
+const DEFAULT_CONTEXT_SIZE = 5;
+const MAX_CONTEXT_SIZE = 100;
+
+function normalizeContextSize(value: unknown): number {
+  const numericValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numericValue)) return DEFAULT_CONTEXT_SIZE;
+  return Math.min(MAX_CONTEXT_SIZE, Math.max(0, Math.round(numericValue)));
+}
 
 type Translate = (id: string, values?: Record<string, unknown>) => string;
 
@@ -147,6 +156,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [files, setFiles] = useFile();
   const [lang, setLang] = useLocalStorage("translate_lang", "");
   const [additional, setAdditional] = useLocalStorage("translate_additional", "");
+  const [contextSize, setContextSize] = useLocalStorage(
+    "translate_context_size",
+    DEFAULT_CONTEXT_SIZE
+  );
+  const normalizedContextSize = normalizeContextSize(contextSize);
   const [model, setModel] = useModel();
   const [prompt] = usePrompt();
   const [delay] = useDelay();
@@ -156,6 +170,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const apiKey = keys.find((key) => key.trim().length > 0)?.trim() || "";
   const normalizedApiHost = apiHost.trim();
   const [requestsPerMinute] = useRPM();
+  const [concurrency] = useTranslationConcurrency();
   const [translationSuccessCount, incrementTranslationSuccessCount] =
     useTranslationSuccessCount();
   const [multiLangSave, setMultiLangSave] = useLocalStorage<TranslationParams["multiLangSave"]>(
@@ -485,6 +500,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           additional,
           temperature,
           multiLangSave,
+          concurrency,
+          contextSize: normalizedContextSize,
           delay: delay * 1000,
           requestsPerMinute,
           outputDirectory: outputDirectory || undefined,
@@ -876,6 +893,26 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                   className="min-h-32 resize-none"
                 />
                 <FieldDescription>{t("tasks.additional.description")}</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="task-context-size">{t("tasks.context.label")}</FieldLabel>
+                <Input
+                  id="task-context-size"
+                  type="number"
+                  min="0"
+                  max={MAX_CONTEXT_SIZE}
+                  step="1"
+                  inputMode="numeric"
+                  value={normalizedContextSize}
+                  onChange={(event) => {
+                    const nextValue = Number(event.target.value);
+                    if (!Number.isFinite(nextValue)) return;
+                    setContextSize(
+                      Math.min(MAX_CONTEXT_SIZE, Math.max(0, Math.round(nextValue)))
+                    );
+                  }}
+                />
+                <FieldDescription>{t("tasks.context.description")}</FieldDescription>
               </Field>
             </FieldGroup>
             <FieldGroup>
