@@ -7,6 +7,57 @@ import { z } from "zod";
 import { generateText, Output, tool } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
+export interface SubtitleCueData {
+  text: string;
+  start: number | string;
+  end: number | string;
+  translatedText?: string;
+}
+
+export interface SubtitleCue {
+  type: "cue";
+  data: SubtitleCueData;
+}
+
+interface SubtitleHeader {
+  type: "header";
+  data: string;
+}
+
+interface AssDescriptor {
+  key?: string;
+  type?: string;
+  value?: Record<string, string> | string;
+  [key: string]: unknown;
+}
+
+interface AssSection {
+  section?: string;
+  body?: AssDescriptor[];
+  [key: string]: unknown;
+}
+
+export interface AssSubtitle {
+  full: AssSection[];
+  events: SubtitleCue[];
+}
+
+export type ParsedSubtitle = Array<SubtitleCue | SubtitleHeader> | AssSubtitle;
+export type MultiLanguageSave =
+  | "none"
+  | "translate+original"
+  | "original+translate";
+
+function isCue(node: SubtitleCue | SubtitleHeader): node is SubtitleCue {
+  return node.type === "cue";
+}
+
+export function getSubtitleCues(parsedSubtitle: ParsedSubtitle): SubtitleCue[] {
+  return Array.isArray(parsedSubtitle)
+    ? parsedSubtitle.filter(isCue)
+    : parsedSubtitle.events;
+}
+
 function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
   return createOpenAICompatible({
     name: "openai",
@@ -20,12 +71,12 @@ function getAi({ apiKey, apiHost }: { apiKey: string; apiHost: string }) {
   });
 }
 
-function splitIntoChunk(array: any[], by = 5) {
-  let chunks = [];
-  let chunk = [];
-  for (let i = 0; i < array.length; i++) {
-    if (array[i].data?.translatedText) continue;
-    chunk.push(array[i]);
+function splitIntoChunk(array: SubtitleCue[], by = 5): SubtitleCue[][] {
+  const chunks: SubtitleCue[][] = [];
+  let chunk: SubtitleCue[] = [];
+  for (const cue of array) {
+    if (cue.data.translatedText) continue;
+    chunk.push(cue);
     if (chunk.length === by) {
       chunks.push(chunk);
       chunk = [];
@@ -120,7 +171,7 @@ async function translateSubtitleChunk(
       maxRetries: 3,
     });
     return output;
-  } catch (e: any) {
+  } catch (e: unknown) {
     throw e;
   }
 }
@@ -201,30 +252,42 @@ async function translateSubtitleSingle(
       maxRetries: 3,
     });
     return output.result;
-  } catch (e: any) {
+  } catch (e: unknown) {
     throw e;
   }
 }
 
-function parseSubtitle(fileContent: string, fileExtension: string) {
+function parseSubtitle(
+  fileContent: string,
+  fileExtension: string
+): ParsedSubtitle {
   if (["srt", "vtt"].includes(fileExtension)) {
-    return parseSync(fileContent);
+    return parseSync(fileContent) as unknown as Array<
+      SubtitleCue | SubtitleHeader
+    >;
   }
   if (["ass", "ssa"].includes(fileExtension)) {
-    const parsedAssSubtitle = assParser(fileContent);
+    const parsedAssSubtitle = assParser(fileContent) as AssSection[];
     const events = parsedAssSubtitle
-      .filter((x: any) => x.section === "Events")[0]
-      .body.filter(({ key }: any) => key === "Dialogue")
-      .map((line: any) => {
+      .find((section) => section.section === "Events")
+      ?.body?.filter(
+        (line) =>
+          line.key === "Dialogue" &&
+          typeof line.value === "object" &&
+          line.value !== null &&
+          typeof line.value.Text === "string"
+      )
+      .map((line) => {
+        const value = line.value as Record<string, string>;
         return {
-          type: `cue`,
+          type: "cue" as const,
           data: {
-            text: line.value.Text,
-            start: line.value.Start,
-            end: line.value.End,
+            text: value.Text,
+            start: value.Start ?? "",
+            end: value.End ?? "",
           },
         };
-      });
+      }) ?? [];
     return { full: parsedAssSubtitle, events };
   }
   throw new Error("Unsupported file extension");
@@ -232,10 +295,10 @@ function parseSubtitle(fileContent: string, fileExtension: string) {
 
 function saveTranslated(
   outputPath: string,
-  parsedSubtitle: any,
+  parsedSubtitle: ParsedSubtitle,
   fileExtension: string,
-  multiLangSave: string = "none"
-) {
+  multiLangSave: MultiLanguageSave = "none"
+): void {
   function parseTranslatedText(
     originalSubtitle: string = "",
     translatedText: string = "",
@@ -248,49 +311,59 @@ function saveTranslated(
         return `${translatedText}${splitText}${originalSubtitle}`;
       case "original+translate":
         return `${originalSubtitle}${splitText}${translatedText}`;
+      default:
+        return translatedText;
     }
   }
 
-  let newSubtitle;
-  if (["srt", "vtt"].includes(fileExtension)) {
+  let newSubtitle = "";
+  if (Array.isArray(parsedSubtitle)) {
     const format = fileExtension === "vtt" ? "WebVTT" : "SRT";
     newSubtitle = stringifySync(
-      parsedSubtitle.map((x) => {
+      parsedSubtitle.map((node) => {
+        if (!isCue(node)) return node;
         return {
-          type: x.type,
+          type: node.type,
           data: {
-            ...x.data,
+            ...node.data,
             text: parseTranslatedText(
-              x.data.text,
-              x.data.translatedText || x.data.text
+              node.data.text,
+              node.data.translatedText || node.data.text
             ),
           },
         };
       }),
       { format }
     );
-  }
-
-  if (["ass", "ssa"].includes(fileExtension)) {
+  } else {
     const { full, events } = parsedSubtitle;
     // Use sequential alignment with Events order instead of text matching to avoid misalignment
     let dialogueIndex = 0;
     newSubtitle = assStringify(
-      full.map((x: any) => {
-        if (x.section === "Events") {
-          x.body = x.body.map((line: any) => {
+      full.map((section) => {
+        if (section.section === "Events" && section.body) {
+          section.body = section.body.map((line) => {
             if (line.key === "Dialogue") {
               const currentEvent = events[dialogueIndex++];
               const translatedText =
-                currentEvent && currentEvent.data
-                  ? currentEvent.data.translatedText || line.value.Text
-                  : line.value.Text;
+                currentEvent &&
+                currentEvent.data.translatedText &&
+                typeof line.value === "object" &&
+                line.value !== null
+                  ? currentEvent.data.translatedText
+                  : typeof line.value === "object" && line.value !== null
+                    ? line.value.Text ?? ""
+                    : "";
+              const value =
+                typeof line.value === "object" && line.value !== null
+                  ? line.value
+                  : {};
               return {
                 key: "Dialogue",
                 value: {
-                  ...line.value,
+                  ...value,
                   Text: parseTranslatedText(
-                    line.value.Text,
+                    value.Text,
                     translatedText,
                     "\\n"
                   ),
@@ -300,7 +373,7 @@ function saveTranslated(
             return line;
           });
         }
-        return x;
+        return section;
       })
     );
   }

@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import useFile from "@/hooks/useFile";
-import { ipcRenderer } from "electron";
 import { useLocalStorage } from "usehooks-ts";
 import useModel from "@/hooks/useModel";
 import usePrompt from "@/hooks/usePrompt";
@@ -13,26 +12,22 @@ import InputField from "@/components/InputField";
 import TextareaField from "@/components/TextareaField";
 import Button from "@/components/Button";
 import { getFilePath } from "@/utils/filePath";
+import type {
+  BatchProgress,
+  SubtitleCuePreview,
+  SubtitleFile,
+  TranslationParams,
+} from "@/types/electron-api";
+import { File, FileText, Play, Trash2, X } from "lucide-react";
 
-interface FileType {
-  path: string;
-  name: string;
-}
-
-interface ProgressType {
-  progress: number;
-  status: "pending" | "analyzing" | "translating" | "done" | "error";
-  error?: string;
-  totalCues?: number;
-  currentCue?: number;
-  analysis?: string;
-}
+type FileProgress = Pick<BatchProgress, "progress" | "status"> &
+  Partial<Omit<BatchProgress, "progress" | "status">>;
 
 export default function TranslatorPanel() {
   const { t } = useTranslation();
   const [files, setFiles] = useFile() as [
-    { path: string; name: string }[],
-    (files: { path: string; name: string }[]) => void
+    SubtitleFile[],
+    (files: SubtitleFile[]) => void
   ];
   const [lang, setLang] = useLocalStorage("translate_lang", "");
   const [additional, setAdditional] = useLocalStorage(
@@ -45,27 +40,28 @@ export default function TranslatorPanel() {
   const [keys] = useAPIKeys();
   const [apiHost] = useAPIHost();
   const [temperature] = useTemperature();
-  const [multiLangSave] = useLocalStorage("multi_language_save", "none");
-  const [batchProgress, setBatchProgress] = useState<
-    Record<string, ProgressType>
-  >({});
+  const [multiLangSave] = useLocalStorage<TranslationParams["multiLangSave"]>(
+    "multi_language_save",
+    "none"
+  );
+  const [batchProgress, setBatchProgress] = useState<Record<string, FileProgress>>({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
-  const [cues, setCues] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<SubtitleFile | null>(null);
+  const [cues, setCues] = useState<SubtitleCuePreview[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   // throttle live preview reload
   const lastPreviewUpdateRef = useRef<number>(0);
 
   useEffect(() => {
-    const handleProgress = (event: any, data: any) => {
+    const unsubscribe = window.electronAPI.onBatchProgress((data) => {
       setBatchProgress((prev) => {
         const prevFile = prev[data.filePath] || {};
-        const merged: ProgressType = {
+        const merged: FileProgress = {
           ...prevFile,
           ...data,
-          analysis: data.analysis ?? (prevFile as any).analysis,
-        } as ProgressType;
+          analysis: data.analysis ?? prevFile.analysis,
+        };
         return { ...prev, [data.filePath]: merged };
       });
 
@@ -90,20 +86,28 @@ export default function TranslatorPanel() {
       if (data.status === "done") {
         toast.success(`Translation completed for ${data.filePath}`);
       }
-    };
+    });
 
-    ipcRenderer.on("batch-progress", handleProgress);
-
-    return () => {
-      ipcRenderer.removeListener("batch-progress", handleProgress);
-    };
+    return unsubscribe;
   }, [modalOpen, selectedFile]);
 
   const overallProgress =
     Object.values(batchProgress).reduce(
-      (acc: number, curr: ProgressType) => acc + curr.progress,
+      (acc: number, curr: FileProgress) => acc + curr.progress,
       0
     ) / (files.length || 1);
+
+  const resolveSelectedFiles = (selectedFiles: File[]): SubtitleFile[] =>
+    selectedFiles.flatMap((file) => {
+      try {
+        return [{ path: getFilePath(file), name: file.name }];
+      } catch (error: unknown) {
+        toast.error(
+          error instanceof Error ? error.message : "Unable to read file"
+        );
+        return [];
+      }
+    });
 
   const startBatchTranslation = async () => {
     if (
@@ -115,7 +119,7 @@ export default function TranslatorPanel() {
     }
     setIsTranslating(true);
     setBatchProgress(
-      files.reduce<Record<string, ProgressType>>(
+      files.reduce<Record<string, FileProgress>>(
         (acc, f) => ({
           ...acc,
           [f.path]: { progress: 0, status: "pending" as const },
@@ -135,7 +139,7 @@ export default function TranslatorPanel() {
       delay: delay * 1000,
     };
     try {
-      await ipcRenderer.invoke("batch-translate", { files, params });
+      await window.electronAPI.translateBatch({ files, params });
       setIsTranslating(false);
     } catch (e: unknown) {
       const error = e as Error;
@@ -146,10 +150,7 @@ export default function TranslatorPanel() {
 
   const loadCues = async (filePath: string) => {
     try {
-      const { cues } = await ipcRenderer.invoke(
-        "get-subtitle-preview",
-        filePath
-      );
+      const { cues } = await window.electronAPI.getSubtitlePreview(filePath);
       setCues(cues);
     } catch (e: unknown) {
       const error = e as Error;
@@ -157,22 +158,22 @@ export default function TranslatorPanel() {
     }
   };
 
-  const openModal = async (file: FileType) => {
+  const openModal = async (file: SubtitleFile) => {
     setSelectedFile(file);
     await loadCues(file.path);
     // Ensure analysis is available even if the renderer missed the progress event
     try {
-      const analysis = await ipcRenderer.invoke("get-analysis", file.path);
+      const analysis = await window.electronAPI.getAnalysis(file.path);
       if (analysis) {
         setBatchProgress((prev) => {
           const prevFile = prev[file.path] || {
             progress: 0,
             status: "pending" as const,
           };
-          const merged: ProgressType = {
+          const merged: FileProgress = {
             ...prevFile,
             analysis,
-          } as ProgressType;
+          };
           return { ...prev, [file.path]: merged };
         });
       }
@@ -255,7 +256,9 @@ export default function TranslatorPanel() {
             placeholder={t(`translate.target_description`)!}
             value={lang}
             onChange={
-              isDisabled ? () => {} : (e: any) => setLang(e.target.value)
+              isDisabled
+                ? undefined
+                : (e: ChangeEvent<HTMLInputElement>) => setLang(e.target.value)
             }
             required
             className={isDisabled ? "cursor-not-allowed opacity-50" : ""}
@@ -265,7 +268,10 @@ export default function TranslatorPanel() {
             placeholder={t(`translate.additional_description`)!}
             value={additional}
             onChange={
-              isDisabled ? () => {} : (e: any) => setAdditional(e.target.value)
+              isDisabled
+                ? undefined
+                : (e: ChangeEvent<HTMLTextAreaElement>) =>
+                    setAdditional(e.target.value)
             }
             minHeight="200px"
           />
@@ -274,7 +280,7 @@ export default function TranslatorPanel() {
           <Button
             onClick={isDisabled ? () => {} : startBatchTranslation}
             variant="primary"
-            icon="bx-play"
+            icon={Play}
             className={`shadow ${
               isDisabled ? "cursor-not-allowed opacity-50" : ""
             }`}
@@ -303,27 +309,22 @@ export default function TranslatorPanel() {
               e.preventDefault();
               setIsDragging(false);
               if (!isDisabled && e.dataTransfer.files) {
-                const fileArray = Array.from(e.dataTransfer.files)
-                  .filter((f: File) =>
-                    [".ass", ".srt", ".vtt", ".saa"].some((ext) =>
-                      f.name.toLowerCase().endsWith(ext)
+                const fileArray = resolveSelectedFiles(
+                  Array.from(e.dataTransfer.files).filter((file) =>
+                    [".ass", ".srt", ".vtt", ".ssa"].some((ext) =>
+                      file.name.toLowerCase().endsWith(ext)
                     )
                   )
-                  .map((f: File) => ({
-                    path: getFilePath(f),
-                    name: f.name,
-                  }));
+                );
                 setFiles(fileArray);
               }
             }}
           >
-            <i
-              className={`bx ${
-                files.length > 0
-                  ? `bxs-file-blank`
-                  : `bx-file-blank opacity-50 `
-              } text-4xl`}
-            ></i>
+            {files.length > 0 ? (
+              <FileText size={40} aria-hidden="true" />
+            ) : (
+              <File size={40} className="opacity-50" aria-hidden="true" />
+            )}
 
             <div className="opacity-50 text-sm">
               {t(`translate.file_description`)}
@@ -337,22 +338,19 @@ export default function TranslatorPanel() {
                   ? () => {}
                   : (e) => {
                       if (e.target.files) {
-                        const fileArray = Array.from(
-                          e.target.files as FileList
-                        ).map((f: File) => ({
-                          path: getFilePath(f),
-                          name: f.name,
-                        }));
+                        const fileArray = resolveSelectedFiles(
+                          Array.from(e.target.files)
+                        );
                         setFiles(fileArray);
                       }
                     }
               }
-              accept=".ass,.srt,.vtt,.saa"
+              accept=".ass,.ssa,.srt,.vtt"
               disabled={isDisabled}
             />
             <input
               className="hidden"
-              value={files.map((f: FileType) => f.path).join(",")}
+              value={files.map((file) => file.path).join(",")}
               required
               onChange={() => {}}
             />
@@ -364,7 +362,7 @@ export default function TranslatorPanel() {
                 <Button
                   onClick={clearCompletedFiles}
                   variant="secondary"
-                  icon="bx-trash"
+                  icon={Trash2}
                   className="text-sm"
                 >
                   {t("translate.clear_completed")}
@@ -374,10 +372,10 @@ export default function TranslatorPanel() {
             {/* Batch Progress if files are present */}
             {files.length > 0 && (
               <div className="flex-1 overflow-y-scroll flex flex-col gap-1 p-1">
-                {files.map((file: FileType) => {
-                  const progressData = batchProgress[file.path] || {
+                {files.map((file: SubtitleFile) => {
+                  const progressData: FileProgress = batchProgress[file.path] || {
                     progress: 0,
-                    status: "pending" as const,
+                    status: "pending",
                   };
                   let statusText = "";
                   if (
@@ -415,7 +413,7 @@ export default function TranslatorPanel() {
                           className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-sm"
                           title="Remove file"
                         >
-                          <i className="bx bx-trash"></i>
+                          <Trash2 size={16} aria-hidden="true" />
                         </button>
                       </div>
                       <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
@@ -455,7 +453,7 @@ export default function TranslatorPanel() {
             <div className="bg-white p-4 rounded max-w-4xl  h-full overflow-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold">{selectedFile.name}</h3>
-                <Button onClick={closeModal} icon="bx-x" className="shrink-0">
+                <Button onClick={closeModal} icon={X} className="shrink-0">
                   {t("translate.close")}
                 </Button>
               </div>
@@ -472,7 +470,7 @@ export default function TranslatorPanel() {
                     <hr className="my-2" />
                   </div>
                 )}
-                {cues.map((cue: any, index: number) => (
+                {cues.map((cue, index) => (
                   <div
                     key={index}
                     className="border border-gray-300 p-1 px-2 mb-1 rounded"

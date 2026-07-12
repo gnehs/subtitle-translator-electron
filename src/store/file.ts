@@ -1,12 +1,17 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { SubtitleFile } from "@/types/electron-api";
+
+interface FileState {
+  value: SubtitleFile[];
+}
+
+const initialState: FileState = { value: [] };
 
 export const fileSlice = createSlice({
   name: "file",
-  initialState: {
-    value: [],
-  },
+  initialState,
   reducers: {
-    setFiles: (state, action) => {
+    setFiles: (state, action: PayloadAction<SubtitleFile[]>) => {
       state.value = action.payload;
     },
   },

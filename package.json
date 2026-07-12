@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "node utils/writeVersion.js && tsc && vite build && electron-builder",
+    "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
     "e2e": "playwright test"
@@ -50,6 +50,7 @@
     "ass-stringify": "^0.1.3",
     "framer-motion": "^12.42.2",
     "i18next": "^26.3.6",
+    "lucide-react": "^1.24.0",
     "normalize.css": "^8.0.1",
     "react-i18next": "^17.0.9",
     "react-redux": "^9.3.0",

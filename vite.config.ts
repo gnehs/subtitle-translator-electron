@@ -5,7 +5,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import electron from "vite-electron-plugin";
 import { customStart, loadViteEnv } from "vite-electron-plugin/plugin";
-import renderer from "vite-plugin-electron-renderer";
 import pkg from "./package.json";
 
 // https://vitejs.dev/config/
@@ -15,6 +14,9 @@ export default defineConfig(({ command }) => {
   const sourcemap = command === "serve" || !!process.env.VSCODE_DEBUG;
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version),
+    },
     resolve: {
       alias: {
         "@": path.join(__dirname, "src"),
@@ -42,11 +44,6 @@ export default defineConfig(({ command }) => {
           // Allow use `import.meta.env.VITE_SOME_KEY` in Electron-Main
           loadViteEnv(),
         ],
-      }),
-      // Use Node.js API in the Renderer-process
-      renderer({
-        //@ts-ignore
-        nodeIntegration: true,
       }),
     ],
     server: !!process.env.VSCODE_DEBUG

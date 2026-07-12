@@ -4,6 +4,7 @@ import useModel from "../../hooks/useModel";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useAPIHost, useAPIKeys } from "@/hooks/useOpenAI";
 import { useTemperature } from "../../hooks/useOpenAI";
+import { Check, ChevronDown } from "lucide-react";
 
 export default function Model() {
   const { t } = useTranslation();
@@ -33,12 +34,25 @@ export default function Model() {
           signal: controller.signal,
         });
         if (!res.ok) return;
-        const json = await res.json();
-        console.log("Fetched models", baseUrl, json);
-        const data = Array.isArray(json?.data) ? json.data : [];
-        const ids = data
-          .map((m: any) => m?.id)
-          .filter((id: any) => typeof id === "string");
+        const json: unknown = await res.json();
+        const data =
+          json &&
+          typeof json === "object" &&
+          "data" in json &&
+          Array.isArray(json.data)
+            ? json.data
+            : [];
+        const ids = data.flatMap((modelInfo) => {
+          if (
+            !modelInfo ||
+            typeof modelInfo !== "object" ||
+            !("id" in modelInfo) ||
+            typeof modelInfo.id !== "string"
+          ) {
+            return [];
+          }
+          return [modelInfo.id];
+        });
         setRemoteModels(ids);
       } catch (_) {
         // silent
@@ -160,11 +174,13 @@ export default function Model() {
                 {model || t("modelName")}
               </div>
             </div>
-            <i
-              className={`bx bx-chevron-down text-slate-400 transition-transform duration-200 ease-in-out ${
+            <ChevronDown
+              size={18}
+              aria-hidden="true"
+              className={`text-slate-400 transition-transform duration-200 ease-in-out ${
                 isModelOpen ? "rotate-180" : ""
               }`}
-            ></i>
+            />
           </button>
 
           {isModelOpen && (
@@ -219,7 +235,7 @@ export default function Model() {
                                 : "bg-slate-300"
                             }`}
                           >
-                            <i className="bx bx-check text-white text-xs"></i>
+                            <Check size={12} className="text-white" aria-hidden="true" />
                           </div>
                         )}
                       </button>

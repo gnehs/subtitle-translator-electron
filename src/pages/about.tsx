@@ -4,6 +4,7 @@ import { useVersion } from "@/hooks/useVersion";
 import { useTranslation } from "react-i18next";
 import icon from "@/assets/icon.png";
 import BuyMeACoffee from "@/components/BuyMeACoffee";
+import { Bug, GitFork } from "lucide-react";
 export default function About() {
   const { t } = useTranslation();
   const version = useVersion();
@@ -20,14 +21,14 @@ export default function About() {
               <Button
                 href="https://github.com/gnehs/subtitle-translator-electron"
                 target="_blank"
-                icon="bxl-github"
+                icon={GitFork}
               >
                 GitHub
               </Button>
               <Button
                 href="https://github.com/gnehs/subtitle-translator-electron/issues"
                 target="_blank"
-                icon="bx-bug"
+                icon={Bug}
               >
                 {t("about.report_issue")}
               </Button>

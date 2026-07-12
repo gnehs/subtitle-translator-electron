@@ -1,9 +1,23 @@
-import { app, BrowserWindow, shell, ipcMain } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  type IpcMainInvokeEvent,
+  type WebFrameMain,
+  type WebContents,
+} from "electron";
 import { release } from "node:os";
 import { join } from "node:path";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import pool from "tiny-async-pool";
+import { z } from "zod";
+import type {
+  BatchProgress,
+  BatchTranslationRequest,
+} from "../../src/types/electron-api";
 import {
   splitIntoChunk,
   parseSubtitle,
@@ -11,6 +25,11 @@ import {
   translateSubtitleSingle,
   saveTranslated,
   analyzeSubtitlesForContext,
+  getSubtitleCues,
+} from "./utils/translate";
+import type {
+  ParsedSubtitle,
+  SubtitleCue,
 } from "./utils/translate";
 
 // The built directory structure
@@ -50,8 +69,152 @@ let win: BrowserWindow | null = null;
 const preload = join(__dirname, "../preload/index.js");
 const url = process.env.VITE_DEV_SERVER_URL;
 const indexHtml = join(process.env.DIST, "index.html");
+const packagedIndexUrl = pathToFileURL(indexHtml).href;
+const supportedExtensions = new Set(["ass", "ssa", "srt", "vtt"]);
+const allowedExternalHosts = new Set([
+  "github.com",
+  "www.github.com",
+  "www.buymeacoffee.com",
+]);
 
-async function createWindow() {
+const subtitleFileSchema = z
+  .object({
+    path: z.string().min(1),
+    name: z.string().min(1),
+  })
+  .refine(({ path: filePath }) => isSupportedSubtitlePath(filePath), {
+    message: "Unsupported subtitle file",
+  });
+
+const translationParamsSchema = z.object({
+  apiKeys: z
+    .array(z.string())
+    .refine((keys) => keys.some((key) => key.trim().length > 0), {
+      message: "At least one API key is required",
+    }),
+  apiHost: z.string().min(1),
+  model: z.string().min(1),
+  prompt: z.string(),
+  lang: z.string(),
+  additional: z.string(),
+  temperature: z.number().finite().min(0).max(2),
+  multiLangSave: z.enum(["none", "translate+original", "original+translate"]),
+  delay: z.number().finite().min(0),
+  contextSize: z.number().int().min(0).max(100).optional(),
+});
+
+const batchTranslationRequestSchema = z.object({
+  files: z.array(subtitleFileSchema).min(1).max(100),
+  params: translationParamsSchema,
+});
+
+function isSupportedSubtitlePath(filePath: string): boolean {
+  return supportedExtensions.has(path.extname(filePath).slice(1).toLowerCase());
+}
+
+function assertSubtitleFile(filePath: string): void {
+  if (!isSupportedSubtitlePath(filePath)) {
+    throw new Error("Unsupported subtitle file");
+  }
+
+  const fileInfo = fs.statSync(filePath);
+  if (!fileInfo.isFile()) {
+    throw new Error("Subtitle path is not a file");
+  }
+}
+
+function isTrustedSender(frame: WebFrameMain | null): boolean {
+  if (!frame) return false;
+
+  try {
+    if (url) {
+      return new URL(frame.url).origin === new URL(url).origin;
+    }
+
+    const actualUrl = new URL(frame.url);
+    const expectedUrl = new URL(packagedIndexUrl);
+    return (
+      actualUrl.protocol === expectedUrl.protocol &&
+      actualUrl.pathname === expectedUrl.pathname
+    );
+  } catch {
+    return false;
+  }
+}
+
+function assertTrustedSender(event: IpcMainInvokeEvent): void {
+  if (!isTrustedSender(event.senderFrame)) {
+    throw new Error("Untrusted IPC sender");
+  }
+}
+
+function isAllowedExternalUrl(target: string): boolean {
+  try {
+    const parsed = new URL(target);
+    return parsed.protocol === "https:" && allowedExternalHosts.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function getTranslatedPath(filePath: string): string {
+  const extension = path.extname(filePath).slice(1).toLowerCase();
+  const basename = path.basename(filePath, path.extname(filePath));
+  return path.join(path.dirname(filePath), `${basename}.translated.${extension}`);
+}
+
+function getErrorDetails(error: unknown): {
+  message: string;
+  name?: string;
+  status?: number;
+} {
+  const errorRecord =
+    typeof error === "object" && error !== null
+      ? (error as Record<string, unknown>)
+      : {};
+  const cause =
+    typeof errorRecord.cause === "object" && errorRecord.cause !== null
+      ? (errorRecord.cause as Record<string, unknown>)
+      : {};
+  const messages = [
+    error instanceof Error ? error.message : undefined,
+    typeof error === "string" ? error : undefined,
+    typeof errorRecord.message === "string" ? errorRecord.message : undefined,
+    typeof cause.message === "string" ? cause.message : undefined,
+  ].filter((message): message is string => Boolean(message));
+  const response =
+    typeof errorRecord.response === "object" && errorRecord.response !== null
+      ? (errorRecord.response as Record<string, unknown>)
+      : {};
+
+  return {
+    message: messages.join(" | ") || "Unknown error",
+    name:
+      typeof errorRecord.name === "string"
+        ? errorRecord.name
+        : typeof cause.name === "string"
+          ? cause.name
+          : undefined,
+    status:
+      typeof errorRecord.status === "number"
+        ? errorRecord.status
+        : typeof response.status === "number"
+          ? response.status
+          : typeof cause.status === "number"
+            ? cause.status
+            : undefined,
+  };
+}
+
+function getErrorMessage(error: unknown): string {
+  return getErrorDetails(error).message;
+}
+
+function sendProgress(sender: WebContents, progress: BatchProgress): void {
+  sender.send("batch-progress", progress);
+}
+
+function createWindow() {
   win = new BrowserWindow({
     title: "Main window",
     icon: join(process.env.PUBLIC, "favicon.ico"),
@@ -59,11 +222,9 @@ async function createWindow() {
     minHeight: 640,
     webPreferences: {
       preload,
-      // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-      // Consider using contextBridge.exposeInMainWorld
-      // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      nodeIntegration: true,
-      contextIsolation: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
     ...(process.platform === "darwin"
       ? {
@@ -79,22 +240,44 @@ async function createWindow() {
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {
-    // electron-vite-vue#298
-    win.loadURL(url);
+    void win.loadURL(url);
     // Open devTool if the app is not packaged
     // win.webContents.openDevTools()
   } else {
-    win.loadFile(indexHtml);
+    void win.loadFile(indexHtml);
   }
 
-  // Make all links open with the browser, not with the application
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("https:")) shell.openExternal(url);
+  win.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (isAllowedExternalUrl(targetUrl)) {
+      void shell.openExternal(targetUrl);
+    }
     return { action: "deny" };
+  });
+
+  win.webContents.on("will-navigate", (event, navigationUrl) => {
+    let isAllowed = false;
+    try {
+      if (url) {
+        isAllowed =
+          new URL(navigationUrl).origin === new URL(url).origin;
+      } else {
+        const actualUrl = new URL(navigationUrl);
+        const expectedUrl = new URL(packagedIndexUrl);
+        isAllowed =
+          actualUrl.protocol === expectedUrl.protocol &&
+          actualUrl.pathname === expectedUrl.pathname;
+      }
+    } catch {
+      isAllowed = false;
+    }
+
+    if (!isAllowed) event.preventDefault();
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(createWindow).catch((error: unknown) => {
+  console.error("Failed to create application window:", error);
+});
 
 app.on("window-all-closed", () => {
   win = null;
@@ -118,49 +301,34 @@ app.on("activate", () => {
   }
 });
 
-// New window example arg: new windows url
-ipcMain.handle("open-win", (_, arg) => {
-  const childWindow = new BrowserWindow({
-    webPreferences: {
-      preload,
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  });
-
-  if (process.env.VITE_DEV_SERVER_URL) {
-    childWindow.loadURL(`${url}#${arg}`);
-  } else {
-    childWindow.loadFile(indexHtml, { hash: arg });
-  }
-});
-
-ipcMain.on("batch-progress", (event, data) => {
-  // Optional: log or handle progress if needed
-  console.log("Batch progress:", data);
-});
-
 // Cache analysis per file so renderer can fetch it on demand
-const analysisCache = new Map<string, any>();
+const analysisCache = new Map<string, string>();
 
-async function retryTranslate(fn, params, maxRetries = 5, delay = 1000) {
+ipcMain.handle("open-external", (event, target: unknown) => {
+  assertTrustedSender(event);
+
+  if (typeof target !== "string" || !isAllowedExternalUrl(target)) {
+    throw new Error("External URL is not allowed");
+  }
+
+  return shell.openExternal(target);
+});
+
+async function retryTranslate<TInput, TResult>(
+  fn: (input: TInput) => Promise<TResult>,
+  input: TInput,
+  maxRetries = 5,
+  delay = 1000
+): Promise<TResult> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await fn(params);
-    } catch (error) {
+      return await fn(input);
+    } catch (error: unknown) {
       if (attempt === maxRetries) {
         throw error;
       }
       // 判斷是否可重試（涵蓋 schema 不符、未產生物件 等訊息）
-      const errObj: any = error || {};
-      const msgParts = [
-        errObj.message,
-        typeof errObj.toString === "function" ? errObj.toString() : "",
-        errObj.cause?.message,
-      ].filter(Boolean);
-      const errorMessage = msgParts.join(" | ");
-      const status = errObj.status || errObj.response?.status;
-      const name = errObj.name || errObj.cause?.name;
+      const { message: errorMessage, name, status } = getErrorDetails(error);
       const msgLower = (errorMessage || "").toLowerCase();
 
       const isRetryable =
@@ -190,10 +358,13 @@ async function retryTranslate(fn, params, maxRetries = 5, delay = 1000) {
   }
 }
 
-ipcMain.handle("batch-translate", async (event, { files, params }) => {
-  const processFile = async (file) => {
+ipcMain.handle("batch-translate", async (event, request: unknown) => {
+  assertTrustedSender(event);
+  const { files, params } = batchTranslationRequestSchema.parse(request);
+
+  const processFile = async (file: BatchTranslationRequest["files"][number]) => {
     try {
-      event.sender.send("batch-progress", {
+      sendProgress(event.sender, {
         filePath: file.path,
         progress: 0,
         status: "translating",
@@ -201,22 +372,15 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       });
       const ext = path.extname(file.path).slice(1).toLowerCase();
       const content = fs.readFileSync(file.path, "utf8");
-      let parsed = parseSubtitle(content, ext);
-      let subtitle;
-      if (Array.isArray(parsed)) {
-        subtitle = parsed.filter((line: any) => line.type === "cue");
-      } else if (parsed.events) {
-        subtitle = parsed.events;
-      } else {
-        subtitle = parsed;
-      }
+      const parsed: ParsedSubtitle = parseSubtitle(content, ext);
+      const subtitle = getSubtitleCues(parsed);
       const totalCues = subtitle.length;
 
       // 建立原始索引對照，供後續「上下文視窗」策略使用
-      const indexMap = new Map<any, number>();
-      subtitle.forEach((cue: any, idx: number) => indexMap.set(cue, idx));
+      const indexMap = new Map<SubtitleCue, number>();
+      subtitle.forEach((cue, idx) => indexMap.set(cue, idx));
 
-      event.sender.send("batch-progress", {
+      sendProgress(event.sender, {
         filePath: file.path,
         progress: 1,
         status: "analyzing",
@@ -225,18 +389,15 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       });
 
       // Prepare output path early so we can write partial updates during translation
-      const outputPath = path.join(
-        path.dirname(file.path),
-        file.name.replace(/\.[^/.]+$/, "") + ".translated." + ext
-      );
+      const outputPath = getTranslatedPath(file.path);
 
       // Build analysis context (plot summary + glossary) and attach to all requests
       const allTexts = subtitle
-        .map((cue: any) => (cue && cue.data ? cue.data.text : ""))
+        .map((cue) => cue.data.text)
         .filter((t: string) => t && t.length > 0);
 
       let combinedAdditional = params.additional || "";
-      let analysisData: any = null;
+      let analysisData: string | null = null;
       try {
         const analysis = await analyzeSubtitlesForContext(allTexts, {
           apiKeys: params.apiKeys || [],
@@ -254,7 +415,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         // Save in cache for renderer retrieval
         analysisCache.set(file.path, analysis);
         // Notify renderer with analysis result so UI can display it
-        event.sender.send("batch-progress", {
+        sendProgress(event.sender, {
           filePath: file.path,
           progress: 4,
           status: "analyzing",
@@ -269,7 +430,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         );
       }
 
-      event.sender.send("batch-progress", {
+      sendProgress(event.sender, {
         filePath: file.path,
         progress: 5,
         status: "translating",
@@ -279,7 +440,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       });
 
       // Translate
-      let chunks = splitIntoChunk(subtitle, 20);
+      const chunks = splitIntoChunk(subtitle, 20);
 
       let completedCues = 0;
 
@@ -289,8 +450,8 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
           typeof params.contextSize === "number" ? params.contextSize : 5;
 
         const coreIndices = block
-          .map((cue: any) => indexMap.get(cue) as number)
-          .filter((n: number) => typeof n === "number")
+          .map((cue) => indexMap.get(cue))
+          .filter((n): n is number => typeof n === "number")
           .sort((a: number, b: number) => a - b);
 
         if (coreIndices.length === 0) return;
@@ -302,12 +463,12 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         const contextEnd = Math.min(subtitle.length - 1, coreEnd + contextSize);
 
         const windowCues = subtitle.slice(contextStart, contextEnd + 1);
-        const windowText = windowCues.map((c: any) =>
-          c && c.data ? String(c.data.text).replaceAll(/\n/g, " ").trim() : ""
+        const windowText = windowCues.map((cue) =>
+          cue.data.text.replaceAll(/\n/g, " ").trim()
         );
 
         // 多次嘗試整塊翻譯（利用隨機性），若三次仍未對齊，改用逐句翻譯（僅針對核心段）
-        let translatedWindow: string[] | null = null;
+        let translatedWindow: Array<string | null> | null = null;
         for (let attempt = 1; attempt <= 3; attempt++) {
           const baseTemp =
             typeof params.temperature === "number" ? params.temperature : 1;
@@ -345,11 +506,12 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
 
         // 逐句 fallback：僅翻譯核心行，並填回對應視窗位置
         if (!translatedWindow) {
-          translatedWindow = new Array(windowText.length).fill(null);
+          translatedWindow = new Array<string | null>(windowText.length).fill(
+            null
+          );
           for (let i = 0; i < coreIndices.length; i++) {
             const idx = coreIndices[i];
-            const lineText =
-              subtitle[idx] && subtitle[idx].data ? subtitle[idx].data.text : "";
+            const lineText = subtitle[idx]?.data.text ?? "";
             const single = await retryTranslate(
               async (singleText) =>
                 translateSubtitleSingle(singleText, {
@@ -374,7 +536,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         // 只回寫核心段的翻譯（丟棄上下文前後行），以避免割裂感
         let chunkCompleted = 0;
         for (const cue of block) {
-          const idx = indexMap.get(cue) as number;
+          const idx = indexMap.get(cue);
           if (typeof idx !== "number") continue;
           const offset = idx - contextStart;
           const t =
@@ -383,16 +545,14 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
             typeof translatedWindow[offset] === "string"
               ? translatedWindow[offset]
               : "";
-          if (cue && cue.data) {
-            cue.data.translatedText = t;
-            chunkCompleted++;
-          }
+          cue.data.translatedText = t;
+          chunkCompleted++;
         }
 
         completedCues += chunkCompleted;
         const progress = 10 + (completedCues / totalCues) * 90;
         const currentCue = Math.min(completedCues, totalCues);
-        event.sender.send("batch-progress", {
+        sendProgress(event.sender, {
           filePath: file.path,
           progress: Math.min(progress, 90),
           status: "translating",
@@ -419,28 +579,25 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
       }
 
       // Fallback for untranslated
-      const untranslated = subtitle.filter(
-        (line: any) => !line.data.translatedText
-      );
+      const untranslated = subtitle.filter((line) => !line.data.translatedText);
       for (let k = 0; k < untranslated.length; k++) {
         const cue = untranslated[k];
-        if (cue && cue.data) {
-          cue.data.translatedText = await retryTranslate(
-            async (singleText) =>
-              translateSubtitleSingle(singleText, {
-                ...params,
-                apiKeys: params.apiKeys || [],
-                apiHost: params.apiHost || "https://api.openai.com/v1",
-                model: params.model || "",
-                prompt: params.prompt || "",
-                lang: params.lang || "",
-                additional: combinedAdditional || "",
-                temperature: params.temperature || 1,
-              }),
-            cue.data.text
-          );
-          const currentCueIndex = subtitle.findIndex((c: any) => c === cue);
-          if (currentCueIndex !== -1) {
+        cue.data.translatedText = await retryTranslate(
+          async (singleText) =>
+            translateSubtitleSingle(singleText, {
+              ...params,
+              apiKeys: params.apiKeys || [],
+              apiHost: params.apiHost || "https://api.openai.com/v1",
+              model: params.model || "",
+              prompt: params.prompt || "",
+              lang: params.lang || "",
+              additional: combinedAdditional || "",
+              temperature: params.temperature || 1,
+            }),
+          cue.data.text
+        );
+        const currentCueIndex = subtitle.indexOf(cue);
+        if (currentCueIndex !== -1) {
             completedCues++;
             const progress =
               90 +
@@ -448,7 +605,7 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
                 untranslated.length) *
                 10;
             const currentCue = completedCues;
-            event.sender.send("batch-progress", {
+            sendProgress(event.sender, {
               filePath: file.path,
               progress: Math.min(100, progress),
               status: "translating",
@@ -471,14 +628,13 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
                 e
               );
             }
-          }
         }
       }
 
       // Final write
       saveTranslated(outputPath, parsed, ext, params.multiLangSave || "none");
       console.log(`Saved translated file to: ${outputPath}`);
-      event.sender.send("batch-progress", {
+      sendProgress(event.sender, {
         filePath: file.path,
         progress: 100,
         status: "done",
@@ -486,13 +642,13 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
         currentCue: totalCues,
         analysis: analysisData,
       });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(`Batch translation error for ${file.path}:`, e);
-      event.sender.send("batch-progress", {
+      sendProgress(event.sender, {
         filePath: file.path,
         progress: 0,
         status: "error",
-        error: e.message,
+        error: getErrorMessage(e),
       });
     }
   };
@@ -504,77 +660,57 @@ ipcMain.handle("batch-translate", async (event, { files, params }) => {
 });
 
 // Allow renderer to fetch cached analysis for a file (in case progress event missed)
-ipcMain.handle("get-analysis", async (event, filePath: string) => {
-  try {
-    return analysisCache.get(filePath) || null;
-  } catch {
-    return null;
-  }
+ipcMain.handle("get-analysis", async (event, filePath: unknown) => {
+  assertTrustedSender(event);
+  const validatedPath = z.string().min(1).parse(filePath);
+  return analysisCache.get(validatedPath) ?? null;
 });
 
-ipcMain.handle("get-translated-content", async (event, filePath) => {
-  const translatedPath =
-    filePath.replace(/\.[^/.]+$/, "") +
-    ".translated." +
-    path.extname(filePath).slice(1).toLowerCase();
-  if (fs.existsSync(translatedPath)) {
-    return fs.readFileSync(translatedPath, "utf8");
-  }
-  throw new Error("Translated file not found");
-});
+ipcMain.handle("get-subtitle-preview", async (event, filePath: unknown) => {
+  assertTrustedSender(event);
+  const validatedPath = z.string().min(1).parse(filePath);
+  assertSubtitleFile(validatedPath);
 
-ipcMain.handle("get-subtitle-preview", async (event, filePath) => {
-  const ext = path.extname(filePath).slice(1).toLowerCase();
-  const content = fs.readFileSync(filePath, "utf8");
-  let parsed = parseSubtitle(content, ext);
-  let subtitle;
-  if (Array.isArray(parsed)) {
-    subtitle = parsed.filter((line: any) => line.type === "cue");
-  } else if (parsed.events) {
-    subtitle = parsed.events;
-  } else {
-    subtitle = parsed;
-  }
+  const ext = path.extname(validatedPath).slice(1).toLowerCase();
+  const content = fs.readFileSync(validatedPath, "utf8");
+  const parsed: ParsedSubtitle = parseSubtitle(content, ext);
+  const subtitle = getSubtitleCues(parsed);
 
-  const translatedPath =
-    filePath.replace(/\.[^/.]+$/, "") + ".translated." + ext;
+  const translatedPath = getTranslatedPath(validatedPath);
 
   // Prefer time-based alignment to avoid index drift; fallback to index-based if needed
   let translatedCuesArray: string[] | null = null;
   let translatedMap: Map<string, string> | null = null;
 
-  const makeKey = (start: any, end: any) => {
-    const norm = (v: any) =>
-      typeof v === "number" ? Math.round(v) : String(v).trim();
+  const makeKey = (
+    start: number | string | undefined,
+    end: number | string | undefined
+  ) => {
+    const norm = (value: number | string | undefined) =>
+      typeof value === "number" ? Math.round(value) : String(value ?? "").trim();
     return `${norm(start)}|${norm(end)}`;
   };
 
   if (fs.existsSync(translatedPath)) {
     const translatedContent = fs.readFileSync(translatedPath, "utf8");
-    let translatedParsed = parseSubtitle(translatedContent, ext);
-    let translatedSubtitle;
-    if (Array.isArray(translatedParsed)) {
-      translatedSubtitle = translatedParsed.filter(
-        (line: any) => line.type === "cue"
-      );
-    } else if (translatedParsed.events) {
-      translatedSubtitle = translatedParsed.events;
-    } else {
-      translatedSubtitle = translatedParsed;
-    }
+    const translatedParsed: ParsedSubtitle = parseSubtitle(
+      translatedContent,
+      ext
+    );
+    const translatedSubtitle = getSubtitleCues(translatedParsed);
 
     translatedCuesArray = translatedSubtitle.map(
-      (c: any) => c.data.translatedText || c.data.text
+      (cue) => cue.data.translatedText || cue.data.text
     );
 
     translatedMap = new Map<string, string>();
-    translatedSubtitle.forEach((c: any) => {
-      const key = makeKey(c.data.start, c.data.end);
-      translatedMap!.set(key, c.data.translatedText || c.data.text);
+    translatedSubtitle.forEach((cue) => {
+      const key = makeKey(cue.data.start, cue.data.end);
+      translatedMap!.set(key, cue.data.translatedText || cue.data.text);
     });
   }
 
-  const cues = subtitle.map((cue: any, index: number) => {
+  const cues = subtitle.map((cue, index) => {
     const key = makeKey(cue.data.start, cue.data.end);
     const byTime = translatedMap ? translatedMap.get(key) : undefined;
     const byIndex = translatedCuesArray

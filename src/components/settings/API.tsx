@@ -1,7 +1,13 @@
 import Title from "../Title";
 import { useTranslation } from "react-i18next";
-import { useAPIHost, useAPIKeys, useAPIProvider } from "@/hooks/useOpenAI";
+import {
+  useAPIHost,
+  useAPIKeys,
+  useAPIProvider,
+  type APIProvider,
+} from "@/hooks/useOpenAI";
 import { useMemo, useState, useEffect, useRef } from "react";
+import { Check, ChevronDown } from "lucide-react";
 
 export default function API() {
   const { t } = useTranslation();
@@ -13,26 +19,25 @@ export default function API() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   function setKey(index: number, value: string) {
-    const newKeys = structuredClone(keys);
-    //@ts-ignore
+    const newKeys = [...keys];
     newKeys[index] = value;
     setKeys(newKeys);
   }
 
-  function preset(hostUrl: string, keyLabel: string) {
+  function preset(hostUrl: string) {
     setHost(hostUrl);
   }
 
   useEffect(() => {
     switch (provider) {
       case "openrouter":
-        preset("https://openrouter.ai/api/v1", "OpenRouter API Key");
+        preset("https://openrouter.ai/api/v1");
         break;
       case "openai":
-        preset("https://api.openai.com/v1", "OpenAI API Key");
+        preset("https://api.openai.com/v1");
         break;
       case "vercel-gateway":
-        preset("https://ai-gateway.vercel.sh/v1", "AI Gateway Key");
+        preset("https://ai-gateway.vercel.sh/v1");
         break;
       case "openai-compatible":
         // do not change host; allow user to edit
@@ -100,22 +105,24 @@ export default function API() {
                 {currentProviderInfo.name}
               </div>
             </div>
-            <i
-              className={`bx bx-chevron-down text-slate-400 transition-transform duration-200 ease-in-out ${
+            <ChevronDown
+              size={18}
+              aria-hidden="true"
+              className={`text-slate-400 transition-transform duration-200 ease-in-out ${
                 isOpen ? "rotate-180" : ""
               }`}
-            ></i>
+            />
           </button>
 
           {isOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
               <div className="py-1">
-                {[
+                {([
                   "openrouter",
                   "openai",
                   "vercel-gateway",
                   "openai-compatible",
-                ].map((providerValue) => {
+                ] satisfies APIProvider[]).map((providerValue) => {
                   const providerInfo = getProviderInfo(providerValue);
                   const isActive = provider === providerValue;
 
@@ -123,7 +130,7 @@ export default function API() {
                     <button
                       key={providerValue}
                       onClick={() => {
-                        setProvider(providerValue as any);
+                        setProvider(providerValue);
                         setIsOpen(false);
                       }}
                       className={`
@@ -143,7 +150,7 @@ export default function API() {
                       </div>
                       {isActive && (
                         <div className="w-4 h-4 bg-slate-500 rounded-full flex items-center justify-center flex-shrink-0">
-                          <i className="bx bx-check text-white text-xs"></i>
+                          <Check size={12} className="text-white" aria-hidden="true" />
                         </div>
                       )}
                     </button>

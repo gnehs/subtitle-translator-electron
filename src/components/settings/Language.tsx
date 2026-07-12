@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import resources from "../../locales/index";
 import { useLocalStorage } from "usehooks-ts";
 import { useState, useEffect, useRef } from "react";
+import { Check, ChevronDown } from "lucide-react";
 
 export default function Language() {
   const [language, setLanguage] = useLocalStorage("language", "en-US");
@@ -92,11 +93,13 @@ export default function Language() {
             {isChanging && (
               <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
             )}
-            <i
-              className={`bx bx-chevron-down text-slate-400 transition-transform duration-200 ease-in-out ${
+            <ChevronDown
+              size={18}
+              aria-hidden="true"
+              className={`text-slate-400 transition-transform duration-200 ease-in-out ${
                 isOpen ? "rotate-180" : ""
               }`}
-            ></i>
+            />
           </div>
         </button>
 
@@ -131,7 +134,7 @@ export default function Language() {
 
                     {isActive && (
                       <div className="w-4 h-4 bg-slate-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i className="bx bx-check text-white text-xs"></i>
+                        <Check size={12} className="text-white" aria-hidden="true" />
                       </div>
                     )}
                   </button>

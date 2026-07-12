@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Coffee } from "lucide-react";
 export default function BuyMeACoffee() {
   const { t } = useTranslation();
   return (
@@ -16,9 +17,10 @@ export default function BuyMeACoffee() {
         <a
           href="https://www.buymeacoffee.com/gnehs"
           target="_blank"
+          rel="noreferrer"
           className={`py-2 px-3 rounded cursor-pointer bg-slate-800 hover:bg-slate-950 active:bg-slate-950 text-white flex items-center justify-center gap-1 shadow`}
         >
-          <i className="bx bx-coffee-togo"></i>
+          <Coffee size={18} aria-hidden="true" />
           {t("about.buy_me_a_coffee")}
         </a>
       </div>

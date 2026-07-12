@@ -1,16 +1,14 @@
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setFiles } from "@/store/file";
-import { useState, useEffect } from "react";
-export default function useFile() {
-  // Get
-  //@ts-ignore
-  const files = useSelector((state) => state.file.value);
+import type { AppDispatch, RootState } from "@/store";
+import type { SubtitleFile } from "@/types/electron-api";
 
-  // Set
-  const dispatch = useDispatch();
-  const _setFiles = (files: { path: string; name: string }[]) =>
-    dispatch(setFiles(files));
+export default function useFile(): [
+  SubtitleFile[],
+  (files: SubtitleFile[]) => void,
+] {
+  const files = useSelector((state: RootState) => state.file.value);
+  const dispatch = useDispatch<AppDispatch>();
 
-  // Return
-  return [files, _setFiles];
+  return [files, (nextFiles) => dispatch(setFiles(nextFiles))];
 }
