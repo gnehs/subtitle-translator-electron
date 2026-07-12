@@ -48,8 +48,9 @@ import {
 } from "./utils/path-claims";
 import {
   createTranslationConfigFingerprint,
+  getTranslationCheckpointCandidates,
+  getTranslationCheckpointResumeMetadata,
   hasMatchingCheckpointSource,
-  hasMatchingTranslationConfig,
   type TranslationSourceFingerprint,
 } from "./utils/translation-checkpoint";
 import type {
@@ -250,11 +251,10 @@ function getTranslationCachePath(
   filePath: string,
   sourceName = path.basename(filePath)
 ): string {
-  if (path.extname(filePath).toLowerCase() === ".json") {
-    return filePath;
-  }
-
-  return path.join(path.dirname(filePath), `${sourceName}.translation.json`);
+  const candidates = getTranslationCheckpointCandidates(filePath, sourceName);
+  return (
+    candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0]
+  );
 }
 
 function getValidatedOutputDirectory(
@@ -317,8 +317,7 @@ function readMatchingCheckpoint(
   checkpointPath: string,
   sourceName: string,
   sourceExtension: SubtitleFileExtension,
-  sourceFingerprint: TranslationSourceFingerprint,
-  configFingerprint?: string
+  sourceFingerprint: TranslationSourceFingerprint
 ): TranslationCacheDocument | undefined {
   try {
     const checkpoint = parseTranslationCache(
@@ -329,9 +328,7 @@ function readMatchingCheckpoint(
       sourceName,
       sourceExtension,
       sourceFingerprint
-    ) &&
-      (!configFingerprint ||
-        hasMatchingTranslationConfig(checkpoint, configFingerprint))
+    )
       ? checkpoint
       : undefined;
   } catch (error: unknown) {
@@ -346,12 +343,6 @@ function readMatchingCheckpoint(
   }
 }
 
-function clearSavedTranslations(parsed: ParsedSubtitle): void {
-  for (const cue of getSubtitleCues(parsed)) {
-    delete cue.data.translatedText;
-  }
-}
-
 function readTranslationInput(
   filePath: string,
   configFingerprint?: string
@@ -363,27 +354,22 @@ function readTranslationInput(
     const cacheDocument = parseTranslationCache(
       fs.readFileSync(filePath, "utf8")
     );
-    const hasMismatchedConfig = Boolean(
-      configFingerprint &&
-        cacheDocument.version === 2 &&
-        !hasMatchingTranslationConfig(cacheDocument, configFingerprint)
+    const resumeMetadata = getTranslationCheckpointResumeMetadata(
+      cacheDocument,
+      configFingerprint
     );
-    if (hasMismatchedConfig) clearSavedTranslations(cacheDocument.subtitle);
 
     return {
       parsed: cacheDocument.subtitle,
       sourceName: path.basename(cacheDocument.source.name),
       sourceExtension: cacheDocument.format,
-      analysis: hasMismatchedConfig ? undefined : cacheDocument.analysis,
+      analysis: resumeMetadata.analysis,
       cacheDocument,
       sourceFingerprint: cacheDocument.source.fingerprint,
       checkpointPath: filePath,
       // Explicitly selected v1 checkpoints remain resumable, but keep a copy
       // before migrating them to the configuration-bound v2 format.
-      shouldBackupCheckpoint: Boolean(
-        configFingerprint &&
-          (cacheDocument.version === 1 || hasMismatchedConfig)
-      ),
+      shouldBackupCheckpoint: resumeMetadata.shouldBackupCheckpoint,
     };
   }
 
@@ -402,20 +388,23 @@ function readTranslationInput(
     checkpointPath,
     sourceName,
     sourceExtension,
-    sourceFingerprint,
-    configFingerprint
+    sourceFingerprint
   );
+  const resumeMetadata = checkpoint
+    ? getTranslationCheckpointResumeMetadata(checkpoint, configFingerprint)
+    : undefined;
 
   return checkpoint
     ? {
         parsed: checkpoint.subtitle,
         sourceName,
         sourceExtension,
-        analysis: checkpoint.analysis,
+        analysis: resumeMetadata?.analysis,
         cacheDocument: checkpoint,
         sourceFingerprint,
         checkpointPath,
-        shouldBackupCheckpoint: false,
+        shouldBackupCheckpoint:
+          resumeMetadata?.shouldBackupCheckpoint ?? false,
       }
     : {
         parsed: parseSubtitle(fs.readFileSync(filePath, "utf8"), extension),

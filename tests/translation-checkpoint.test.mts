@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createTranslationConfigFingerprint,
+  getTranslationCheckpointCandidates,
+  getTranslationCheckpointResumeMetadata,
   hasMatchingCheckpointSource,
   hasMatchingTranslationConfig,
 } from "../electron/main/utils/translation-checkpoint.ts";
@@ -52,7 +54,7 @@ test("does not auto-resume legacy checkpoints without a fingerprint", () => {
   );
 });
 
-test("resumes only with the same translation configuration", () => {
+test("identifies whether the translation configuration matches", () => {
   const config = {
     apiHost: "https://api.openai.com/v1",
     model: "example-model",
@@ -86,5 +88,44 @@ test("resumes only with the same translation configuration", () => {
       configFingerprint
     ),
     false
+  );
+});
+
+test("preserves completed work but invalidates analysis when settings change", () => {
+  const checkpoint = {
+    version: 2 as const,
+    format: "srt",
+    source: { name: "episode.srt", fingerprint },
+    translation: { configFingerprint: "a".repeat(64) },
+    analysis: "Existing context",
+  };
+
+  assert.deepEqual(
+    getTranslationCheckpointResumeMetadata(checkpoint, "b".repeat(64)),
+    {
+      analysis: undefined,
+      shouldBackupCheckpoint: true,
+    }
+  );
+  assert.deepEqual(
+    getTranslationCheckpointResumeMetadata(checkpoint, "a".repeat(64)),
+    {
+      analysis: "Existing context",
+      shouldBackupCheckpoint: false,
+    }
+  );
+});
+
+test("finds both stable and version 1.8.0 checkpoint names", () => {
+  assert.deepEqual(
+    getTranslationCheckpointCandidates("/tmp/episode.srt"),
+    [
+      "/tmp/episode.translation.json",
+      "/tmp/episode.srt.translation.json",
+    ]
+  );
+  assert.deepEqual(
+    getTranslationCheckpointCandidates("/tmp/episode.translation.json"),
+    ["/tmp/episode.translation.json"]
   );
 });
