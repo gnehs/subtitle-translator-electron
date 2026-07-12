@@ -1,0 +1,484 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: subtitle-translator-electron\n"
+"Language: en-US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Lingui\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:57
+msgid "about.title"
+msgstr "About"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:70
+msgid "translate.additional"
+msgstr "Additional notes"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:74
+msgid "translate.subtitleFilter.all"
+msgstr "All"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:93
+msgid "translate.analyzing_context"
+msgstr "Analyzing context"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:22
+msgid "api.title"
+msgstr "API & Host"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:26
+msgid "api.host.name"
+msgstr "API Host"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:23
+msgid "api.key.name"
+msgstr "API Key"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:88
+msgid "translate.exceeded"
+msgstr "API usage exceeded."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:66
+msgid "translate.back"
+msgstr "Back"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:49
+msgid "save.multi-language.name"
+msgstr "Bilingual Subtitles"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:61
+msgid "about.buy_me_a_coffee"
+msgstr "Buy Me a Coffee"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:14
+msgid "cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:89
+msgid "translate.clear_completed"
+msgstr "Clear Completed"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:92
+msgid "translate.cleared_files"
+msgstr "Cleared {count} completed file(s)"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:94
+msgid "translate.close"
+msgstr "Close"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:60
+msgid "about.commit_sha"
+msgstr "Commit SHA"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:13
+msgid "confirm"
+msgstr "Confirm"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:34
+msgid "api.connection.rateLimited"
+msgstr "Connection failed because the request was rate limited. Try again later."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:32
+msgid "api.connection.failed"
+msgstr "Connection failed. Check the API host and key."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:33
+msgid "api.connection.unauthorized"
+msgstr "Connection failed. The API key is invalid or unauthorized."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:31
+msgid "api.connection.successEmpty"
+msgstr "Connection successful, but no models are available."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:30
+msgid "api.connection.success"
+msgstr "Connection successful. {count} model(s) available."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:35
+msgid "api.connection.timeout"
+msgstr "Connection timed out. Check your network or API host."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:95
+msgid "translate.context.title"
+msgstr "Context"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:20
+msgid "delay.title"
+msgstr "Delay"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:58
+msgid "about.author"
+msgstr "Developer"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:75
+msgid "translate.subtitleFilter.translated"
+msgstr "Done"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:73
+msgid "translate.file_description"
+msgstr "Drag and drop the subtitle file or click here to choose a file."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:71
+msgid "translate.additional_description"
+msgstr "e.g. This is a Star Wars movie."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:46
+msgid "prompt.name"
+msgstr "Edit prompt"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:5
+msgid "name"
+msgstr "English"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:69
+msgid "translate.target_description"
+msgstr "English, 繁體中文, 日本語, etc."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:37
+msgid "api.connection.missing"
+msgstr "Enter an API host and API key first."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:12
+msgid "enterModelName"
+msgstr "Enter model name"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:77
+msgid "translate.failed_to_translate"
+msgstr "Failed to translate line: {text}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:72
+msgid "translate.file"
+msgstr "File"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:90
+msgid "translate.file_removed"
+msgstr "File removed"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:97
+msgid "translate.context.glossary"
+msgstr "Glossary"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:62
+msgid "about.buy_me_a_coffee_description"
+msgstr "If this project has been helpful to you, please consider buying me a cup of coffee. It will motivate me to continue the development further."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:79
+msgid "translate.input"
+msgstr "input"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:7
+msgid "language"
+msgstr "Language"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:67
+msgid "translate.language"
+msgstr "Language"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:11
+msgid "manualInput"
+msgstr "Manual Input"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:8
+msgid "model"
+msgstr "Model"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:9
+msgid "modelName"
+msgstr "Model name"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:65
+msgid "translate.next"
+msgstr "Next"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:91
+msgid "translate.no_completed_files"
+msgstr "No completed files to clear"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:16
+msgid "noModelsFound"
+msgstr "No models found"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:98
+msgid "translate.not_translated_yet"
+msgstr "Not translated yet"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:25
+msgid "api.key.notify"
+msgstr "Note: Usage is billed by the chosen provider. Please ensure your account is active and has a valid payment method."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:41
+msgid "api.presets.openai"
+msgstr "OpenAI"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:43
+msgid "api.presets.openai_compatible"
+msgstr "OpenAI-Compatible (custom)"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:40
+msgid "api.presets.openrouter"
+msgstr "OpenRouter"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:53
+msgid "save.multi-language.options.original+translate"
+msgstr "Original + Translated"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:80
+msgid "translate.output"
+msgstr "output"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:87
+msgid "translate.no_api_key"
+msgstr "Please enter your API key in the settings."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:50
+msgid "save.multi-language.description"
+msgstr "Please select whether to save the original text and the translated text simultaneously."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:96
+msgid "translate.context.plot_summary"
+msgstr "Plot summary"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:17
+msgid "pressEnterToUse"
+msgstr "Press Enter to use"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:45
+msgid "prompt.title"
+msgstr "Prompt"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:39
+msgid "api.presets.title"
+msgstr "Quick Presets"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:76
+msgid "translate.subtitleFilter.not_translated"
+msgstr "Remain"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:63
+msgid "about.report_issue"
+msgstr "Report an Issue"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:54
+msgid "reset.title"
+msgstr "Reset"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:84
+msgid "translate.reset"
+msgstr "Reset"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:55
+msgid "reset.name"
+msgstr "Reset all settings"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:19
+msgid "temperature.description"
+msgstr "Sampling temperature affects the randomness and determinism of text generated by language models. A lower temperature (like 0.2) produces more precise and deterministic text, suitable for formal documents; a higher temperature (like 0.8) makes the text more creative and varied, ideal for creative purposes. Adjusting this parameter properly can tailor the model's output to meet specific usage requirements."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:48
+msgid "save.title"
+msgstr "Save"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:85
+msgid "translate.save"
+msgstr "Save"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:15
+msgid "searchOrEnterModel"
+msgstr "Search or enter model name"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:10
+msgid "modelDescription"
+msgstr "Select a model or enter a custom model."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:6
+msgid "settings"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:64
+msgid "about.special_thanks"
+msgstr "Special Thanks"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:82
+msgid "translate.start"
+msgstr "Start"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:68
+msgid "translate.target"
+msgstr "Target language"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:18
+msgid "temperature.title"
+msgstr "Temperature"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:28
+msgid "api.connection.test"
+msgstr "Test connection"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:29
+msgid "api.connection.testing"
+msgstr "Testing…"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:36
+msgid "api.connection.invalidHost"
+msgstr "The API host must be a valid HTTP or HTTPS URL."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:38
+msgid "api.connection.unavailable"
+msgstr "The current environment cannot test the API connection."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:21
+msgid "delay.description"
+msgstr "The delay between each translation request. This is used to prevent the API from being overloaded. The unit is in seconds."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:47
+msgid "prompt.description"
+msgstr "The prompt used with ChatGPT. You can modify the prompt here. Additionally, <code>&#123;&#123;lang&#125;&#125;</code> is used to specify the language, and <code>&#123;&#123;additional&#125;&#125;</code> is used for additional notes. These fields will be automatically filled in during translation. When modifying the prompt, please make sure to keep these fields intact."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:27
+msgid "api.host.description"
+msgstr "This is typically used to bypass firewall blocking. If this application is functioning properly, there is no need to modify this setting."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:56
+msgid "reset.prompt"
+msgstr "This will clear all settings and restore all settings to their default values. Are you sure you want to reset?"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:44
+msgid "api.presets.recommendation"
+msgstr "Tip: If you haven't used any API before, start with OpenRouter. It offers more models and higher request limits. Use the buttons below to set defaults."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:78
+msgid "translate.tokens"
+msgstr "tokens"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:52
+msgid "save.multi-language.options.translate+original"
+msgstr "Translated + Original"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:51
+msgid "save.multi-language.options.none"
+msgstr "Translated Only"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:83
+msgid "translate.translating"
+msgstr "Translating..."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:86
+msgid "translate.translation_completed"
+msgstr "Translation completed"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:81
+msgid "translate.USD"
+msgstr "USD"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:42
+msgid "api.presets.vercel_gateway"
+msgstr "Vercel AI Gateway"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:59
+msgid "about.version"
+msgstr "Version"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:24
+msgid "api.key.description"
+msgstr "You can obtain API keys at <a href=\"https://platform.openai.com/api-keys\" target=\"_blank\">https://platform.openai.com/api-keys</a>."

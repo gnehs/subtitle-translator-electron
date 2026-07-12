@@ -1,7 +1,5 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { useLocalStorage } from "usehooks-ts";
 import { toast } from "sonner";
 import { FilePlus2, Settings2 } from "lucide-react";
 import Settings from "@/pages/settings";
@@ -62,17 +60,11 @@ function CheckUpdate() {
 }
 
 export default function DefaultLayout() {
-  const [language] = useLocalStorage("language", "en-US");
-  const { i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const isSettingsOpen = location.pathname === "/settings";
   const isTaskSurface = location.pathname === "/" || isSettingsOpen;
   const [addTaskRequest, setAddTaskRequest] = useState(0);
-
-  useEffect(() => {
-    if (language !== i18n.language) void i18n.changeLanguage(language);
-  }, [i18n, language]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-muted/30">

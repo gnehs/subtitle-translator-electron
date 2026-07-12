@@ -1,5 +1,5 @@
 import Title from "../Title";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/i18n";
 import useDelay from "@/hooks/useDelay";
 
 export default function Delay() {

@@ -6,7 +6,7 @@
   "author": "gnehs",
   "license": "MIT",
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@11.12.0",
   "debug": {
     "env": {
       "VITE_DEV_SERVER_URL": "http://127.0.0.1:7777/"
@@ -14,13 +14,19 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "build": "tsc && vite build && electron-builder --publish never",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "i18n:extract": "lingui extract",
+    "i18n:compile": "lingui compile"
   },
   "devDependencies": {
+    "@lingui/babel-plugin-lingui-macro": "^6.5.0",
+    "@lingui/cli": "^6.5.0",
+    "@lingui/vite-plugin": "^6.5.0",
     "@playwright/test": "^1.61.1",
+    "@rolldown/plugin-babel": "^0.2.3",
     "@tailwindcss/vite": "^4.3.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
@@ -40,11 +46,13 @@
     "vite-plugin-electron-renderer": "^1.0.0"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=24.17.0"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.7",
     "@fontsource-variable/geist": "^5.2.9",
+    "@lingui/core": "^6.5.0",
+    "@lingui/react": "^6.5.0",
     "@reduxjs/toolkit": "^2.12.0",
     "ai": "^7.0.22",
     "ass-parser": "^0.2.0",
@@ -53,12 +61,10 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "framer-motion": "^12.42.2",
-    "i18next": "^26.3.6",
     "lucide-react": "^1.24.0",
     "next-themes": "^0.4.6",
     "normalize.css": "^8.0.1",
     "radix-ui": "^1.6.2",
-    "react-i18next": "^17.0.9",
     "react-markdown": "^10.1.0",
     "react-redux": "^9.3.0",
     "react-router-dom": "^7.18.1",

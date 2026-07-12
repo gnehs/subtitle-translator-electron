@@ -1,6 +1,5 @@
 import Title from "../Title";
-import { useTranslation } from "react-i18next";
-import resources from "../../locales/index";
+import { dynamicActivate, localeNames, locales, type Locale, useTranslation } from "@/i18n";
 import { useLocalStorage } from "usehooks-ts";
 import { useState, useEffect, useRef } from "react";
 import { Check, ChevronDown } from "lucide-react";
@@ -13,26 +12,19 @@ export default function Language() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const getLanguageInfo = (langCode: string) => {
-    const langNames: Record<string, { name: string }> = {
-      "en-US": { name: "English" },
-      "zh-TW": { name: "繁體中文" },
-      "zh-CN": { name: "简体中文" },
-    };
-    return (
-      langNames[langCode] || { name: langCode, flag: "🌍", native: langCode }
-    );
+    return { name: localeNames[langCode as Locale] || langCode };
   };
 
   const handleLanguageChange = async (newLanguage: string) => {
-    if (newLanguage === i18n.language) {
+    if (newLanguage === i18n.locale) {
       setIsOpen(false);
       return;
     }
 
     setIsChanging(true);
     try {
-      await i18n.changeLanguage(newLanguage);
-      setLanguage(newLanguage);
+      const activatedLocale = await dynamicActivate(newLanguage);
+      setLanguage(activatedLocale);
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to change language:", error);
@@ -58,7 +50,7 @@ export default function Language() {
     };
   }, []);
 
-  const currentLangInfo = getLanguageInfo(i18n.language);
+  const currentLangInfo = getLanguageInfo(i18n.locale);
 
   return (
     <div className="bg-white rounded flex justify-between items-center border border-slate-200 p-4 gap-8">
@@ -107,9 +99,9 @@ export default function Language() {
         {isOpen && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
             <div className="py-1">
-              {Object.keys(resources).map((langCode) => {
+              {locales.map((langCode) => {
                 const langInfo = getLanguageInfo(langCode);
-                const isActive = i18n.language === langCode;
+                const isActive = i18n.locale === langCode;
 
                 return (
                   <button

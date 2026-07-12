@@ -6,8 +6,12 @@ import useModel from "@/hooks/useModel";
 import usePrompt from "@/hooks/usePrompt";
 import useDelay from "@/hooks/useDelay";
 import useRPM from "@/hooks/useRPM";
+import useTranslationSuccessCount, {
+  TRANSLATION_SUCCESS_THRESHOLD,
+} from "@/hooks/useTranslationSuccessCount";
 import { useAPIHost, useAPIKeys, useTemperature } from "@/hooks/useOpenAI";
 import { getFilePath } from "@/utils/filePath";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import type {
   AvailableModel,
   BatchProgress,
@@ -134,6 +138,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const apiKey = keys.find((key) => key.trim().length > 0)?.trim() || "";
   const normalizedApiHost = apiHost.trim();
   const [requestsPerMinute] = useRPM();
+  const [translationSuccessCount, incrementTranslationSuccessCount] =
+    useTranslationSuccessCount();
   const [multiLangSave, setMultiLangSave] = useLocalStorage<TranslationParams["multiLangSave"]>(
     "multi_language_save",
     "none"
@@ -189,12 +195,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         toast.error(`翻譯失敗：${data.error || data.filePath}`);
       }
       if (data.status === "done") {
+        incrementTranslationSuccessCount();
         toast.success(`翻譯完成：${data.filePath.split(/[\\/]/).at(-1) || data.filePath}`);
       }
     });
 
     return unsubscribe;
-  }, [detailOpen, selectedFile]);
+  }, [detailOpen, incrementTranslationSuccessCount, selectedFile]);
 
   useEffect(() => {
     if (!addDialogOpen) {
@@ -265,6 +272,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     const status = batchProgress[file.path]?.status;
     return status === "analyzing" || status === "translating";
   }).length;
+  const shouldShowCoffeeBanner =
+    translationSuccessCount > TRANSLATION_SUCCESS_THRESHOLD;
 
   const customModelValue = modelSearch.trim();
   const normalizedModelSearch = customModelValue.toLowerCase();
@@ -559,6 +568,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               選擇檔案
             </Button>
           </EmptyContent>
+          {shouldShowCoffeeBanner && (
+            <BuyMeACoffee dismissible className="w-full max-w-sm" />
+          )}
           <p className="mt-auto pt-10 text-center text-xs text-muted-foreground">
             支援格式：ass、ssa、srt、vtt，以及翻譯暫存 json。
             <br />

@@ -2,39 +2,37 @@ name: Build
 
 on:
   push:
-    tags: ["*.*.*"]
-    paths-ignore:
-      - "**.md"
-      - "**.spec.js"
-      - ".idea"
-      - ".vscode"
-      - ".dockerignore"
-      - "Dockerfile"
-      - ".gitignore"
-      - ".github/**"
-      - "!.github/workflows/build.yml"
+    tags:
+      - "*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
+    name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
-        with:
-          version: 11.9.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22.12.0
+          node-version: 24.17.0
           cache: pnpm
 
       - name: Install Dependencies
@@ -42,30 +40,44 @@ jobs:
 
       - name: Build Release Files
         run: pnpm run build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: release_on_${{ matrix. os }}
+          name: release_on_${{ matrix.os }}
           path: |
             release/*.dmg
             release/*.exe
             release/*.AppImage
+          if-no-files-found: error
           retention-days: 5
-      - name: Upload Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+
+  release:
+    name: Publish GitHub Release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Release Artifacts
+        uses: actions/download-artifact@v8
         with:
+          pattern: release_on_*
+          path: artifacts
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            release/*.dmg
-            release/*.exe
-            release/*.AppImage
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+          fail_on_unmatched_files: true
           body: |
             ### Download
             - [Windows](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.exe)
             - [macOS](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.dmg)
             - [Linux](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.AppImage)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

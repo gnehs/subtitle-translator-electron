@@ -5,7 +5,8 @@ import { createHashRouter, RouterProvider } from "react-router-dom";
 import store from "./store";
 import { Provider } from "react-redux";
 
-import "./i18n";
+import { I18nProvider } from "@lingui/react";
+import { defaultLocale, dynamicActivate, i18n, locales } from "./i18n";
 import DefaultLayout from "./layouts/default";
 import About from "./pages/about";
 import Translator from "./pages/translator";
@@ -30,10 +31,21 @@ const router = createHashRouter([
     ],
   },
 ]);
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <StrictMode>
-    <Provider store={store}>
-      <RouterProvider router={router} />
-    </Provider>
-  </StrictMode>
-);
+const storedLocale = localStorage.getItem("language");
+const initialLocale = locales.find((locale) => locale === storedLocale) ?? defaultLocale;
+
+async function bootstrap() {
+  await dynamicActivate(initialLocale);
+
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <StrictMode>
+      <I18nProvider i18n={i18n}>
+        <Provider store={store}>
+          <RouterProvider router={router} />
+        </Provider>
+      </I18nProvider>
+    </StrictMode>
+  );
+}
+
+void bootstrap();

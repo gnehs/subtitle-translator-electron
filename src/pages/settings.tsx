@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { dynamicActivate, useTranslation } from "@/i18n";
 import { useLocalStorage } from "usehooks-ts";
 import { useAPIHost, useAPIKeys, useAPIProvider, useTemperature } from "@/hooks/useOpenAI";
 import useDelay from "@/hooks/useDelay";
@@ -78,7 +78,7 @@ const providerPresets = {
 } as const;
 
 export default function Settings() {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const [language, setLanguage] = useLocalStorage("language", "en-US");
   const [provider, setProvider] = useAPIProvider();
   const [keys, setKeys] = useAPIKeys();
@@ -99,8 +99,8 @@ export default function Settings() {
   const normalizedApiHost = host.trim();
 
   const changeLanguage = async (nextLanguage: string) => {
-    setLanguage(nextLanguage);
-    await i18n.changeLanguage(nextLanguage);
+    const activatedLocale = await dynamicActivate(nextLanguage);
+    setLanguage(activatedLocale);
   };
 
   const changeProvider = (nextProvider: keyof typeof providerPresets) => {

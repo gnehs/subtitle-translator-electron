@@ -1,0 +1,484 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: subtitle-translator-electron\n"
+"Language: zh-CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Lingui\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:57
+msgid "about.title"
+msgstr "关于"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:70
+msgid "translate.additional"
+msgstr "附加注记"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:74
+msgid "translate.subtitleFilter.all"
+msgstr "所有"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:93
+msgid "translate.analyzing_context"
+msgstr "分析上下文"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:22
+msgid "api.title"
+msgstr "API 与主机"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:26
+msgid "api.host.name"
+msgstr "API 主机"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:23
+msgid "api.key.name"
+msgstr "API 密钥"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:88
+msgid "translate.exceeded"
+msgstr "API 额度已用罄"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:66
+msgid "translate.back"
+msgstr "返回"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:49
+msgid "save.multi-language.name"
+msgstr "双语字幕"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:61
+msgid "about.buy_me_a_coffee"
+msgstr "请我喝杯咖啡"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:14
+msgid "cancel"
+msgstr "取消"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:89
+msgid "translate.clear_completed"
+msgstr "清除已完成"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:92
+msgid "translate.cleared_files"
+msgstr "已清除 {count} 个已完成档案"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:94
+msgid "translate.close"
+msgstr "关闭"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:60
+msgid "about.commit_sha"
+msgstr "Commit SHA"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:13
+msgid "confirm"
+msgstr "确认"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:34
+msgid "api.connection.rateLimited"
+msgstr "连接失败，请求过于频繁，请稍后再试。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:32
+msgid "api.connection.failed"
+msgstr "连接失败，请检查 API 主机与密钥。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:33
+msgid "api.connection.unauthorized"
+msgstr "连接失败，API 密钥无效或没有权限。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:31
+msgid "api.connection.successEmpty"
+msgstr "连接成功，但没有可用模型。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:30
+msgid "api.connection.success"
+msgstr "连接成功，可取得 {count} 个模型。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:35
+msgid "api.connection.timeout"
+msgstr "连接超时，请检查网络或 API 主机。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:95
+msgid "translate.context.title"
+msgstr "内容上下文"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:20
+msgid "delay.title"
+msgstr "延迟"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:58
+msgid "about.author"
+msgstr "开发者"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:75
+msgid "translate.subtitleFilter.translated"
+msgstr "已翻译"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:73
+msgid "translate.file_description"
+msgstr "拖入字幕档案，或点击此处选择档案。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:71
+msgid "translate.additional_description"
+msgstr "例如：这是一部星际大战电影。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:46
+msgid "prompt.name"
+msgstr "编辑咒语"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:5
+msgid "name"
+msgstr "中文（中国）"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:69
+msgid "translate.target_description"
+msgstr "英文，繁体中文，日本语，等等。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:37
+msgid "api.connection.missing"
+msgstr "请先填写 API 主机与 API 密钥。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:12
+msgid "enterModelName"
+msgstr "输入模型名称"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:77
+msgid "translate.failed_to_translate"
+msgstr "无法翻译该行字幕：{text}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:72
+msgid "translate.file"
+msgstr "档案"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:90
+msgid "translate.file_removed"
+msgstr "档案已移除"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:97
+msgid "translate.context.glossary"
+msgstr "词汇表"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:62
+msgid "about.buy_me_a_coffee_description"
+msgstr "如果这个项目对你有帮助，请考虑请我喝杯咖啡，这将会让我更有动力继续开发下去。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:79
+msgid "translate.input"
+msgstr "输入"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:7
+msgid "language"
+msgstr "语言"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:67
+msgid "translate.language"
+msgstr "语言"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:11
+msgid "manualInput"
+msgstr "手动输入"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:8
+msgid "model"
+msgstr "模型"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:9
+msgid "modelName"
+msgstr "模型名称"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:65
+msgid "translate.next"
+msgstr "下一步"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:91
+msgid "translate.no_completed_files"
+msgstr "没有已完成的档案可清除"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:16
+msgid "noModelsFound"
+msgstr "找不到模型"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:98
+msgid "translate.not_translated_yet"
+msgstr "尚未翻译"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:25
+msgid "api.key.notify"
+msgstr "注意：费用由各供应商计费，请确认您的账号状态正常并已设置付款方式。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:41
+msgid "api.presets.openai"
+msgstr "OpenAI"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:43
+msgid "api.presets.openai_compatible"
+msgstr "OpenAI 兼容（自定义）"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:40
+msgid "api.presets.openrouter"
+msgstr "OpenRouter"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:53
+msgid "save.multi-language.options.original+translate"
+msgstr "原文字幕+翻译字幕"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:80
+msgid "translate.output"
+msgstr "输出"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:87
+msgid "translate.no_api_key"
+msgstr "请先设定 API 密钥"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:50
+msgid "save.multi-language.description"
+msgstr "请选择是否同时储存原文与翻译文本。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:96
+msgid "translate.context.plot_summary"
+msgstr "剧情摘要"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:17
+msgid "pressEnterToUse"
+msgstr "按 Enter 使用"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:45
+msgid "prompt.title"
+msgstr "咒语"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:39
+msgid "api.presets.title"
+msgstr "快速预设"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:76
+msgid "translate.subtitleFilter.not_translated"
+msgstr "未翻译"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:63
+msgid "about.report_issue"
+msgstr "回报问题"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:54
+msgid "reset.title"
+msgstr "重设"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:84
+msgid "translate.reset"
+msgstr "重设"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:55
+msgid "reset.name"
+msgstr "重设所有设定"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:19
+msgid "temperature.description"
+msgstr "采樣溫度影響語言模型生成文本的隨機性與確定性。較低的溫度（如 0.2）產生較確定、精確的文本，適合正式文件；而較高的溫度（如 0.8）則讓文本更具創意和多樣性，適合創作用途。通过适当调整这个参数，可以让模型输出更符合特定的使用需求。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:48
+msgid "save.title"
+msgstr "储存"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:85
+msgid "translate.save"
+msgstr "储存"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:15
+msgid "searchOrEnterModel"
+msgstr "搜索或输入模型名称"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:10
+msgid "modelDescription"
+msgstr "选择一个模型或输入自订模型名称。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:6
+msgid "settings"
+msgstr "设定"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:64
+msgid "about.special_thanks"
+msgstr "特别感谢"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:82
+msgid "translate.start"
+msgstr "开始翻译"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:68
+msgid "translate.target"
+msgstr "目标语言"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:18
+msgid "temperature.title"
+msgstr "溫度"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:28
+msgid "api.connection.test"
+msgstr "测试连接"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:29
+msgid "api.connection.testing"
+msgstr "测试中…"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:36
+msgid "api.connection.invalidHost"
+msgstr "API 主机必须是有效的 HTTP 或 HTTPS 网址。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:38
+msgid "api.connection.unavailable"
+msgstr "当前环境无法测试 API 连接。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:21
+msgid "delay.description"
+msgstr "在翻译完成后休息多久才开始翻译下一行字幕，调高这个值可以有效避免因密钥使用频率过高导致失败的问题，单位为秒。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:47
+msgid "prompt.description"
+msgstr "使用 ChatGPT 时所使用的咒语，你可以在此更改咒语，另外 <code>&#123;&#123;lang&#125;&#125;</code> 用于指定语言，<code>&#123;&#123;additional&#125;&#125;</code> 用于附加备注，上述字段将于翻译时自动带入内容，修改咒语时请务必保留这些字段。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:27
+msgid "api.host.description"
+msgstr "这通常用于绕过防火墙封锁，若这个应用程序可以正常运作，则不需要更改此设定。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:56
+msgid "reset.prompt"
+msgstr "这将会清空所有设定，并将所有设定恢复为默认值，确定要重设吗？"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:44
+msgid "api.presets.recommendation"
+msgstr "建议：如果您从未使用过任何 API，建议先使用 OpenRouter，可使用更多模型且请求上限更高。可使用下方按钮快速套用预设。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:78
+msgid "translate.tokens"
+msgstr "词元"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:52
+msgid "save.multi-language.options.translate+original"
+msgstr "翻译字幕+原文字幕"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:51
+msgid "save.multi-language.options.none"
+msgstr "仅储存翻译字幕"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:83
+msgid "translate.translating"
+msgstr "翻译中..."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:86
+msgid "translate.translation_completed"
+msgstr "翻译完成"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:81
+msgid "translate.USD"
+msgstr "美金"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:42
+msgid "api.presets.vercel_gateway"
+msgstr "Vercel AI Gateway"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:59
+msgid "about.version"
+msgstr "版本"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:24
+msgid "api.key.description"
+msgstr "您可以选择供应商（例如 OpenRouter、OpenAI 等）并在该供应商创建 API 密钥。"
