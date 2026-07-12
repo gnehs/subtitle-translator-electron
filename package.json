@@ -16,7 +16,7 @@
     "dev": "vite",
     "build": "pnpm run check && vite build && electron-builder --publish never",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/api-host.test.mts tests/path-claims.test.mts tests/retry-after.test.mts tests/subtitle-chunks.test.mts tests/subtitle-sampling.test.mts tests/translation-checkpoint.test.mts",
+    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/api-host.test.mts tests/locale.test.mts tests/path-claims.test.mts tests/retry-after.test.mts tests/subtitle-chunks.test.mts tests/subtitle-sampling.test.mts tests/translation-checkpoint.test.mts",
     "check": "pnpm run typecheck && pnpm run test",
     "preview": "vite preview",
     "pree2e": "vite build --mode=test",

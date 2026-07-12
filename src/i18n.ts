@@ -1,11 +1,16 @@
 import { i18n as linguiI18n, type MessageDescriptor } from "@lingui/core";
 import { useLingui } from "@lingui/react";
 import { messages as messageDescriptors } from "./i18n-messages";
+import {
+  fallbackLocale,
+  supportedLocales,
+  type SupportedLocale,
+} from "./utils/locale";
 
 export const i18n = linguiI18n;
-export const defaultLocale = "en-US" as const;
-export const locales = ["en-US", "zh-TW", "zh-CN"] as const;
-export type Locale = (typeof locales)[number];
+export const defaultLocale = fallbackLocale;
+export const locales = supportedLocales;
+export type Locale = SupportedLocale;
 
 export const localeNames: Record<Locale, string> = {
   "en-US": "English",

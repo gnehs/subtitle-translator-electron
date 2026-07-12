@@ -60,7 +60,7 @@ test("settings shows the API connection test control", async () => {
   }
 });
 
-test("switching language updates the active task and settings UI", async () => {
+test("the selected language remains active after reload", async () => {
   const app = await electron.launch({ args: [".", "--no-sandbox"] });
   try {
     const page = await app.firstWindow();
@@ -70,11 +70,14 @@ test("switching language updates the active task and settings UI", async () => {
     await page.getByRole("button", { name: "Settings" }).click();
 
     await page.getByRole("combobox").first().click();
-    await page.getByRole("option", { name: "简体中文" }).click();
+    await page.getByRole("option", { name: "繁體中文" }).click();
 
-    await expect(page.getByRole("heading", { name: "API 连接" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "新增任务" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "关闭设置" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "API 連線" })).toBeVisible();
+    await page.reload();
+
+    await expect(page.getByRole("button", { name: "新增任務" })).toBeVisible();
+    await page.getByRole("button", { name: "設定" }).click();
+    await expect(page.getByRole("heading", { name: "API 連線" })).toBeVisible();
   } finally {
     await app.close();
   }

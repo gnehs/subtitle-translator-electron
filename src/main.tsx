@@ -7,15 +7,14 @@ import { Provider } from "react-redux";
 
 import { I18nProvider } from "@lingui/react";
 import {
-  defaultLocale,
   dynamicActivate,
   i18n,
-  locales,
   syncNativeMenuLocale,
 } from "./i18n";
 import DefaultLayout from "./layouts/default";
 import About from "./pages/about";
 import Translator from "./pages/translator";
+import { parseStoredLocale } from "./utils/locale";
 import "./index.css";
 const router = createHashRouter([
   {
@@ -37,8 +36,7 @@ const router = createHashRouter([
     element: <About />,
   },
 ]);
-const storedLocale = localStorage.getItem("language");
-const initialLocale = locales.find((locale) => locale === storedLocale) ?? defaultLocale;
+const initialLocale = parseStoredLocale(localStorage.getItem("language"));
 
 async function bootstrap() {
   const activatedLocale = await dynamicActivate(initialLocale);
