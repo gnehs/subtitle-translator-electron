@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Sheet } from "@/components/ui/sheet";
 import { useVersion } from "@/hooks/useVersion";
 import { useTranslation } from "@/i18n";
+import { isNewerVersion } from "@/utils/version";
 
 const dragRegionStyle = { appRegion: "drag" } as CSSProperties & {
   appRegion: "drag";
@@ -45,7 +46,7 @@ function CheckUpdate() {
   }, []);
 
   useEffect(() => {
-    if (!version || !newVersion || version === newVersion) return;
+    if (!version || !newVersion || !isNewerVersion(version, newVersion)) return;
     toast.info(t("update.available", { version: newVersion }), {
       action: {
         label: t("update.view"),
