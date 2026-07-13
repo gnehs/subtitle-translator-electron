@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import path from "node:path";
 import {
   createTranslationConfigFingerprint,
   getTranslationCheckpointCandidates,
@@ -117,15 +118,18 @@ test("preserves completed work but invalidates analysis when settings change", (
 });
 
 test("finds both stable and version 1.8.0 checkpoint names", () => {
+  const sourcePath = path.join("/tmp", "episode.srt");
+  const checkpointPath = path.join("/tmp", "episode.translation.json");
+
   assert.deepEqual(
-    getTranslationCheckpointCandidates("/tmp/episode.srt"),
+    getTranslationCheckpointCandidates(sourcePath),
     [
-      "/tmp/episode.translation.json",
-      "/tmp/episode.srt.translation.json",
+      path.join("/tmp", "episode.translation.json"),
+      path.join("/tmp", "episode.srt.translation.json"),
     ]
   );
   assert.deepEqual(
-    getTranslationCheckpointCandidates("/tmp/episode.translation.json"),
-    ["/tmp/episode.translation.json"]
+    getTranslationCheckpointCandidates(checkpointPath),
+    [checkpointPath]
   );
 });
