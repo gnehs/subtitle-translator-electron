@@ -936,7 +936,7 @@ msgstr "This will clear all settings and restore all settings to their default v
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:44
 msgid "api.presets.recommendation"
-msgstr "Tip: If you haven't used any API before, start with OpenRouter. It offers more models and higher request limits. Use the buttons below to set defaults."
+msgstr "Tip: If OpenAI's RPM limits are getting in the way, try OpenRouter first. Its routing options can offer more flexibility, but actual RPM varies by plan, model, and provider. A small model is usually enough for subtitle translation."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:78

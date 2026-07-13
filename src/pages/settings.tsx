@@ -38,6 +38,7 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
+  Info,
   LoaderCircle,
   PlugZap,
   RotateCcw,
@@ -199,6 +200,10 @@ export default function Settings() {
             <h2 className="font-heading text-lg font-semibold">{t("settings.api.title")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t("settings.api.description")}</p>
           </div>
+          <aside className="flex gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
+            <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+            <p className="text-muted-foreground">{t("api.presets.recommendation")}</p>
+          </aside>
           <Field>
             <FieldLabel>{t("settings.provider")}</FieldLabel>
             <Select value={provider} onValueChange={(value) => changeProvider(value as keyof typeof providerPresets)}>

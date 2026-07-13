@@ -936,7 +936,7 @@ msgstr "这将会清空所有设定，并将所有设定恢复为默认值，确
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:44
 msgid "api.presets.recommendation"
-msgstr "建议：如果您从未使用过任何 API，建议先使用 OpenRouter，可使用更多模型且请求上限更高。可使用下方按钮快速套用预设。"
+msgstr "建议：如果直接使用 OpenAI 容易遇到 RPM 限制，请先试用 OpenRouter。它的路由选项通常更有弹性，但实际 RPM 仍会因方案、模型和供应商而异；字幕翻译通常使用小型模型就足够。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:78

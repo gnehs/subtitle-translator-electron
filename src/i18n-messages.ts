@@ -41,7 +41,7 @@ export const messages = {
   "api.presets.openai": defineMessage({ id: "api.presets.openai", message: "OpenAI" }),
   "api.presets.vercel_gateway": defineMessage({ id: "api.presets.vercel_gateway", message: "Vercel AI Gateway" }),
   "api.presets.openai_compatible": defineMessage({ id: "api.presets.openai_compatible", message: "OpenAI-Compatible (custom)" }),
-  "api.presets.recommendation": defineMessage({ id: "api.presets.recommendation", message: "Tip: If you haven't used any API before, start with OpenRouter. It offers more models and higher request limits. Use the buttons below to set defaults." }),
+  "api.presets.recommendation": defineMessage({ id: "api.presets.recommendation", message: "Tip: If OpenAI's RPM limits are getting in the way, try OpenRouter first. Its routing options can offer more flexibility, but actual RPM varies by plan, model, and provider. A small model is usually enough for subtitle translation." }),
   "prompt.title": defineMessage({ id: "prompt.title", message: "Prompt" }),
   "prompt.name": defineMessage({ id: "prompt.name", message: "Edit prompt" }),
   "prompt.description": defineMessage({ id: "prompt.description", message: "The prompt used with ChatGPT. You can modify the prompt here. Additionally, <code>&#123;&#123;lang&#125;&#125;</code> is used to specify the language, and <code>&#123;&#123;additional&#125;&#125;</code> is used for additional notes. These fields will be automatically filled in during translation. When modifying the prompt, please make sure to keep these fields intact." }),
