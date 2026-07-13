@@ -8,6 +8,7 @@ import { generateText, Output } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { translationErrorCodes } from "../../shared/translation-error-codes";
 import type { RequestRateLimiter } from "./request-rate-limiter";
+import { compactRepetitiveSubtitleText } from "./subtitle-chunks";
 import { sampleSubtitlesForAnalysis } from "./subtitle-sampling";
 import type { TranslationSourceFingerprint } from "./translation-checkpoint";
 
@@ -289,6 +290,10 @@ async function translateSubtitleChunk(
 ) {
   if (core.length === 0) return [];
 
+  const compactedBefore = before.map(compactRepetitiveSubtitleText);
+  const compactedCore = core.map(compactRepetitiveSubtitleText);
+  const compactedAfter = after.map(compactRepetitiveSubtitleText);
+
   const ai = getAi({ apiKey: getFirstValidApiKey(apiKeys), apiHost });
 
   const systemPrompt = prompt
@@ -300,7 +305,7 @@ async function translateSubtitleChunk(
     MAX_TRANSLATION_OUTPUT_TOKENS,
     Math.max(
       512,
-      core.reduce((characterCount, subtitle) => {
+      compactedCore.reduce((characterCount, subtitle) => {
         return characterCount + subtitle.length * 2;
       }, 0)
     )
@@ -318,7 +323,13 @@ async function translateSubtitleChunk(
       `Translate only the \`core\` subtitles. Use \`before\` and \`after\` only as context. ` +
       `Return a JSON object with one \`elements\` array containing exactly ${core.length} translated strings ` +
       `in the same order as \`core\`, with no other properties.\n\n` +
-      JSON.stringify({ before, core, after }),
+      `A bracketed note such as [source phrase repeats N times total] is input metadata, not subtitle text. ` +
+      `Interpret repeated source phrases naturally and never output the bracketed note.\n\n` +
+      JSON.stringify({
+        before: compactedBefore,
+        core: compactedCore,
+        after: compactedAfter,
+      }),
     maxOutputTokens,
     maxRetries: 0,
   });
