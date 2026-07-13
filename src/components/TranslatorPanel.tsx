@@ -851,15 +851,25 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       )}
 
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-h-[min(760px,calc(100vh-2rem))] sm:max-w-4xl overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="top-[calc(50%+1.5rem)] grid-rows-[auto_minmax(0,1fr)_auto] max-h-[min(760px,calc(100vh-6rem))] overflow-hidden sm:max-w-4xl">
+          <DialogHeader className="pr-10">
             <DialogTitle className="text-xl">{t("tasks.dialog.title")}</DialogTitle>
-            <DialogDescription>{t("tasks.dialog.description")}</DialogDescription>
+            <DialogDescription className="max-w-2xl">
+              {t("tasks.dialog.description")}
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-2 md:grid-cols-2">
-            <FieldGroup>
+          <form
+            id="add-task-form"
+            className="min-h-0 overflow-y-auto"
+            onSubmit={(event) => {
+              event.preventDefault();
+              addPendingTasks();
+            }}
+          >
+            <div className="flex flex-col gap-6 py-2 pr-1">
+              <FieldGroup className="grid gap-x-8 gap-y-5 md:grid-cols-2">
               <Field>
-                  <FieldLabel htmlFor="task-model">{t("tasks.model.label")}</FieldLabel>
+                <FieldLabel htmlFor="task-model">{t("tasks.model.label")}</FieldLabel>
                 <Popover
                   open={modelPickerOpen}
                   onOpenChange={handleModelPickerChange}
@@ -870,6 +880,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                       type="button"
                       variant="outline"
                       className="w-full justify-between font-normal"
+                      autoFocus
                     >
                       <span className={cn("truncate", !taskModel && "text-muted-foreground")}>
                         {taskModel || t("tasks.model.choose")}
@@ -971,15 +982,60 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                 </FieldDescription>
               </Field>
               <Field>
+                <FieldLabel htmlFor="task-output-format">
+                  {t("tasks.output.label")}
+                </FieldLabel>
+                <Select value={multiLangSave} onValueChange={(value) => setMultiLangSave(value as TranslationParams["multiLangSave"])}>
+                  <SelectTrigger id="task-output-format" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">{t("tasks.output.none")}</SelectItem>
+                      <SelectItem value="translate+original">{t("tasks.output.translateOriginal")}</SelectItem>
+                      <SelectItem value="original+translate">{t("tasks.output.originalTranslate")}</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>{t("tasks.output.description")}</FieldDescription>
+              </Field>
+              <Field>
                 <FieldLabel htmlFor="task-language">{t("tasks.language.label")}</FieldLabel>
                 <Input
                   id="task-language"
                   value={lang}
                   onChange={(event) => setLang(event.target.value)}
                   placeholder={t("tasks.language.placeholder")}
-                  autoFocus
                 />
               </Field>
+              <Field>
+                <FieldLabel htmlFor="task-output-directory">{t("tasks.output.directory")}</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <output
+                    id="task-output-directory"
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-input px-2.5 py-1.5 text-sm text-muted-foreground"
+                    title={outputDirectory || t("tasks.output.directoryFallback")}
+                  >
+                    <FolderOpen className="shrink-0" aria-hidden="true" />
+                    <span className="truncate">
+                      {outputDirectory || t("tasks.output.directoryFallback")}
+                    </span>
+                  </output>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void chooseOutputDirectory()}
+                    disabled={isChoosingOutputDirectory}
+                  >
+                    <FolderOpen data-icon="inline-start" />
+                    {isChoosingOutputDirectory ? t("tasks.output.selecting") : t("tasks.output.select")}
+                  </Button>
+                </div>
+                <FieldDescription>{t("tasks.output.directoryDescription")}</FieldDescription>
+              </Field>
+            </FieldGroup>
+            <Separator />
+            <FieldGroup className="grid gap-x-8 gap-y-5 md:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="task-additional">{t("tasks.additional.label")}</FieldLabel>
                 <Textarea
@@ -987,7 +1043,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                   value={additional}
                   onChange={(event) => setAdditional(event.target.value)}
                   placeholder={t("tasks.additional.placeholder")}
-                  className="min-h-32 resize-none"
+                  className="min-h-24 resize-none"
                 />
                 <FieldDescription>{t("tasks.additional.description")}</FieldDescription>
               </Field>
@@ -1012,64 +1068,28 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                 <FieldDescription>{t("tasks.context.description")}</FieldDescription>
               </Field>
             </FieldGroup>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="task-output-format">
-                  {t("tasks.output.label")}
-                </FieldLabel>
-                <Select value={multiLangSave} onValueChange={(value) => setMultiLangSave(value as TranslationParams["multiLangSave"])}>
-                  <SelectTrigger id="task-output-format" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="none">{t("tasks.output.none")}</SelectItem>
-                      <SelectItem value="translate+original">{t("tasks.output.translateOriginal")}</SelectItem>
-                      <SelectItem value="original+translate">{t("tasks.output.originalTranslate")}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <FieldDescription>{t("tasks.output.description")}</FieldDescription>
-              </Field>
-              <Field>
-                  <FieldLabel>{t("tasks.output.directory")}</FieldLabel>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-input px-2.5 py-1.5 text-sm text-muted-foreground"
-                    title={outputDirectory || t("tasks.output.directoryFallback")}
-                  >
-                    <FolderOpen className="shrink-0" />
-                    <span className="truncate">
-                      {outputDirectory || t("tasks.output.directoryFallback")}
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => void chooseOutputDirectory()}
-                    disabled={isChoosingOutputDirectory}
-                  >
-                    <FolderOpen data-icon="inline-start" />
-                    {isChoosingOutputDirectory ? t("tasks.output.selecting") : t("tasks.output.select")}
-                  </Button>
-                </div>
-                <FieldDescription>{t("tasks.output.directoryDescription")}</FieldDescription>
-              </Field>
-              <div className="rounded-xl border bg-muted/20 p-4">
-                <div className="flex items-center gap-2 font-medium">
-                  <FilePlus2 />
-                  {t("tasks.output.selectedFiles", { count: pendingFiles.length })}
-                </div>
-                <div className="mt-3 max-h-36 overflow-y-auto text-sm text-muted-foreground">
-                  {pendingFiles.map((file) => <p key={file.path} className="truncate py-0.5" title={file.path}>{file.name}</p>)}
-                </div>
+            <Separator />
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <FilePlus2 aria-hidden="true" />
+                {t("tasks.output.selectedFiles", { count: pendingFiles.length })}
               </div>
-            </FieldGroup>
-          </div>
-          <Separator />
+              <ul
+                className="flex flex-col gap-1 rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground"
+                aria-label={t("tasks.output.selectedFiles", { count: pendingFiles.length })}
+              >
+                {pendingFiles.map((file) => (
+                  <li key={file.path} className="shrink-0 truncate py-0.5" title={file.path}>
+                    {file.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            </div>
+          </form>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>{t("cancel")}</Button>
-            <Button onClick={addPendingTasks} disabled={pendingFiles.length === 0 || !lang.trim() || !taskModel.trim()}>
+            <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>{t("cancel")}</Button>
+            <Button type="submit" form="add-task-form" disabled={pendingFiles.length === 0 || !lang.trim() || !taskModel.trim()}>
               <FilePlus2 data-icon="inline-start" />
               {t("navigation.addTask")}
             </Button>
