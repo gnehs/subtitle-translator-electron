@@ -225,13 +225,14 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [selectedAnalysis, setSelectedAnalysis] = useState<string | undefined>();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
+  const [activeTranslationCount, setActiveTranslationCount] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
   const [modelLoadStatus, setModelLoadStatus] = useState<ModelLoadStatus>("idle");
   const [modelLoadError, setModelLoadError] = useState("");
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState("");
+  const isTranslating = activeTranslationCount > 0;
   const statusCopy: Record<BatchProgress["status"], string> = {
     pending: t("task.status.pending"),
     analyzing: t("task.status.analyzing"),
@@ -361,9 +362,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       return;
     }
     handledAddTaskRequestRef.current = addTaskRequest;
-    if (isTranslating) return;
     fileInputRef.current?.click();
-  }, [addTaskRequest, isTranslating]);
+  }, [addTaskRequest]);
 
   const completedCount = files.filter(
     (file) => batchProgress[file.path]?.status === "done"
@@ -428,10 +428,6 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   };
 
   const requestAddFiles = (selectedFiles: File[]) => {
-    if (isTranslating) {
-      toast.info(t("toast.translationInProgress"));
-      return;
-    }
     const nextFiles = resolveSelectedFiles(selectedFiles);
     if (nextFiles.length === 0) return;
     setTaskModel(model);
@@ -529,6 +525,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   };
 
   const removeFile = (filePath: string) => {
+    window.electronAPI.cancelTranslation(filePath);
     setFiles(files.filter((file) => file.path !== filePath));
     setBatchProgress((previous) => {
       const next = { ...previous };
@@ -566,7 +563,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       return;
     }
 
-    setIsTranslating(true);
+    setActiveTranslationCount((count) => count + 1);
     setBatchProgress((previous) => ({
       ...previous,
       ...Object.fromEntries(
@@ -608,7 +605,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         })
       );
     } finally {
-      setIsTranslating(false);
+      setActiveTranslationCount((count) => Math.max(0, count - 1));
     }
   };
 
@@ -685,7 +682,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       className={cn("flex min-h-0 flex-1 flex-col", isDragging && "bg-muted/40")}
       onDragOver={(event) => {
         event.preventDefault();
-        if (!isTranslating) setIsDragging(true);
+        setIsDragging(true);
       }}
       onDragLeave={(event) => {
         if (event.currentTarget === event.target) setIsDragging(false);

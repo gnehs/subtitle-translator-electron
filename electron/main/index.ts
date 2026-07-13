@@ -5,7 +5,6 @@ import {
   ipcMain,
   Menu,
   shell,
-  type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
   type WebFrameMain,
   type WebContents,
@@ -16,6 +15,7 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import fs, { type Stats } from "node:fs";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import pool from "tiny-async-pool";
 import { z } from "zod";
@@ -121,6 +121,7 @@ const applicationLocaleSchema = z.enum(["en-US", "zh-TW", "zh-CN"]);
 type ApplicationLocale = z.infer<typeof applicationLocaleSchema>;
 let applicationLocale: ApplicationLocale | undefined;
 const activeTranslationPathClaims = new Set<string>();
+const activeTranslationControllers = new Map<string, Set<AbortController>>();
 
 const subtitleFileSchema = z
   .object({
@@ -219,9 +220,31 @@ function isTrustedSender(frame: WebFrameMain | null): boolean {
   }
 }
 
-function assertTrustedSender(event: IpcMainInvokeEvent): void {
+function assertTrustedSender(event: { senderFrame: WebFrameMain | null }): void {
   if (!isTrustedSender(event.senderFrame)) {
     throw new Error("Untrusted IPC sender");
+  }
+}
+
+function registerTranslationController(
+  filePath: string,
+  controller: AbortController
+): () => void {
+  const controllers = activeTranslationControllers.get(filePath) || new Set();
+  controllers.add(controller);
+  activeTranslationControllers.set(filePath, controllers);
+
+  return () => {
+    controllers.delete(controller);
+    if (controllers.size === 0) {
+      activeTranslationControllers.delete(filePath);
+    }
+  };
+}
+
+function cancelTranslation(filePath: string): void {
+  for (const controller of activeTranslationControllers.get(filePath) || []) {
+    controller.abort();
   }
 }
 
@@ -810,16 +833,19 @@ ipcMain.handle("list-models", async (event, request: unknown) => {
 async function retryTranslate<TInput, TResult>(
   fn: (input: TInput) => Promise<TResult>,
   input: TInput,
-  delay = 1000
+  delay = 1000,
+  abortSignal?: AbortSignal
 ): Promise<TResult> {
   for (
     let attempt = 1;
     attempt <= MAX_AUTOMATIC_TRANSLATION_ATTEMPTS;
     attempt++
   ) {
+    abortSignal?.throwIfAborted();
     try {
       return await fn(input);
     } catch (error: unknown) {
+      if (abortSignal?.aborted) throw error;
       if (attempt === MAX_AUTOMATIC_TRANSLATION_ATTEMPTS) {
         throw error;
       }
@@ -833,12 +859,19 @@ async function retryTranslate<TInput, TResult>(
       console.warn(
         `Translation attempt ${attempt} failed: ${errorMessage || name || "unknown error"}. Retrying in ${backoff}ms...`
       );
-      await new Promise((resolve) => setTimeout(resolve, backoff));
+      await sleep(backoff, undefined, { signal: abortSignal });
     }
   }
 
   throw new Error("Automatic translation retry loop exited unexpectedly");
 }
+
+ipcMain.on("cancel-translation", (event, filePath: unknown) => {
+  if (!isTrustedSender(event.senderFrame)) return;
+  const parsedFilePath = z.string().min(1).safeParse(filePath);
+  if (!parsedFilePath.success) return;
+  cancelTranslation(parsedFilePath.data);
+});
 
 ipcMain.handle("batch-translate", async (event, request: unknown) => {
   assertTrustedSender(event);
@@ -856,13 +889,26 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
     requestsPerMinute: params.requestsPerMinute,
     minimumIntervalMs: params.delay,
   });
+  const translationControllersByPath = new Map<string, AbortController>();
+  const unregisterTranslationControllers: Array<() => void> = [];
+  for (const file of files) {
+    if (translationControllersByPath.has(file.path)) continue;
+    const controller = new AbortController();
+    translationControllersByPath.set(file.path, controller);
+    unregisterTranslationControllers.push(
+      registerTranslationController(file.path, controller)
+    );
+  }
   // Keep these claims for the whole request so later files cannot silently
   // overwrite an earlier file after its active write lock has been released.
   const batchPathClaims = new Set<string>();
   const processFile = async (file: BatchTranslationRequest["files"][number]) => {
+    const abortSignal = translationControllersByPath.get(file.path)?.signal;
+    if (!abortSignal) return;
     let outputPath: string | undefined;
     let releasePathClaims: (() => void) | undefined;
     try {
+      abortSignal.throwIfAborted();
       const input = readTranslationInput(
         file.path,
         translationConfigFingerprint
@@ -894,6 +940,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         batchPathClaims
       );
       if (input.shouldBackupCheckpoint) {
+        abortSignal.throwIfAborted();
         const backupPath = await backupTranslationCheckpoint(checkpointPath);
         console.warn(
           `Preserved an incompatible translation checkpoint at: ${backupPath}`
@@ -920,9 +967,11 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       };
 
       await persistCheckpoint();
+      abortSignal.throwIfAborted();
 
       const chunks = splitIntoChunk(subtitle, 20);
       if (chunks.length === 0) {
+        abortSignal.throwIfAborted();
         saveTranslated(
           translatedOutputPath,
           parsed,
@@ -945,6 +994,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         return;
       }
 
+      abortSignal.throwIfAborted();
       sendProgress(event.sender, {
         filePath: file.path,
         progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
@@ -976,6 +1026,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
             lang: params.lang || "",
             temperature: 0.3,
             requestRateLimiter,
+            abortSignal,
           });
           if (analysis) {
             combinedAdditional = `${
@@ -996,6 +1047,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
             });
           }
         } catch (analysisErr) {
+          abortSignal.throwIfAborted();
           console.warn(
             "Context analysis failed, continue without it:",
             analysisErr
@@ -1003,6 +1055,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         }
       }
 
+      abortSignal.throwIfAborted();
       sendProgress(event.sender, {
         filePath: file.path,
         progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
@@ -1015,6 +1068,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
 
       // Translate
       const chunkProcessor = async (block: SubtitleCue[]) => {
+        abortSignal.throwIfAborted();
         // 以原始索引建立「核心段」和「上下文視窗」
         const contextSize =
           typeof params.contextSize === "number"
@@ -1060,6 +1114,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
                   ? params.temperature
                   : 1,
               requestRateLimiter,
+              abortSignal,
             });
 
             if (!Array.isArray(result) || result.length !== block.length) {
@@ -1070,9 +1125,12 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
 
             return result;
           },
-          translationChunk
+          translationChunk,
+          1000,
+          abortSignal
         );
 
+        abortSignal.throwIfAborted();
         // The model receives surrounding context but returns only the core block.
         let chunkCompleted = 0;
         for (const [index, cue] of block.entries()) {
@@ -1080,6 +1138,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           chunkCompleted++;
         }
 
+        abortSignal.throwIfAborted();
         completedCues += chunkCompleted;
         const progress = totalCues > 0 ? (completedCues / totalCues) * 100 : 100;
         const currentCue = Math.min(completedCues, totalCues);
@@ -1132,6 +1191,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       }
 
       // Final write
+      abortSignal.throwIfAborted();
       saveTranslated(
         translatedOutputPath,
         parsed,
@@ -1153,6 +1213,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         outputPath: translatedOutputPath,
       });
     } catch (e: unknown) {
+      if (abortSignal.aborted) return;
       console.error(`Batch translation error for ${file.path}:`, e);
       sendProgress(event.sender, {
         filePath: file.path,
@@ -1166,8 +1227,12 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
     }
   };
 
-  for await (const _ of pool(3, files, processFile)) {
-    // Process all files in parallel with concurrency 3
+  try {
+    for await (const _ of pool(3, files, processFile)) {
+      // Process all files in parallel with concurrency 3
+    }
+  } finally {
+    for (const unregister of unregisterTranslationControllers) unregister();
   }
   return { success: true };
 });

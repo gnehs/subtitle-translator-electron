@@ -277,6 +277,7 @@ async function translateSubtitleChunk(
     additional,
     temperature,
     requestRateLimiter,
+    abortSignal,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -286,6 +287,7 @@ async function translateSubtitleChunk(
     additional: string;
     temperature: number;
     requestRateLimiter?: RequestRateLimiter;
+    abortSignal?: AbortSignal;
   }
 ) {
   if (core.length === 0) return [];
@@ -300,7 +302,7 @@ async function translateSubtitleChunk(
     .replaceAll("{{lang}}", lang)
     .replaceAll("{{additional}}", additional);
 
-  await requestRateLimiter?.waitForSlot();
+  await requestRateLimiter?.waitForSlot(abortSignal);
   const maxOutputTokens = Math.min(
     MAX_TRANSLATION_OUTPUT_TOKENS,
     Math.max(
@@ -332,6 +334,7 @@ async function translateSubtitleChunk(
       }),
     maxOutputTokens,
     maxRetries: 0,
+    abortSignal,
   });
 
   if (
@@ -495,6 +498,7 @@ async function analyzeSubtitlesForContext(
     lang,
     temperature = 0.3,
     requestRateLimiter,
+    abortSignal,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -502,6 +506,7 @@ async function analyzeSubtitlesForContext(
     lang: string;
     temperature?: number;
     requestRateLimiter?: RequestRateLimiter;
+    abortSignal?: AbortSignal;
   }
 ): Promise<string> {
   const sampledSubtitles = sampleSubtitlesForAnalysis(subtitles);
@@ -510,7 +515,7 @@ async function analyzeSubtitlesForContext(
   const ai = getAi({ apiKey: getFirstValidApiKey(apiKeys), apiHost });
 
   try {
-    await requestRateLimiter?.waitForSlot();
+    await requestRateLimiter?.waitForSlot(abortSignal);
     const result = await generateText({
       model: ai(model),
       temperature,
@@ -541,9 +546,11 @@ Analyze subtitle samples and return exactly two Markdown sections:
         sampledSubtitles.join("\n"),
       maxOutputTokens: MAX_ANALYSIS_OUTPUT_TOKENS,
       maxRetries: 0,
+      abortSignal,
     });
     return result.text;
-  } catch {
+  } catch (error) {
+    if (abortSignal?.aborted) throw error;
     return "";
   }
 }

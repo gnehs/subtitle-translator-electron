@@ -72,6 +72,7 @@ export interface ElectronAPI {
     apiHost: string;
   }): Promise<AvailableModel[]>;
   translateBatch(request: BatchTranslationRequest): Promise<{ success: true }>;
+  cancelTranslation(filePath: string): void;
   getSubtitlePreview(
     request: SubtitlePreviewRequest
   ): Promise<{ cues: SubtitleCuePreview[] }>;

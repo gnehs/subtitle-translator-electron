@@ -23,6 +23,10 @@ const electronAPI = {
     return ipcRenderer.invoke("batch-translate", request);
   },
 
+  cancelTranslation(filePath: string): void {
+    ipcRenderer.send("cancel-translation", filePath);
+  },
+
   getSubtitlePreview(request: SubtitlePreviewRequest) {
     return ipcRenderer.invoke("get-subtitle-preview", request);
   },
