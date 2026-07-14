@@ -24,6 +24,12 @@
 
 ## [Download](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
 
+Install with Homebrew:
+
+```sh
+brew install --cask gnehs/tap/subtitle-translator-electron
+```
+
 Download the latest stable version from the
 [Releases](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
 page

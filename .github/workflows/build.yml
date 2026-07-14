@@ -78,6 +78,7 @@ jobs:
           fail_on_unmatched_files: true
           body: |
             ### Download
+            - Homebrew: `brew install --cask gnehs/tap/subtitle-translator-electron`
             - [Windows](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.exe)
             - [macOS](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.dmg)
             - [Linux](https://github.com/gnehs/subtitle-translator-electron/releases/download/${{ github.ref_name }}/subtitle-translator_${{ github.ref_name }}.AppImage)
