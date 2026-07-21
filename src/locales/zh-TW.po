@@ -404,6 +404,11 @@ msgid "task.progress.retry"
 msgstr "自動重試三次後失敗；請按「重試」再次執行"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:144
+msgid "task.progress.failedSummary"
+msgstr "翻譯失敗。請開啟詳細資訊查看錯誤，或重新嘗試。"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:77
 msgid "translate.failed_to_translate"
 msgstr "無法翻譯該行字幕：{text}"
@@ -507,6 +512,16 @@ msgstr "模型名稱"
 #: src/i18n-messages.ts:130
 msgid "error.outputPathConflict"
 msgstr "多個任務會寫入同一個輸出檔案。請選擇不同的輸出資料夾，或重新命名其中一個來源檔案。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:131
+msgid "error.repetitiveModelOutput"
+msgstr "模型開始異常重複輸出，因此已停止翻譯。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:132
+msgid "error.incompleteModelOutput"
+msgstr "模型在完成翻譯前停止輸出。請重試或改用其他模型。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:65
@@ -732,6 +747,11 @@ msgstr "重設所有設定"
 #: src/i18n-messages.ts:214
 msgid "tasks.details.retry"
 msgstr "重試"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:218
+msgid "tasks.details.error"
+msgstr "錯誤詳細資訊"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:164

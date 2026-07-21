@@ -7,4 +7,6 @@ export const translationErrorCodes = {
   noValidApiKeys: "ERR_NO_VALID_API_KEYS",
   unsupportedFileExtension: "ERR_UNSUPPORTED_FILE_EXTENSION",
   outputPathConflict: "ERR_TRANSLATION_OUTPUT_PATH_CONFLICT",
+  repetitiveModelOutput: "ERR_REPETITIVE_MODEL_OUTPUT",
+  incompleteModelOutput: "ERR_INCOMPLETE_MODEL_OUTPUT",
 } as const;

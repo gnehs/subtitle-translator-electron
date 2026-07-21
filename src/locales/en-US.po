@@ -404,6 +404,11 @@ msgid "task.progress.retry"
 msgstr "Failed after three automatic retries; press Retry to run again"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:144
+msgid "task.progress.failedSummary"
+msgstr "Translation failed. Open details to view the error, or retry."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:77
 msgid "translate.failed_to_translate"
 msgstr "Failed to translate line: {text}"
@@ -507,6 +512,16 @@ msgstr "Model name"
 #: src/i18n-messages.ts:130
 msgid "error.outputPathConflict"
 msgstr "Multiple tasks would write to the same output file. Choose separate output folders or rename one of the source files."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:131
+msgid "error.repetitiveModelOutput"
+msgstr "Translation stopped because the model began repeating its output abnormally."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:132
+msgid "error.incompleteModelOutput"
+msgstr "The model stopped before producing a complete translation. Try again or choose a different model."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:65
@@ -732,6 +747,11 @@ msgstr "Reset all settings"
 #: src/i18n-messages.ts:214
 msgid "tasks.details.retry"
 msgstr "Retry"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:218
+msgid "tasks.details.error"
+msgstr "Error details"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:164

@@ -62,6 +62,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -132,6 +133,8 @@ const translationErrorMessageIds: Record<string, string> = {
   [translationErrorCodes.noValidApiKeys]: "error.noValidApiKeys",
   [translationErrorCodes.unsupportedFileExtension]: "error.unsupportedFileExtension",
   [translationErrorCodes.outputPathConflict]: "error.outputPathConflict",
+  [translationErrorCodes.repetitiveModelOutput]: "error.repetitiveModelOutput",
+  [translationErrorCodes.incompleteModelOutput]: "error.incompleteModelOutput",
 };
 
 function getLocalizedError(error: unknown, fallbackId: string, t: Translate): string {
@@ -648,14 +651,12 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     if (progress.status === "done") detail = t("task.progress.done");
     if (progress.status === "error") {
       detail = progress.error
-        ? t("task.progress.retryWithError", {
-            error: getLocalizedError(progress.error, "toast.unknownError", t),
-          })
+        ? t("task.progress.failedSummary")
         : t("task.progress.retry");
     }
 
     return (
-      <div className="flex min-w-44 flex-col gap-1.5">
+      <div className="flex w-full min-w-0 flex-col gap-1.5">
         <div className="flex items-center justify-between gap-3">
           <Badge variant={getStatusVariant(progress.status)}>
             {progress.status === "translating" && <LoaderCircle className="animate-spin" data-icon="inline-start" />}
@@ -672,7 +673,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             progress: progressValue,
           })}
         />
-        <span className="truncate text-xs text-muted-foreground" title={detail}>{detail}</span>
+        <span className="truncate text-xs text-muted-foreground">{detail}</span>
       </div>
     );
   };
@@ -758,7 +759,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[320px] px-5">{t("tasks.table.file")}</TableHead>
-                  <TableHead className="min-w-[260px]">{t("tasks.table.progress")}</TableHead>
+                  <TableHead className="w-[280px] min-w-[280px] max-w-[280px]">{t("tasks.table.progress")}</TableHead>
                   <TableHead className="hidden min-w-[180px] xl:table-cell">
                     {t("tasks.table.settings")}
                   </TableHead>
@@ -779,7 +780,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{renderStatus(file)}</TableCell>
+                    <TableCell className="w-[280px] max-w-[280px]">
+                      {renderStatus(file)}
+                    </TableCell>
                     <TableCell className="hidden min-w-0 xl:table-cell">
                       <div className="flex min-w-0 flex-col gap-0.5 text-sm">
                       <span
@@ -1129,6 +1132,31 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                   <span className="flex items-center gap-2"><span className="size-2 rounded-full border" />{t("tasks.details.stage.organize")}</span>
                 </div>
               </div>
+              {batchProgress[selectedFile.path]?.status === "error" && (
+                <section
+                  className="border-t px-5 py-5"
+                  aria-labelledby="task-error-details-title"
+                >
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle aria-hidden="true" />
+                    <h3
+                      id="task-error-details-title"
+                      className="font-medium"
+                    >
+                      {t("tasks.details.error")}
+                    </h3>
+                  </div>
+                  <ScrollArea className="mt-3 h-40 rounded-lg border bg-muted/20">
+                    <pre className="whitespace-pre-wrap break-words p-3 font-mono text-xs leading-5 text-muted-foreground select-text [overflow-wrap:anywhere]">
+                      {getLocalizedError(
+                        batchProgress[selectedFile.path]?.error,
+                        "toast.unknownError",
+                        t
+                      )}
+                    </pre>
+                  </ScrollArea>
+                </section>
+              )}
               {selectedAnalysis && (
                 <div className="border-t px-5 py-5">
                   <p className="font-medium">{t("tasks.details.context")}</p>

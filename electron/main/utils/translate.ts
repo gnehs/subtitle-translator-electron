@@ -4,13 +4,18 @@ import { parseSync, stringifySync, type NodeList } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import { z } from "zod";
-import { generateText, Output } from "ai";
+import { generateText, Output, streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { translationErrorCodes } from "../../shared/translation-error-codes";
 import type { RequestRateLimiter } from "./request-rate-limiter";
 import { compactRepetitiveSubtitleText } from "./subtitle-chunks";
 import { sampleSubtitlesForAnalysis } from "./subtitle-sampling";
 import type { TranslationSourceFingerprint } from "./translation-checkpoint";
+import {
+  isCompletedTranslationFinishReason,
+  MAX_TRANSLATION_OUTPUT_TOKENS,
+  TranslationOutputRepetitionGuard,
+} from "./translation-output";
 
 export interface SubtitleCueData {
   text: string;
@@ -76,7 +81,6 @@ export interface TranslationCacheDocument {
 }
 
 const savedSubtitleSeparators = ["\r\n", "\n", "\\N", "\\n"] as const;
-const MAX_TRANSLATION_OUTPUT_TOKENS = 4_096;
 const MAX_ANALYSIS_OUTPUT_TOKENS = 2_048;
 
 /**
@@ -303,16 +307,17 @@ async function translateSubtitleChunk(
     .replaceAll("{{additional}}", additional);
 
   await requestRateLimiter?.waitForSlot(abortSignal);
-  const maxOutputTokens = Math.min(
-    MAX_TRANSLATION_OUTPUT_TOKENS,
-    Math.max(
-      512,
-      compactedCore.reduce((characterCount, subtitle) => {
-        return characterCount + subtitle.length * 2;
-      }, 0)
-    )
-  );
-  const { output } = await generateText({
+  const repetitionController = new AbortController();
+  const requestAbortSignal = abortSignal
+    ? AbortSignal.any([abortSignal, repetitionController.signal])
+    : repetitionController.signal;
+  const repetitionGuards = new Map<
+    string,
+    TranslationOutputRepetitionGuard
+  >();
+  let stoppedForRepetition = false;
+
+  const result = streamText({
     model: ai(model),
     temperature,
     system: systemPrompt,
@@ -332,10 +337,45 @@ async function translateSubtitleChunk(
         core: compactedCore,
         after: compactedAfter,
       }),
-    maxOutputTokens,
+    maxOutputTokens: MAX_TRANSLATION_OUTPUT_TOKENS,
     maxRetries: 0,
-    abortSignal,
+    abortSignal: requestAbortSignal,
+    onChunk({ chunk }) {
+      if (
+        chunk.type !== "text-delta" &&
+        chunk.type !== "reasoning-delta"
+      ) {
+        return;
+      }
+
+      const guardKey = `${chunk.type}:${chunk.id}`;
+      const guard =
+        repetitionGuards.get(guardKey) ??
+        new TranslationOutputRepetitionGuard();
+      repetitionGuards.set(guardKey, guard);
+
+      if (guard.push(chunk.text)) {
+        stoppedForRepetition = true;
+        repetitionController.abort(
+          new Error(translationErrorCodes.repetitiveModelOutput)
+        );
+      }
+    },
   });
+
+  let output: string[];
+  try {
+    const finishReason = await result.finishReason;
+    if (!isCompletedTranslationFinishReason(finishReason)) {
+      throw new Error(translationErrorCodes.incompleteModelOutput);
+    }
+    output = await result.output;
+  } catch (error) {
+    if (stoppedForRepetition && !abortSignal?.aborted) {
+      throw new Error(translationErrorCodes.repetitiveModelOutput);
+    }
+    throw error;
+  }
 
   if (
     output.length !== core.length ||
