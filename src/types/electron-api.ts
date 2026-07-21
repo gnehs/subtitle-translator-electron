@@ -50,6 +50,7 @@ export interface BatchProgress {
   currentCue?: number;
   analysis?: string | null;
   outputPath?: string;
+  previewCues?: SubtitleCuePreview[];
 }
 
 export interface SubtitlePreviewRequest {

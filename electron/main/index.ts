@@ -32,8 +32,9 @@ import {
   saveTranslated,
   analyzeSubtitlesForContext,
   getSubtitleCues,
-  getTranslatedPreviewText,
 } from "./utils/translate";
+import { createSubtitlePreview } from "./utils/subtitle-preview";
+import { shouldAnalyzeSubtitles } from "./utils/subtitle-sampling";
 import { fetchAvailableModels } from "./utils/models";
 import { RequestRateLimiter } from "./utils/request-rate-limiter";
 import { isAllowedApiHost } from "./utils/api-host";
@@ -981,7 +982,6 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         await checkpointWriter.wait().catch((error: unknown) => {
           console.warn("Failed to finish translation checkpoint:", error);
         });
-        await removeTranslationCheckpoint(checkpointPath);
         sendProgress(event.sender, {
           filePath: file.path,
           progress: 100,
@@ -990,25 +990,34 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           currentCue: totalCues,
           analysis: analysisData,
           outputPath: translatedOutputPath,
+          previewCues: createSubtitlePreview(subtitle, subtitle),
         });
+        await removeTranslationCheckpoint(checkpointPath);
         return;
       }
-
-      abortSignal.throwIfAborted();
-      sendProgress(event.sender, {
-        filePath: file.path,
-        progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
-        status: "analyzing",
-        totalCues,
-        currentCue: completedCues,
-        analysis: analysisData ?? null,
-        outputPath: translatedOutputPath,
-      });
 
       // Build analysis context (plot summary + glossary) and attach to all requests
       const allTexts = subtitle
         .map((cue) => cue.data.text)
         .filter((t: string) => t && t.length > 0);
+
+      const shouldAnalyze = shouldAnalyzeSubtitles(
+        analysisData,
+        allTexts.length,
+        MIN_CUES_FOR_CONTEXT_ANALYSIS
+      );
+      if (shouldAnalyze) {
+        abortSignal.throwIfAborted();
+        sendProgress(event.sender, {
+          filePath: file.path,
+          progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
+          status: "analyzing",
+          totalCues,
+          currentCue: completedCues,
+          analysis: null,
+          outputPath: translatedOutputPath,
+        });
+      }
 
       let combinedAdditional = params.additional || "";
       if (analysisData) {
@@ -1016,7 +1025,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           combinedAdditional ? combinedAdditional + "\n\n" : ""
         }[Context]\n${analysisData}`;
         analysisCache.set(file.path, analysisData);
-      } else if (allTexts.length >= MIN_CUES_FOR_CONTEXT_ANALYSIS) {
+      } else if (shouldAnalyze) {
         try {
           const analysis = await analyzeSubtitlesForContext(allTexts, {
             apiKeys: params.apiKeys || [],
@@ -1201,8 +1210,6 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
       await checkpointWriter.wait().catch((error: unknown) => {
         console.warn("Failed to finish translation checkpoint:", error);
       });
-      await removeTranslationCheckpoint(checkpointPath);
-      console.log(`Saved translated file to: ${translatedOutputPath}`);
       sendProgress(event.sender, {
         filePath: file.path,
         progress: 100,
@@ -1211,7 +1218,10 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         currentCue: totalCues,
         analysis: analysisData ?? null,
         outputPath: translatedOutputPath,
+        previewCues: createSubtitlePreview(subtitle, subtitle),
       });
+      await removeTranslationCheckpoint(checkpointPath);
+      console.log(`Saved translated file to: ${translatedOutputPath}`);
     } catch (e: unknown) {
       if (abortSignal.aborted) return;
       console.error(`Batch translation error for ${file.path}:`, e);
@@ -1258,29 +1268,8 @@ ipcMain.handle("get-subtitle-preview", async (event, request: unknown) => {
   const parsed = input.parsed;
   const subtitle = getSubtitleCues(parsed);
 
-  const makePreview = (translatedSubtitle?: SubtitleCue[]) => {
-    const translatedCuesArray = translatedSubtitle?.map(
-      (cue) => cue.data.translatedText || cue.data.text
-    );
-
-    return subtitle.map((cue, index) => {
-      // Translation and checkpoint writes preserve cue order. Sequential
-      // alignment also keeps distinct cues that intentionally share timestamps.
-      const savedTranslation = translatedCuesArray?.[index];
-      return {
-        text: cue.data.text,
-        translatedText:
-          typeof savedTranslation === "string"
-            ? getTranslatedPreviewText(savedTranslation, cue.data.text)
-            : undefined,
-        start: cue.data.start,
-        end: cue.data.end,
-      };
-    });
-  };
-
   if (input.cacheDocument) {
-    return { cues: makePreview(subtitle) };
+    return { cues: createSubtitlePreview(subtitle, subtitle) };
   }
 
   const checkpointPath = getTranslationCachePath(
@@ -1320,5 +1309,5 @@ ipcMain.handle("get-subtitle-preview", async (event, request: unknown) => {
     }
   }
 
-  return { cues: makePreview(translatedSubtitle) };
+  return { cues: createSubtitlePreview(subtitle, translatedSubtitle) };
 });

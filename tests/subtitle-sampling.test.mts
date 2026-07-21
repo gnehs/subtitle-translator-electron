@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sampleSubtitlesForAnalysis } from "../electron/main/utils/subtitle-sampling.ts";
+import {
+  sampleSubtitlesForAnalysis,
+  shouldAnalyzeSubtitles,
+} from "../electron/main/utils/subtitle-sampling.ts";
+
+test("analyzes only when a sufficiently large subtitle has no cached analysis", () => {
+  assert.equal(shouldAnalyzeSubtitles(undefined, 40, 40), true);
+  assert.equal(shouldAnalyzeSubtitles("Existing context", 40, 40), false);
+  assert.equal(shouldAnalyzeSubtitles(undefined, 39, 40), false);
+});
 
 test("samples deterministically across the full timeline", () => {
   const subtitles = Array.from({ length: 100 }, (_, index) => `Cue ${index}`);

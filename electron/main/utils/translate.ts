@@ -80,37 +80,7 @@ export interface TranslationCacheDocument {
   analysis?: string;
 }
 
-const savedSubtitleSeparators = ["\r\n", "\n", "\\N", "\\n"] as const;
 const MAX_ANALYSIS_OUTPUT_TOKENS = 2_048;
-
-/**
- * Recover the translation portion from a cue saved in bilingual mode.
- *
- * Bilingual output is serialized into one cue so subtitle timing stays
- * aligned. The preview needs the two logical values separately again.
- */
-export function getTranslatedPreviewText(
-  savedText: string,
-  originalText: string
-): string {
-  if (!savedText || !originalText || savedText === originalText) {
-    return savedText;
-  }
-
-  for (const separator of savedSubtitleSeparators) {
-    const originalFirst = `${originalText}${separator}`;
-    if (savedText.startsWith(originalFirst)) {
-      return savedText.slice(originalFirst.length);
-    }
-
-    const originalLast = `${separator}${originalText}`;
-    if (savedText.endsWith(originalLast)) {
-      return savedText.slice(0, -originalLast.length);
-    }
-  }
-
-  return savedText;
-}
 
 function isCue(node: SubtitleCue | SubtitleHeader): node is SubtitleCue {
   return node.type === "cue";

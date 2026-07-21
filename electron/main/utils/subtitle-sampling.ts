@@ -8,6 +8,14 @@ const defaultOptions = {
   maxLines: 240,
 } as const;
 
+export function shouldAnalyzeSubtitles(
+  cachedAnalysis: string | undefined,
+  subtitleCount: number,
+  minimumSubtitleCount: number
+): boolean {
+  return !cachedAnalysis && subtitleCount >= minimumSubtitleCount;
+}
+
 function getEvenlySpacedSample(
   subtitles: readonly string[],
   sampleSize: number

@@ -100,7 +100,7 @@ import { cn } from "@/lib/utils";
 import MarkdownContent from "@/components/MarkdownContent";
 
 type FileProgress = Pick<BatchProgress, "progress" | "status"> &
-  Partial<Omit<BatchProgress, "progress" | "status">> & {
+  Partial<Omit<BatchProgress, "progress" | "status" | "previewCues">> & {
     model?: string;
     targetLanguage?: string;
   };
@@ -248,21 +248,35 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const previewRequestIdRef = useRef(0);
   const detailRequestIdRef = useRef(0);
   const handledAddTaskRequestRef = useRef(0);
+  const finalPreviewCuesRef = useRef(
+    new Map<string, SubtitleCuePreview[]>()
+  );
 
   useEffect(() => {
     if (!window.electronAPI?.onBatchProgress) return;
     const unsubscribe = window.electronAPI.onBatchProgress((data) => {
+      const { previewCues, ...progressData } = data;
       setBatchProgress((previous) => ({
         ...previous,
         [data.filePath]: {
           ...previous[data.filePath],
-          ...data,
+          ...progressData,
           analysis:
             data.analysis === undefined
               ? previous[data.filePath]?.analysis
               : data.analysis ?? undefined,
         },
       }));
+
+      if (previewCues) {
+        finalPreviewCuesRef.current.set(data.filePath, previewCues);
+        if (selectedFile?.path === data.filePath) {
+          previewRequestIdRef.current += 1;
+          setCues(previewCues);
+          setPreviewLoadStatus("success");
+          setPreviewLoadError("");
+        }
+      }
 
       if (
         selectedFile?.path === data.filePath &&
@@ -276,7 +290,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         detailOpen &&
         selectedFile?.path === data.filePath &&
         previewLoadStatus === "success" &&
-        (data.status === "translating" || data.status === "done") &&
+        data.status === "translating" &&
+        !previewCues &&
         now - lastPreviewUpdateRef.current > 800
       ) {
         lastPreviewUpdateRef.current = now;
@@ -493,11 +508,18 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     setSelectedAnalysis(batchProgress[file.path]?.analysis ?? undefined);
     setCues([]);
     setDetailOpen(true);
-    await loadCues(
-      file.path,
-      true,
-      batchProgress[file.path]?.outputPath
-    );
+    const cachedPreview = finalPreviewCuesRef.current.get(file.path);
+    if (cachedPreview) {
+      setCues(cachedPreview);
+      setPreviewLoadStatus("success");
+      setPreviewLoadError("");
+    } else {
+      await loadCues(
+        file.path,
+        true,
+        batchProgress[file.path]?.outputPath
+      );
+    }
     try {
       const analysis = await window.electronAPI.getAnalysis(file.path);
       if (detailRequestId !== detailRequestIdRef.current) return;
@@ -529,6 +551,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
 
   const removeFile = (filePath: string) => {
     window.electronAPI.cancelTranslation(filePath);
+    finalPreviewCuesRef.current.delete(filePath);
     setFiles(files.filter((file) => file.path !== filePath));
     setBatchProgress((previous) => {
       const next = { ...previous };
@@ -542,6 +565,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const clearCompletedFiles = () => {
     if (completedCount === 0) return;
     const remaining = files.filter((file) => batchProgress[file.path]?.status !== "done");
+    for (const file of files) {
+      if (batchProgress[file.path]?.status === "done") {
+        finalPreviewCuesRef.current.delete(file.path);
+      }
+    }
     setFiles(remaining);
     setBatchProgress((previous) =>
       Object.fromEntries(Object.entries(previous).filter(([path]) => remaining.some((file) => file.path === path)))
@@ -557,6 +585,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       (file) => batchProgress[file.path]?.status !== "done"
     );
     if (translatableFiles.length === 0) return;
+    for (const file of translatableFiles) {
+      finalPreviewCuesRef.current.delete(file.path);
+    }
     if (!lang.trim()) {
       toast.error(t("toast.targetLanguageRequired"));
       return;
