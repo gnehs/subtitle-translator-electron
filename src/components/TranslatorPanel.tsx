@@ -871,6 +871,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               <Field>
                 <FieldLabel htmlFor="task-model">{t("tasks.model.label")}</FieldLabel>
                 <Popover
+                  modal
                   open={modelPickerOpen}
                   onOpenChange={handleModelPickerChange}
                 >
