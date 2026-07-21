@@ -6,7 +6,7 @@
   "author": "gnehs",
   "license": "MIT",
   "private": true,
-  "packageManager": "pnpm@11.12.0",
+  "packageManager": "pnpm@11.15.1",
   "debug": {
     "env": {
       "VITE_DEV_SERVER_URL": "http://127.0.0.1:7777/"
