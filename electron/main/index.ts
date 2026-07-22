@@ -19,7 +19,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import pool from "tiny-async-pool";
 import { z } from "zod";
-import { APICallError } from "ai";
+import { APICallError, NoObjectGeneratedError } from "ai";
 import {
   type BatchProgress,
   type BatchTranslationRequest,
@@ -544,14 +544,18 @@ function getRetryAfterMs(error: unknown): number {
 
 function isRetryableTranslationError(error: unknown): boolean {
   if (APICallError.isInstance(error)) return error.isRetryable;
+  if (NoObjectGeneratedError.isInstance(error)) return true;
 
   const { message, status } = getErrorDetails(error);
   if (status === 429 || (typeof status === "number" && status >= 500)) {
     return true;
   }
 
-  return /network|timeout|timed out|econnreset|econnrefused|enotfound|socket hang up/i.test(
-    message
+  return (
+    message.includes(translationErrorCodes.incompleteModelOutput) ||
+    /network|timeout|timed out|econnreset|econnrefused|enotfound|socket hang up/i.test(
+      message
+    )
   );
 }
 
@@ -1027,16 +1031,21 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         analysisCache.set(file.path, analysisData);
       } else if (shouldAnalyze) {
         try {
-          const analysis = await analyzeSubtitlesForContext(allTexts, {
-            apiKeys: params.apiKeys || [],
-            apiHost: params.apiHost || "https://api.openai.com/v1",
-
-            model: params.model || "",
-            lang: params.lang || "",
-            temperature: 0.3,
-            requestRateLimiter,
-            abortSignal,
-          });
+          const analysis = await retryTranslate(
+            (texts) =>
+              analyzeSubtitlesForContext(texts, {
+                apiKeys: params.apiKeys || [],
+                apiHost: params.apiHost || "https://api.openai.com/v1",
+                model: params.model || "",
+                lang: params.lang || "",
+                temperature: 0.3,
+                requestRateLimiter,
+                abortSignal,
+              }),
+            allTexts,
+            params.delay,
+            abortSignal
+          );
           if (analysis) {
             combinedAdditional = `${
               combinedAdditional ? combinedAdditional + "\n\n" : ""

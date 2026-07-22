@@ -1,6 +1,4 @@
-export const MAX_TRANSLATION_OUTPUT_TOKENS = 32_768;
-
-export function isCompletedTranslationFinishReason(
+export function isCompletedModelFinishReason(
   finishReason: string
 ): boolean {
   return finishReason === "stop";

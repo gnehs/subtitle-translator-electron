@@ -1,19 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  isCompletedTranslationFinishReason,
-  MAX_TRANSLATION_OUTPUT_TOKENS,
+  isCompletedModelFinishReason,
   TranslationOutputRepetitionGuard,
 } from "../electron/main/utils/translation-output.ts";
 
-test("keeps a large finite output budget for reasoning models", () => {
-  assert.equal(MAX_TRANSLATION_OUTPUT_TOKENS, 32_768);
-});
-
 test("accepts only a normally completed model response", () => {
-  assert.equal(isCompletedTranslationFinishReason("stop"), true);
-  assert.equal(isCompletedTranslationFinishReason("length"), false);
-  assert.equal(isCompletedTranslationFinishReason("content-filter"), false);
+  assert.equal(isCompletedModelFinishReason("stop"), true);
+  assert.equal(isCompletedModelFinishReason("length"), false);
+  assert.equal(isCompletedModelFinishReason("content-filter"), false);
 });
 
 test("detects a pathological exact cycle across streamed chunks", () => {

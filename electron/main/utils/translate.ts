@@ -12,8 +12,11 @@ import { compactRepetitiveSubtitleText } from "./subtitle-chunks";
 import { sampleSubtitlesForAnalysis } from "./subtitle-sampling";
 import type { TranslationSourceFingerprint } from "./translation-checkpoint";
 import {
-  isCompletedTranslationFinishReason,
-  MAX_TRANSLATION_OUTPUT_TOKENS,
+  formatSubtitleAnalysis,
+  subtitleAnalysisSchema,
+} from "./analysis-output";
+import {
+  isCompletedModelFinishReason,
   TranslationOutputRepetitionGuard,
 } from "./translation-output";
 
@@ -79,8 +82,6 @@ export interface TranslationCacheDocument {
   subtitle: ParsedSubtitle;
   analysis?: string;
 }
-
-const MAX_ANALYSIS_OUTPUT_TOKENS = 2_048;
 
 function isCue(node: SubtitleCue | SubtitleHeader): node is SubtitleCue {
   return node.type === "cue";
@@ -307,7 +308,6 @@ async function translateSubtitleChunk(
         core: compactedCore,
         after: compactedAfter,
       }),
-    maxOutputTokens: MAX_TRANSLATION_OUTPUT_TOKENS,
     maxRetries: 0,
     abortSignal: requestAbortSignal,
     onChunk({ chunk }) {
@@ -336,7 +336,7 @@ async function translateSubtitleChunk(
   let output: string[];
   try {
     const finishReason = await result.finishReason;
-    if (!isCompletedTranslationFinishReason(finishReason)) {
+    if (!isCompletedModelFinishReason(finishReason)) {
       throw new Error(translationErrorCodes.incompleteModelOutput);
     }
     output = await result.output;
@@ -524,45 +524,50 @@ async function analyzeSubtitlesForContext(
 
   const ai = getAi({ apiKey: getFirstValidApiKey(apiKeys), apiHost });
 
-  try {
-    await requestRateLimiter?.waitForSlot(abortSignal);
-    const result = await generateText({
-      model: ai(model),
-      temperature,
-      system: `# System Prompt
+  await requestRateLimiter?.waitForSlot(abortSignal);
+  const result = await generateText({
+    model: ai(model),
+    temperature,
+    output: Output.object({
+      name: "SubtitleAnalysis",
+      description:
+        "A plot summary and glossary extracted from subtitle samples.",
+      schema: subtitleAnalysisSchema,
+    }),
+    system: `# System Prompt
 
 You are a subtitle content analyst assisting a translation and glossary extraction system.
 
 ## Task
-Analyze subtitle samples and return exactly two Markdown sections:
-## Plot Summary
+Analyze subtitle samples and return one JSON object with exactly these properties:
+- plotSummary: a string with the plot summary
+- glossary: an array of glossary entry objects
+
+## plotSummary
    - Language: ${lang}
    - Length: 5–10 sentences
    - Must be clear, coherent, and written in natural ${lang}
    - Avoid literal stitching of subtitles
 
-## Glossary
+## glossary
    - Up to 20 items
    - Include rare words, character names, places, organizations, fictional elements, or jargon
-   - Each entry must follow the schema:
-     - term (required)
-     - description (required)
-     - category (optional: person, place, organization, jargon, fictional, other)
-     - preferredTranslation (optional)
-     - notes (optional)
-   - Do not add any other sections.  `,
-      prompt:
-        `Produce plot summary in ${lang} and glossary from this sample:\n` +
-        sampledSubtitles.join("\n"),
-      maxOutputTokens: MAX_ANALYSIS_OUTPUT_TOKENS,
-      maxRetries: 0,
-      abortSignal,
-    });
-    return result.text;
-  } catch (error) {
-    if (abortSignal?.aborted) throw error;
-    return "";
+   - Every entry must include term, description, category, preferredTranslation, and notes
+   - category must be person, place, organization, jargon, fictional, other, or null
+   - Use null for category, preferredTranslation, or notes when not applicable
+   - Do not invent glossary entries merely to make the array non-empty.`,
+    prompt:
+      `Produce a plot summary in ${lang} and a glossary from this sample:\n` +
+      sampledSubtitles.join("\n"),
+    maxRetries: 0,
+    abortSignal,
+  });
+
+  if (!isCompletedModelFinishReason(result.finishReason)) {
+    throw new Error(translationErrorCodes.incompleteModelOutput);
   }
+
+  return formatSubtitleAnalysis(result.output);
 }
 
 export {
