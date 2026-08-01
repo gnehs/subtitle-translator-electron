@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@lingui/babel-plugin-lingui-macro": "^6.5.0",
-    "@lingui/cli": "^6.5.0",
+    "@lingui/cli": "^6.6.0",
     "@lingui/vite-plugin": "^6.5.0",
     "@playwright/test": "^1.61.1",
     "@rolldown/plugin-babel": "^0.2.3",
