@@ -50,7 +50,7 @@
     "node": ">=24.17.0"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.7",
+    "@ai-sdk/openai-compatible": "^3.0.16",
     "@fontsource-variable/geist": "^5.2.9",
     "@lingui/core": "^6.5.0",
     "@lingui/react": "^6.5.0",
