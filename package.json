@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.7",
-    "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/geist": "^5.3.0",
     "@lingui/core": "^6.5.0",
     "@lingui/react": "^6.5.0",
     "@reduxjs/toolkit": "^2.12.0",
