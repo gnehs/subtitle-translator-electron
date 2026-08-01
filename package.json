@@ -35,7 +35,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/tiny-async-pool": "^2.0.3",
-    "@vitejs/plugin-react": "^6.0.3",
+    "@vitejs/plugin-react": "^6.0.4",
     "electron": "^43.1.0",
     "electron-builder": "^26.15.3",
     "react": "^19.2.7",
