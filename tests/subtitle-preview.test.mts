@@ -18,8 +18,8 @@ test("creates a self-contained final preview before its checkpoint is removed", 
   const translated = [cue("First", "第一"), cue("Second", "Second\n第二")];
 
   assert.deepEqual(createSubtitlePreview(source, translated), [
-    { text: "First", translatedText: "第一", start: 0, end: 1_000 },
-    { text: "Second", translatedText: "第二", start: 0, end: 1_000 },
+    { kind: "strict", text: "First", translatedText: "第一", start: 0, end: 1_000 },
+    { kind: "strict", text: "Second", translatedText: "第二", start: 0, end: 1_000 },
   ]);
 });
 

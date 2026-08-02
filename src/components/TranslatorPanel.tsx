@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import useFile from "@/hooks/useFile";
 import useModel from "@/hooks/useModel";
 import usePrompt from "@/hooks/usePrompt";
+import useAdaptivePrompt from "@/hooks/useAdaptivePrompt";
+import useTranslationMode from "@/hooks/useTranslationMode";
 import useDelay from "@/hooks/useDelay";
 import useRPM from "@/hooks/useRPM";
 import useTranslationConcurrency from "@/hooks/useTranslationConcurrency";
@@ -16,12 +18,14 @@ import { getFilePath } from "@/utils/filePath";
 import BuyMeACoffee from "@/components/BuyMeACoffee";
 import type {
   AvailableModel,
+  AdaptiveSubtitleCuePreview,
   BatchProgress,
   SubtitleCuePreview,
   SubtitleFile,
   SubtitleOutputFormat,
+  TranslationMode,
 } from "@/types/electron-api";
-import { translationErrorCodes } from "@/types/electron-api";
+import { translationErrorCodes, translationModes } from "@/types/electron-api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -114,8 +118,35 @@ type TranslatorPanelProps = {
 };
 
 const supportedExtensions = [".ass", ".ssa", ".srt", ".vtt", ".json"];
+const subtitleOutputFormats: readonly SubtitleOutputFormat[] = [
+  "srt-translation",
+  "srt-bilingual",
+  "srt-original-translation",
+  "ass-bilingual",
+  "ass-original-translation",
+];
 const DEFAULT_CONTEXT_SIZE = 5;
 const MAX_CONTEXT_SIZE = 100;
+
+function getLegacyOutputFormat(): SubtitleOutputFormat {
+  if (typeof window === "undefined") return "srt-translation";
+
+  try {
+    const stored = window.localStorage.getItem("subtitle_output_format");
+    if (!stored) return "srt-translation";
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stored);
+    } catch {
+      parsed = stored;
+    }
+    return typeof parsed === "string" && subtitleOutputFormats.includes(parsed as SubtitleOutputFormat)
+      ? (parsed as SubtitleOutputFormat)
+      : "srt-translation";
+  } catch {
+    return "srt-translation";
+  }
+}
 
 function normalizeContextSize(value: unknown): number {
   const numericValue = typeof value === "number" ? value : Number(value);
@@ -136,6 +167,23 @@ const translationErrorMessageIds: Record<string, string> = {
   [translationErrorCodes.outputPathConflict]: "error.outputPathConflict",
   [translationErrorCodes.repetitiveModelOutput]: "error.repetitiveModelOutput",
   [translationErrorCodes.incompleteModelOutput]: "error.incompleteModelOutput",
+  [translationErrorCodes.adaptiveUnsupportedInputFormat]: "error.adaptiveUnsupportedInputFormat",
+  [translationErrorCodes.adaptiveUnsupportedOutputFormat]: "error.adaptiveUnsupportedOutputFormat",
+  [translationErrorCodes.adaptiveInvalidCheckpoint]: "error.adaptiveInvalidCheckpoint",
+  [translationErrorCodes.adaptiveIncompatibleCheckpoint]: "error.adaptiveIncompatibleCheckpoint",
+  [translationErrorCodes.adaptiveInvalidPartition]: "error.adaptiveInvalidPartition",
+  [translationErrorCodes.adaptivePlaceholderMismatch]: "error.adaptivePlaceholderMismatch",
+  [translationErrorCodes.adaptiveLockedCueViolation]: "error.adaptiveLockedCueViolation",
+  [translationErrorCodes.adaptiveInsufficientDuration]: "error.adaptiveInsufficientDuration",
+  [translationErrorCodes.adaptiveRepairFailed]: "error.adaptiveRepairFailed",
+  [translationErrorCodes.adaptiveFallbackFailed]: "error.adaptiveFallbackFailed",
+  [translationErrorCodes.adaptiveIncompleteCoverage]: "error.adaptiveIncompleteCoverage",
+  [translationErrorCodes.adaptiveGenerationBudgetExceeded]: "error.adaptiveGenerationBudgetExceeded",
+  "adaptive.generation.budgetExceeded": "error.adaptiveGenerationBudgetExceeded",
+  "adaptive.scene.strictFallbackFailed": "error.adaptiveFallbackFailed",
+  "adaptive.placeholder.mismatch": "error.adaptivePlaceholderMismatch",
+  "adaptive.partition.coverage": "error.adaptiveInvalidPartition",
+  "adaptive.layout.insufficientDuration": "error.adaptiveInsufficientDuration",
 };
 
 function getLocalizedError(error: unknown, fallbackId: string, t: Translate): string {
@@ -152,7 +200,15 @@ function getLocalizedError(error: unknown, fallbackId: string, t: Translate): st
 function getStatusVariant(status: BatchProgress["status"]) {
   if (status === "error") return "destructive" as const;
   if (status === "done") return "outline" as const;
-  if (status === "translating" || status === "analyzing") return "default" as const;
+  if (
+    status === "translating" ||
+    status === "analyzing" ||
+    status === "repairing" ||
+    status === "fallback" ||
+    status === "rendering"
+  ) {
+    return "default" as const;
+  }
   return "secondary" as const;
 }
 
@@ -187,6 +243,25 @@ function formatCueTimeRange(cue: SubtitleCuePreview): string {
   return `${formatCueTime(cue.start)}–${formatCueTime(cue.end)}`;
 }
 
+function isAdaptivePreviewCue(
+  cue: SubtitleCuePreview
+): cue is AdaptiveSubtitleCuePreview {
+  return cue.kind === "adaptive";
+}
+
+function formatSourceRange(cue: AdaptiveSubtitleCuePreview): string {
+  // Adaptive source ids are zero-based internally; display user-facing cue numbers.
+  const start = Math.max(0, Math.trunc(cue.sourceStart)) + 1;
+  const end = Math.max(start - 1, Math.trunc(cue.sourceEnd)) + 1;
+  return start === end ? `#${start}` : `#${start}–#${end}`;
+}
+
+function formatUsageValue(value: number | undefined): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value.toLocaleString()
+    : "—";
+}
+
 export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps) {
   const { i18n, t } = useTranslation();
   const [files, setFiles] = useFile();
@@ -198,7 +273,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   );
   const normalizedContextSize = normalizeContextSize(contextSize);
   const [model, setModel] = useModel();
-  const [prompt] = usePrompt();
+  const [strictPrompt] = usePrompt();
+  const [adaptivePrompt] = useAdaptivePrompt();
+  const [mode, setMode] = useTranslationMode();
   const [delay] = useDelay();
   const [keys] = useAPIKeys();
   const [apiHost] = useAPIHost();
@@ -209,10 +286,16 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [concurrency] = useTranslationConcurrency();
   const [translationSuccessCount, incrementTranslationSuccessCount] =
     useTranslationSuccessCount();
-  const [outputFormat, setOutputFormat] = useLocalStorage<SubtitleOutputFormat>(
-    "subtitle_output_format",
-    "srt-translation"
-  );
+  const [strictOutputFormat, setStrictOutputFormat] =
+    useLocalStorage<SubtitleOutputFormat>(
+      "strict_output_format",
+      getLegacyOutputFormat
+    );
+  const [adaptiveOutputFormat, setAdaptiveOutputFormat] =
+    useLocalStorage<SubtitleOutputFormat>(
+      "adaptive_output_format",
+      "srt-translation"
+    );
   const [assTranslationFont, setAssTranslationFont] = useLocalStorage(
     "ass_translation_font",
     ""
@@ -229,6 +312,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [isChoosingOutputDirectory, setIsChoosingOutputDirectory] = useState(false);
   const [batchProgress, setBatchProgress] = useState<Record<string, FileProgress>>({});
   const [pendingFiles, setPendingFiles] = useState<SubtitleFile[]>([]);
+  const [pendingUnsupportedFiles, setPendingUnsupportedFiles] = useState<string[]>([]);
+  const [pendingCheckpointVersions, setPendingCheckpointVersions] =
+    useState<Record<string, number | undefined>>({});
   const [selectedFile, setSelectedFile] = useState<SubtitleFile | null>(null);
   const [cues, setCues] = useState<SubtitleCuePreview[]>([]);
   const [previewLoadStatus, setPreviewLoadStatus] =
@@ -245,10 +331,45 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState("");
   const isTranslating = activeTranslationCount > 0;
+  const outputFormat = mode === "adaptive" ? "srt-translation" : strictOutputFormat;
+  const prompt = mode === "adaptive" ? adaptivePrompt : strictPrompt;
+  const hasAdaptiveUnsupportedPendingFile = pendingFiles.some((file) => {
+    const lowerName = file.name.toLowerCase();
+    return mode === "adaptive" && (
+      lowerName.endsWith(".ass") ||
+      lowerName.endsWith(".ssa") ||
+      (lowerName.endsWith(".json") && pendingCheckpointVersions[file.path] !== 3)
+    );
+  });
+  const adaptiveUnsupportedPendingNames = Array.from(
+    new Set([
+      ...pendingUnsupportedFiles,
+      ...pendingFiles
+        .filter((file) => {
+          const lowerName = file.name.toLowerCase();
+          return mode === "adaptive" &&
+            (lowerName.endsWith(".ass") ||
+              lowerName.endsWith(".ssa") ||
+              (lowerName.endsWith(".json") && pendingCheckpointVersions[file.path] !== 3));
+        })
+        .map((file) => file.name),
+    ])
+  );
+  const hasUnsupportedPendingFiles =
+    pendingUnsupportedFiles.length > 0 || hasAdaptiveUnsupportedPendingFile;
+
+  useEffect(() => {
+    if (adaptiveOutputFormat !== "srt-translation") {
+      setAdaptiveOutputFormat("srt-translation");
+    }
+  }, [adaptiveOutputFormat, setAdaptiveOutputFormat]);
   const statusCopy: Record<BatchProgress["status"], string> = {
     pending: t("task.status.pending"),
     analyzing: t("task.status.analyzing"),
     translating: t("task.status.translating"),
+    repairing: t("task.status.repairing"),
+    fallback: t("task.status.fallback"),
+    rendering: t("task.status.rendering"),
     done: t("task.status.done"),
     error: t("task.status.error"),
   };
@@ -397,7 +518,13 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   ).length;
   const activeCount = files.filter((file) => {
     const status = batchProgress[file.path]?.status;
-    return status === "analyzing" || status === "translating";
+    return (
+      status === "analyzing" ||
+      status === "translating" ||
+      status === "repairing" ||
+      status === "fallback" ||
+      status === "rendering"
+    );
   }).length;
   const shouldShowCoffeeBanner =
     translationSuccessCount > TRANSLATION_SUCCESS_THRESHOLD;
@@ -426,8 +553,10 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     if (!open) setModelSearch("");
   };
 
-  const resolveSelectedFiles = (selectedFiles: File[]) => {
+  const resolveSelectedFiles = async (selectedFiles: File[]) => {
     const accepted: SubtitleFile[] = [];
+    const adaptiveUnsupported: string[] = [];
+    const checkpointVersions: Record<string, number | undefined> = {};
     let rejectedCount = 0;
 
     for (const file of selectedFiles) {
@@ -437,10 +566,51 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         continue;
       }
 
+      if (mode === "adaptive" && (lowerName.endsWith(".ass") || lowerName.endsWith(".ssa"))) {
+        adaptiveUnsupported.push(file.name);
+        continue;
+      }
+
+      let checkpointVersion: number | undefined;
+      if (lowerName.endsWith(".json")) {
+        try {
+          const text = typeof file.text === "function" ? await file.text() : "";
+          const parsed: unknown = JSON.parse(text);
+          if (typeof parsed === "object" && parsed !== null) {
+            const candidate = parsed as {
+              version?: unknown;
+              kind?: unknown;
+              format?: unknown;
+            };
+            const validAdaptiveFormat =
+              candidate.format === "srt" || candidate.format === "vtt";
+            if (
+              typeof candidate.version === "number" &&
+              Number.isFinite(candidate.version) &&
+              (mode !== "adaptive" ||
+                (candidate.version === 3 &&
+                  candidate.kind === "adaptive" &&
+                  validAdaptiveFormat))
+            ) {
+              checkpointVersion = candidate.version;
+            }
+          }
+        } catch {
+          checkpointVersion = undefined;
+        }
+        if (mode === "adaptive" && checkpointVersion !== 3) {
+          adaptiveUnsupported.push(file.name);
+          continue;
+        }
+      }
+
       try {
         const path = getFilePath(file);
         if (!path || files.some((item) => item.path === path) || accepted.some((item) => item.path === path)) {
           continue;
+        }
+        if (lowerName.endsWith(".json")) {
+          checkpointVersions[path] = checkpointVersion;
         }
         accepted.push({ path, name: file.name });
       } catch (error: unknown) {
@@ -451,14 +621,17 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     if (rejectedCount > 0) {
       toast.error(t("toast.filesSkipped", { count: rejectedCount }));
     }
-    return accepted;
+    return { accepted, adaptiveUnsupported, checkpointVersions };
   };
 
-  const requestAddFiles = (selectedFiles: File[]) => {
-    const nextFiles = resolveSelectedFiles(selectedFiles);
-    if (nextFiles.length === 0) return;
+  const requestAddFiles = async (selectedFiles: File[]) => {
+    const { accepted: nextFiles, adaptiveUnsupported, checkpointVersions } =
+      await resolveSelectedFiles(selectedFiles);
+    if (nextFiles.length === 0 && adaptiveUnsupported.length === 0) return;
     setTaskModel(model);
     setPendingFiles(nextFiles);
+    setPendingUnsupportedFiles(adaptiveUnsupported);
+    setPendingCheckpointVersions(checkpointVersions);
     setAddDialogOpen(true);
   };
 
@@ -594,6 +767,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       (file) => batchProgress[file.path]?.status !== "done"
     );
     if (translatableFiles.length === 0) return;
+    const batchMode: TranslationMode =
+      batchProgress[translatableFiles[0].path]?.mode || mode;
+    const batchPrompt = batchMode === "adaptive" ? adaptivePrompt : strictPrompt;
+    const batchOutputFormat =
+      batchMode === "adaptive" ? "srt-translation" : strictOutputFormat;
     for (const file of translatableFiles) {
       finalPreviewCuesRef.current.delete(file.path);
     }
@@ -603,6 +781,24 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     }
     if (!keys.some((key) => key.trim().length > 0)) {
       toast.error(t("toast.apiKeyRequired"));
+      return;
+    }
+    if (batchMode === "adaptive" && batchOutputFormat !== "srt-translation") {
+      toast.error(t("error.adaptiveUnsupportedOutputFormat"));
+      return;
+    }
+    if (
+      batchMode === "adaptive" &&
+      translatableFiles.some((file) => {
+        const lowerName = file.name.toLowerCase();
+        return (
+          lowerName.endsWith(".ass") ||
+          lowerName.endsWith(".ssa") ||
+          (lowerName.endsWith(".json") && pendingCheckpointVersions[file.path] !== 3)
+        );
+      })
+    ) {
+      toast.error(t("error.adaptiveUnsupportedInputFormat"));
       return;
     }
 
@@ -615,6 +811,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           {
             progress: 0,
             status: "pending" as const,
+            mode: batchMode,
             model: translationModel,
             targetLanguage: lang,
           },
@@ -629,11 +826,12 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           apiKeys: keys,
           apiHost,
           model: translationModel,
-          prompt,
+          prompt: batchPrompt,
+          mode: batchMode,
           lang,
           additional,
           temperature,
-          outputFormat,
+          outputFormat: batchOutputFormat,
           assFonts: {
             translationFont: assTranslationFont,
             originalFont: assOriginalFont,
@@ -668,6 +866,10 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       toast.error(t("toast.apiKeyRequired"));
       return;
     }
+    if (hasUnsupportedPendingFiles) {
+      toast.error(t("error.adaptiveUnsupportedInputFormat"));
+      return;
+    }
 
     setModel(translationModel);
     setFiles([...files, ...filesToTranslate]);
@@ -692,6 +894,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           })
         : t("task.progress.translating");
     }
+    if (progress.status === "repairing") detail = t("task.progress.repairing");
+    if (progress.status === "fallback") detail = t("task.progress.fallback");
+    if (progress.status === "rendering") detail = t("task.progress.rendering");
     if (progress.status === "done") detail = t("task.progress.done");
     if (progress.status === "error") {
       detail = progress.error
@@ -703,7 +908,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       <div className="flex w-full min-w-0 flex-col gap-1.5">
         <div className="flex items-center justify-between gap-3">
           <Badge variant={getStatusVariant(progress.status)}>
-            {progress.status === "translating" && <LoaderCircle className="animate-spin" data-icon="inline-start" />}
+            {(progress.status === "translating" ||
+              progress.status === "analyzing" ||
+              progress.status === "repairing" ||
+              progress.status === "fallback" ||
+              progress.status === "rendering") && <LoaderCircle className="animate-spin" data-icon="inline-start" />}
             {progress.status === "done" && <CheckCircle2 data-icon="inline-start" />}
             {progress.status === "error" && <AlertCircle data-icon="inline-start" />}
             {statusCopy[progress.status]}
@@ -722,6 +931,10 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     );
   };
 
+  const selectedProgress = selectedFile
+    ? batchProgress[selectedFile.path]
+    : undefined;
+
   return (
     <div
       className={cn("flex min-h-0 flex-1 flex-col", isDragging && "bg-muted/40")}
@@ -735,7 +948,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       onDrop={(event) => {
         event.preventDefault();
         setIsDragging(false);
-        requestAddFiles(Array.from(event.dataTransfer.files));
+        void requestAddFiles(Array.from(event.dataTransfer.files));
       }}
     >
       <input
@@ -745,7 +958,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         multiple
         className="hidden"
         onChange={(event) => {
-          requestAddFiles(Array.from(event.target.files || []));
+          void requestAddFiles(Array.from(event.target.files || []));
           event.currentTarget.value = "";
         }}
       />
@@ -913,6 +1126,31 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             <div className="flex flex-col gap-6 py-2 pr-1">
               <FieldGroup className="grid gap-x-8 gap-y-5 md:grid-cols-2">
               <Field>
+                <FieldLabel htmlFor="task-translation-mode">{t("tasks.mode.label")}</FieldLabel>
+                <Select
+                  value={mode}
+                  onValueChange={(value) => setMode(value as TranslationMode)}
+                >
+                  <SelectTrigger id="task-translation-mode" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {translationModes.map((translationMode) => (
+                        <SelectItem key={translationMode} value={translationMode}>
+                          {t(`tasks.mode.${translationMode}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  {mode === "adaptive"
+                    ? t("tasks.mode.adaptiveDescription")
+                    : t("tasks.mode.strictDescription")}
+                </FieldDescription>
+              </Field>
+              <Field>
                 <FieldLabel htmlFor="task-model">{t("tasks.model.label")}</FieldLabel>
                 <Popover
                   modal
@@ -1032,8 +1270,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                 </FieldLabel>
                 <Select
                   value={outputFormat}
+                  disabled={mode === "adaptive"}
                   onValueChange={(value) =>
-                    setOutputFormat(value as SubtitleOutputFormat)
+                    setStrictOutputFormat(value as SubtitleOutputFormat)
                   }
                 >
                   <SelectTrigger id="task-output-format" className="w-full">
@@ -1064,8 +1303,18 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                <FieldDescription>{t("tasks.output.description")}</FieldDescription>
+                <FieldDescription>
+                  {mode === "adaptive"
+                    ? t("tasks.output.adaptiveLocked")
+                    : t("tasks.output.description")}
+                </FieldDescription>
               </Field>
+              {mode === "adaptive" && (
+                <aside className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 md:col-span-2 dark:text-amber-200">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                  <p>{t("tasks.mode.adaptiveOutputNotice")}</p>
+                </aside>
+              )}
               {outputFormat.startsWith("ass-") && (
                 <div className="grid gap-5 md:col-span-2 md:grid-cols-2">
                   <Field>
@@ -1178,6 +1427,20 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
               </Field>
             </FieldGroup>
             <Separator />
+            {mode === "adaptive" && adaptiveUnsupportedPendingNames.length > 0 && (
+              <aside className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm" role="alert">
+                <div className="flex items-center gap-2 font-medium text-destructive">
+                  <AlertCircle className="size-4" aria-hidden="true" />
+                  {t("tasks.mode.unsupportedFiles")}
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                  {adaptiveUnsupportedPendingNames.map((fileName) => (
+                    <li key={fileName} className="truncate" title={fileName}>{fileName}</li>
+                  ))}
+                </ul>
+                <p className="text-muted-foreground">{t("tasks.mode.adaptiveFileNotice")}</p>
+              </aside>
+            )}
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <FilePlus2 aria-hidden="true" />
@@ -1198,7 +1461,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           </form>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>{t("cancel")}</Button>
-            <Button type="submit" form="add-task-form" disabled={pendingFiles.length === 0 || !lang.trim() || !taskModel.trim()}>
+            <Button type="submit" form="add-task-form" disabled={pendingFiles.length === 0 || hasUnsupportedPendingFiles || !lang.trim() || !taskModel.trim()}>
               <FilePlus2 data-icon="inline-start" />
               {t("navigation.addTask")}
             </Button>
@@ -1238,6 +1501,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                   <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />{t("tasks.details.stage.prepare")}</span>
                   <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />{t("tasks.details.stage.analyze")}</span>
                   <span className="flex items-center gap-2 text-foreground"><span className="size-2 rounded-full bg-primary" />{t("tasks.details.stage.translate")}</span>
+                  <span className="hidden items-center gap-2 text-foreground sm:flex"><span className="size-2 rounded-full border" />{t("tasks.details.stage.repair")}</span>
+                  <span className="hidden items-center gap-2 sm:flex"><span className="size-2 rounded-full border" />{t("tasks.details.stage.fallback")}</span>
                   <span className="flex items-center gap-2"><span className="size-2 rounded-full border" />{t("tasks.details.stage.organize")}</span>
                 </div>
               </div>
@@ -1264,6 +1529,39 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                       )}
                     </pre>
                   </ScrollArea>
+                </section>
+              )}
+              {selectedProgress?.usageSummary && (
+                <section className="border-t px-5 py-5" aria-labelledby="task-usage-title">
+                  <h3 id="task-usage-title" className="font-medium">{t("tasks.details.usage")}</h3>
+                  <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <dt className="text-xs text-muted-foreground">{t("tasks.details.usage.requests")}</dt>
+                      <dd className="mt-1 font-mono tabular-nums">{formatUsageValue(selectedProgress.usageSummary.requestCount)}</dd>
+                    </div>
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <dt className="text-xs text-muted-foreground">{t("tasks.details.usage.input")}</dt>
+                      <dd className="mt-1 font-mono tabular-nums">{formatUsageValue(selectedProgress.usageSummary.inputTokens)}</dd>
+                    </div>
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <dt className="text-xs text-muted-foreground">{t("tasks.details.usage.output")}</dt>
+                      <dd className="mt-1 font-mono tabular-nums">{formatUsageValue(selectedProgress.usageSummary.outputTokens)}</dd>
+                    </div>
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <dt className="text-xs text-muted-foreground">{t("tasks.details.usage.cached")}</dt>
+                      <dd className="mt-1 font-mono tabular-nums">{formatUsageValue(selectedProgress.usageSummary.cachedInputTokens)}</dd>
+                    </div>
+                  </dl>
+                </section>
+              )}
+              {selectedProgress?.warnings && selectedProgress.warnings.length > 0 && (
+                <section className="border-t px-5 py-5" aria-labelledby="task-warnings-title">
+                  <h3 id="task-warnings-title" className="font-medium">{t("tasks.details.warnings")}</h3>
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-amber-700 dark:text-amber-300">
+                    {selectedProgress.warnings.map((warning, index) => (
+                      <li key={`${warning.code}-${index}`}>{warning.message}</li>
+                    ))}
+                  </ul>
                 </section>
               )}
               {selectedAnalysis && (
@@ -1330,20 +1628,63 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                       </EmptyHeader>
                     </Empty>
                   ) : (
-                    cues.map((cue, index) => (
-                      <div
-                        key={`${cue.start}-${index}`}
-                        className="border-t px-5 py-3 text-sm leading-6"
-                      >
-                        <p className="font-mono text-xs tabular-nums text-muted-foreground">
-                          {formatCueTimeRange(cue)}
-                        </p>
-                        <p>{cue.translatedText || cue.text}</p>
-                        {cue.translatedText && cue.translatedText !== cue.text && (
-                          <p className="mt-1 text-muted-foreground">{cue.text}</p>
-                        )}
-                      </div>
-                    ))
+                    cues.map((cue, index) => {
+                      if (isAdaptivePreviewCue(cue)) {
+                        const originMessageId =
+                          cue.origin === "repair"
+                            ? "tasks.details.preview.origin.repaired"
+                            : cue.origin === "strict-fallback"
+                              ? "tasks.details.preview.origin.strictFallback"
+                              : "tasks.details.preview.origin.adaptive";
+                        return (
+                          <div
+                            key={`${cue.sourceStart}-${cue.sourceEnd}-${index}`}
+                            className="border-t px-5 py-3 text-sm leading-6"
+                          >
+                            <div className="grid gap-x-3 gap-y-1 sm:grid-cols-[auto_1fr]">
+                              <span className="font-medium text-muted-foreground">{t("tasks.details.preview.source")}</span>
+                              <span>
+                                <span className="font-mono text-xs">{formatSourceRange(cue)}</span>
+                                <span className="ml-2 whitespace-pre-wrap text-muted-foreground">{cue.sourceTexts.join("\n")}</span>
+                              </span>
+                              <span className="font-medium text-muted-foreground">{t("tasks.details.preview.targetTime")}</span>
+                              <span className="font-mono text-xs tabular-nums">{formatCueTimeRange(cue)}</span>
+                              <span className="font-medium text-muted-foreground">{t("tasks.details.preview.translation")}</span>
+                              <span>{cue.targetText}</span>
+                              <span className="font-medium text-muted-foreground">{t("tasks.details.preview.origin")}</span>
+                              <span>{t(originMessageId)}</span>
+                              <span className="font-medium text-muted-foreground">{t("tasks.details.preview.warning")}</span>
+                              <span>
+                                {cue.warnings.length === 0 ? (
+                                  t("tasks.details.preview.noWarning")
+                                ) : (
+                                  <ul className="list-disc space-y-0.5 pl-4 text-amber-700 dark:text-amber-300">
+                                    {cue.warnings.map((warning, warningIndex) => (
+                                      <li key={`${warning.code}-${warningIndex}`}>{warning.message}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={`${cue.start}-${index}`}
+                          className="border-t px-5 py-3 text-sm leading-6"
+                        >
+                          <p className="font-mono text-xs tabular-nums text-muted-foreground">
+                            {formatCueTimeRange(cue)}
+                          </p>
+                          <p>{cue.translatedText || cue.text}</p>
+                          {cue.translatedText && cue.translatedText !== cue.text && (
+                            <p className="mt-1 text-muted-foreground">{cue.text}</p>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>

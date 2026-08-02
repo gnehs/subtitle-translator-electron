@@ -5,15 +5,15 @@ import assParser from "ass-parser";
 import assStringify from "ass-stringify";
 import { generateText, Output, streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { translationErrorCodes } from "../../shared/translation-error-codes";
-import type { RequestRateLimiter } from "./request-rate-limiter";
-import { compactRepetitiveSubtitleText } from "./subtitle-chunks";
-import { sampleSubtitlesForAnalysis } from "./subtitle-sampling";
-import type { TranslationSourceFingerprint } from "./translation-checkpoint";
+import { translationErrorCodes } from "../../shared/translation-error-codes.ts";
+import type { RequestRateLimiter } from "./request-rate-limiter.ts";
+import { compactRepetitiveSubtitleText } from "./subtitle-chunks.ts";
+import { sampleSubtitlesForAnalysis } from "./subtitle-sampling.ts";
+import type { TranslationSourceFingerprint } from "./translation-checkpoint.ts";
 import {
   formatSubtitleAnalysis,
   subtitleAnalysisSchema,
-} from "./analysis-output";
+} from "./analysis-output.ts";
 import {
   createTranslationOutputValidationError,
   createTranslationRepairPrompt,
@@ -21,19 +21,23 @@ import {
   parseTranslationOutput,
   TranslationOutputRepetitionGuard,
   validateTranslationOutputForCore,
-} from "./translation-output";
+} from "./translation-output.ts";
 import {
   addAssBilingualStyles,
   formatAssBilingualStyledText,
   type AssBilingualFontOptions,
-} from "./ass-bilingual";
+} from "./ass-bilingual.ts";
 import {
   assTextToPlainText,
   createDefaultAssSections,
   formatSrtOutputText,
   subtitleTimestampToMilliseconds,
   type SubtitleOutputFormat,
-} from "./subtitle-output";
+} from "./subtitle-output.ts";
+import type {
+  StageUsage,
+  TranslationUsageSummary,
+} from "./adaptive/types.ts";
 
 export interface SubtitleCueData {
   text: string;
@@ -91,6 +95,10 @@ export interface TranslationCacheDocument {
   };
   subtitle: ParsedSubtitle;
   analysis?: string;
+  /** Optional request-level usage records persisted only in v2 checkpoints. */
+  usage?: StageUsage[];
+  /** Optional aggregate usage persisted only in v2 checkpoints. */
+  usageSummary?: TranslationUsageSummary;
 }
 
 function isCue(node: SubtitleCue | SubtitleHeader): node is SubtitleCue {
@@ -156,6 +164,127 @@ function isParsedSubtitle(value: unknown): value is ParsedSubtitle {
   );
 }
 
+const translationUsageStages = new Set<StageUsage["stage"]>([
+  "brief",
+  "strict-translate",
+  "adaptive-translate",
+  "adaptive-repair",
+  "strict-fallback",
+]);
+
+const stageUsageKeys = new Set([
+  "stage",
+  "model",
+  "sceneId",
+  "requestAttempt",
+  "inputTokens",
+  "outputTokens",
+  "totalTokens",
+  "reasoningTokens",
+  "cachedInputTokens",
+  "durationMs",
+  "finishReason",
+]);
+
+const usageSummaryKeys = new Set([
+  "requestCount",
+  "inputTokens",
+  "outputTokens",
+  "totalTokens",
+  "reasoningTokens",
+  "cachedInputTokens",
+  "byStage",
+]);
+
+const stageUsageSummaryKeys = new Set([
+  "requestCount",
+  "inputTokens",
+  "outputTokens",
+  "totalTokens",
+]);
+
+function isNonNegativeSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function isPositiveSafeInteger(value: unknown): value is number {
+  return isNonNegativeSafeInteger(value) && value > 0;
+}
+
+function isOptionalNonNegativeSafeInteger(
+  record: Record<string, unknown>,
+  key: string
+): boolean {
+  return record[key] === undefined || isNonNegativeSafeInteger(record[key]);
+}
+
+function hasOnlyKeys(
+  record: Record<string, unknown>,
+  allowedKeys: ReadonlySet<string>
+): boolean {
+  return Object.keys(record).every((key) => allowedKeys.has(key));
+}
+
+function isStageUsage(value: unknown): value is StageUsage {
+  if (!isRecord(value) || Array.isArray(value)) return false;
+  if (!hasOnlyKeys(value, stageUsageKeys)) return false;
+  if (
+    !translationUsageStages.has(value.stage as StageUsage["stage"]) ||
+    typeof value.model !== "string" ||
+    value.model.trim().length === 0 ||
+    !isPositiveSafeInteger(value.requestAttempt) ||
+    typeof value.durationMs !== "number" ||
+    !Number.isFinite(value.durationMs) ||
+    value.durationMs < 0 ||
+    (value.sceneId !== undefined && typeof value.sceneId !== "string") ||
+    (value.finishReason !== undefined && typeof value.finishReason !== "string")
+  ) {
+    return false;
+  }
+
+  return (
+    isOptionalNonNegativeSafeInteger(value, "inputTokens") &&
+    isOptionalNonNegativeSafeInteger(value, "outputTokens") &&
+    isOptionalNonNegativeSafeInteger(value, "totalTokens") &&
+    isOptionalNonNegativeSafeInteger(value, "reasoningTokens") &&
+    isOptionalNonNegativeSafeInteger(value, "cachedInputTokens")
+  );
+}
+
+function isStageUsageSummary(value: unknown): boolean {
+  if (!isRecord(value) || Array.isArray(value)) return false;
+  if (!hasOnlyKeys(value, stageUsageSummaryKeys)) return false;
+  return (
+    isNonNegativeSafeInteger(value.requestCount) &&
+    isOptionalNonNegativeSafeInteger(value, "inputTokens") &&
+    isOptionalNonNegativeSafeInteger(value, "outputTokens") &&
+    isOptionalNonNegativeSafeInteger(value, "totalTokens")
+  );
+}
+
+function isTranslationUsageSummary(value: unknown): value is TranslationUsageSummary {
+  if (!isRecord(value) || Array.isArray(value)) return false;
+  if (!hasOnlyKeys(value, usageSummaryKeys)) return false;
+  if (
+    !isNonNegativeSafeInteger(value.requestCount) ||
+    !isOptionalNonNegativeSafeInteger(value, "inputTokens") ||
+    !isOptionalNonNegativeSafeInteger(value, "outputTokens") ||
+    !isOptionalNonNegativeSafeInteger(value, "totalTokens") ||
+    !isOptionalNonNegativeSafeInteger(value, "reasoningTokens") ||
+    !isOptionalNonNegativeSafeInteger(value, "cachedInputTokens") ||
+    !isRecord(value.byStage) ||
+    Array.isArray(value.byStage)
+  ) {
+    return false;
+  }
+
+  return Object.entries(value.byStage).every(
+    ([stage, summary]) =>
+      translationUsageStages.has(stage as StageUsage["stage"]) &&
+      isStageUsageSummary(summary)
+  );
+}
+
 export function createTranslationCacheDocument({
   subtitle,
   sourceName,
@@ -163,6 +292,8 @@ export function createTranslationCacheDocument({
   configFingerprint,
   analysis,
   sourceFingerprint,
+  usage,
+  usageSummary,
 }: {
   subtitle: ParsedSubtitle;
   sourceName: string;
@@ -170,6 +301,8 @@ export function createTranslationCacheDocument({
   configFingerprint: string;
   analysis?: string;
   sourceFingerprint?: TranslationSourceFingerprint;
+  usage?: StageUsage[];
+  usageSummary?: TranslationUsageSummary;
 }): TranslationCacheDocument {
   return {
     version: 2,
@@ -181,6 +314,8 @@ export function createTranslationCacheDocument({
     translation: { configFingerprint },
     subtitle,
     ...(analysis ? { analysis } : {}),
+    ...(usage !== undefined ? { usage } : {}),
+    ...(usageSummary !== undefined ? { usageSummary } : {}),
   };
 }
 
@@ -214,7 +349,14 @@ export function parseTranslationCache(
     (value.version === 1 && value.translation !== undefined) ||
     !isParsedSubtitle(value.subtitle) ||
     getSubtitleCues(value.subtitle).length === 0 ||
-    (value.analysis !== undefined && typeof value.analysis !== "string")
+    (value.analysis !== undefined && typeof value.analysis !== "string") ||
+    (value.version === 1 &&
+      (value.usage !== undefined || value.usageSummary !== undefined)) ||
+    (value.version === 2 &&
+      ((value.usage !== undefined &&
+        (!Array.isArray(value.usage) || !value.usage.every(isStageUsage))) ||
+        (value.usageSummary !== undefined &&
+          !isTranslationUsageSummary(value.usageSummary))))
   ) {
     throw new Error(translationErrorCodes.incompatibleCheckpoint);
   }
@@ -251,6 +393,118 @@ function getFirstValidApiKey(apiKeys: readonly string[]): string {
   return apiKey;
 }
 
+type UsageCallback = (usage: StageUsage) => void | Promise<void>;
+
+interface NormalizedModelUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  reasoningTokens?: number;
+  cachedInputTokens?: number;
+}
+
+function readUsageNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function firstUsageNumber(...values: unknown[]): number | undefined {
+  for (const value of values) {
+    const numberValue = readUsageNumber(value);
+    if (numberValue !== undefined) return numberValue;
+  }
+  return undefined;
+}
+
+function normalizeModelUsage(value: unknown): NormalizedModelUsage {
+  if (!isRecord(value)) return {};
+
+  const inputTokenDetails = isRecord(value.inputTokenDetails)
+    ? value.inputTokenDetails
+    : undefined;
+  const outputTokenDetails = isRecord(value.outputTokenDetails)
+    ? value.outputTokenDetails
+    : undefined;
+
+  const normalized: NormalizedModelUsage = {};
+  const inputTokens = firstUsageNumber(value.inputTokens, value.promptTokens);
+  const outputTokens = firstUsageNumber(
+    value.outputTokens,
+    value.completionTokens
+  );
+  const totalTokens = firstUsageNumber(value.totalTokens);
+  const reasoningTokens = firstUsageNumber(
+    outputTokenDetails?.reasoningTokens,
+    value.reasoningTokens
+  );
+  const cachedInputTokens = firstUsageNumber(
+    inputTokenDetails?.cacheReadTokens,
+    inputTokenDetails?.cachedInputTokens,
+    value.cachedInputTokens,
+    value.cacheReadTokens
+  );
+
+  if (inputTokens !== undefined) normalized.inputTokens = inputTokens;
+  if (outputTokens !== undefined) normalized.outputTokens = outputTokens;
+  if (totalTokens !== undefined) normalized.totalTokens = totalTokens;
+  if (reasoningTokens !== undefined) {
+    normalized.reasoningTokens = reasoningTokens;
+  }
+  if (cachedInputTokens !== undefined) {
+    normalized.cachedInputTokens = cachedInputTokens;
+  }
+
+  return normalized;
+}
+
+function emitUsage(
+  onUsage: UsageCallback | undefined,
+  {
+    model,
+    stage,
+    requestAttempt,
+    startedAt,
+    usage,
+    finishReason,
+  }: {
+    model: string;
+    stage: StageUsage["stage"];
+    requestAttempt: number;
+    startedAt: number;
+    usage?: unknown;
+    finishReason?: unknown;
+  }
+): void {
+  if (!onUsage) return;
+
+  const normalizedUsage = normalizeModelUsage(usage);
+  const stageUsage: StageUsage = {
+    stage,
+    model,
+    requestAttempt,
+    ...normalizedUsage,
+    durationMs: Math.max(0, Date.now() - startedAt),
+    ...(typeof finishReason === "string" ? { finishReason } : {}),
+  };
+
+  try {
+    const callbackResult = onUsage(stageUsage);
+    if (
+      callbackResult &&
+      typeof callbackResult === "object" &&
+      "then" in callbackResult &&
+      typeof callbackResult.then === "function"
+    ) {
+      void Promise.resolve(callbackResult).catch(() => {
+        // Usage reporting is observational and must not alter translation.
+        console.warn("Translation usage callback failed.");
+      });
+    }
+  } catch {
+    // Usage reporting is observational and must not alter translation.
+    console.warn("Translation usage callback failed.");
+  }
+}
+
 async function translateSubtitleChunk(
   { before, core, after }: SubtitleTranslationChunk,
   {
@@ -263,6 +517,8 @@ async function translateSubtitleChunk(
     temperature,
     requestRateLimiter,
     abortSignal,
+    onUsage,
+    requestAttemptOffset = 0,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -273,6 +529,8 @@ async function translateSubtitleChunk(
     temperature: number;
     requestRateLimiter?: RequestRateLimiter;
     abortSignal?: AbortSignal;
+    onUsage?: UsageCallback;
+    requestAttemptOffset?: number;
   }
 ) {
   if (core.length === 0) return [];
@@ -293,49 +551,57 @@ async function translateSubtitleChunk(
     : repetitionController.signal;
 
   const translationOutput = Output.json();
+  let requestAttempt = 0;
 
   const runTranslationRequest = async (requestPrompt: string) => {
     await requestRateLimiter?.waitForSlot(abortSignal);
+    const currentRequestAttempt = requestAttemptOffset + ++requestAttempt;
+    const requestStartedAt = Date.now();
     const repetitionGuards = new Map<
       string,
       TranslationOutputRepetitionGuard
     >();
     let stoppedForRepetition = false;
 
-    const result = streamText({
-      model: ai(model),
-      temperature,
-      system: systemPrompt,
-      output: translationOutput,
-      prompt: requestPrompt,
-      maxRetries: 0,
-      abortSignal: requestAbortSignal,
-      onChunk({ chunk }) {
-        if (
-          chunk.type !== "text-delta" &&
-          chunk.type !== "reasoning-delta"
-        ) {
-          return;
-        }
-
-        const guardKey = `${chunk.type}:${chunk.id}`;
-        const guard =
-          repetitionGuards.get(guardKey) ??
-          new TranslationOutputRepetitionGuard();
-        repetitionGuards.set(guardKey, guard);
-
-        if (guard.push(chunk.text)) {
-          stoppedForRepetition = true;
-          repetitionController.abort(
-            new Error(translationErrorCodes.repetitiveModelOutput)
-          );
-        }
-      },
-    });
-
+    let finishReason: unknown;
+    let usage: unknown;
     try {
-      const finishReason = await result.finishReason;
-      if (!isCompletedModelFinishReason(finishReason)) {
+      const result = streamText({
+        model: ai(model),
+        temperature,
+        system: systemPrompt,
+        output: translationOutput,
+        prompt: requestPrompt,
+        maxRetries: 0,
+        abortSignal: requestAbortSignal,
+        onChunk({ chunk }) {
+          if (
+            chunk.type !== "text-delta" &&
+            chunk.type !== "reasoning-delta"
+          ) {
+            return;
+          }
+
+          const guardKey = `${chunk.type}:${chunk.id}`;
+          const guard =
+            repetitionGuards.get(guardKey) ??
+            new TranslationOutputRepetitionGuard();
+          repetitionGuards.set(guardKey, guard);
+
+          if (guard.push(chunk.text)) {
+            stoppedForRepetition = true;
+            repetitionController.abort(
+              new Error(translationErrorCodes.repetitiveModelOutput)
+            );
+          }
+        },
+      });
+
+      const resultFinishReason = await result.finishReason;
+      finishReason =
+        typeof resultFinishReason === "string" ? resultFinishReason : undefined;
+      usage = await result.usage;
+      if (!isCompletedModelFinishReason(resultFinishReason)) {
         throw new Error(translationErrorCodes.incompleteModelOutput);
       }
       return parseTranslationOutput(await result.output);
@@ -344,6 +610,15 @@ async function translateSubtitleChunk(
         throw new Error(translationErrorCodes.repetitiveModelOutput);
       }
       throw error;
+    } finally {
+      emitUsage(onUsage, {
+        model,
+        stage: "strict-translate",
+        requestAttempt: currentRequestAttempt,
+        startedAt: requestStartedAt,
+        usage,
+        finishReason,
+      });
     }
   };
 
@@ -563,6 +838,8 @@ async function analyzeSubtitlesForContext(
     temperature = 0.3,
     requestRateLimiter,
     abortSignal,
+    onUsage,
+    requestAttemptOffset = 0,
   }: {
     apiKeys: string[];
     apiHost: string;
@@ -571,6 +848,8 @@ async function analyzeSubtitlesForContext(
     temperature?: number;
     requestRateLimiter?: RequestRateLimiter;
     abortSignal?: AbortSignal;
+    onUsage?: UsageCallback;
+    requestAttemptOffset?: number;
   }
 ): Promise<string> {
   const sampledSubtitles = sampleSubtitlesForAnalysis(subtitles);
@@ -579,11 +858,15 @@ async function analyzeSubtitlesForContext(
   const ai = getAi({ apiKey: getFirstValidApiKey(apiKeys), apiHost });
 
   await requestRateLimiter?.waitForSlot(abortSignal);
-  const result = await generateText({
-    model: ai(model),
-    temperature,
-    output: Output.json(),
-    system: `# System Prompt
+  const requestStartedAt = Date.now();
+  let finishReason: unknown;
+  let usage: unknown;
+  try {
+    const result = await generateText({
+      model: ai(model),
+      temperature,
+      output: Output.json(),
+      system: `# System Prompt
 
 You are a subtitle content analyst assisting a translation and glossary extraction system.
 
@@ -605,18 +888,30 @@ Analyze subtitle samples and return one JSON object with exactly these propertie
    - category must be person, place, organization, jargon, fictional, other, or null
    - Use null for category, preferredTranslation, or notes when not applicable
    - Do not invent glossary entries merely to make the array non-empty.`,
-    prompt:
-      `Produce a plot summary in ${lang} and a glossary from this sample:\n` +
-      sampledSubtitles.join("\n"),
-    maxRetries: 0,
-    abortSignal,
-  });
+      prompt:
+        `Produce a plot summary in ${lang} and a glossary from this sample:\n` +
+        sampledSubtitles.join("\n"),
+      maxRetries: 0,
+      abortSignal,
+    });
 
-  if (!isCompletedModelFinishReason(result.finishReason)) {
-    throw new Error(translationErrorCodes.incompleteModelOutput);
+    finishReason = result.finishReason;
+    usage = result.usage;
+    if (!isCompletedModelFinishReason(result.finishReason)) {
+      throw new Error(translationErrorCodes.incompleteModelOutput);
+    }
+
+    return formatSubtitleAnalysis(subtitleAnalysisSchema.parse(result.output));
+  } finally {
+    emitUsage(onUsage, {
+      model,
+      stage: "brief",
+      requestAttempt: requestAttemptOffset + 1,
+      startedAt: requestStartedAt,
+      usage,
+      finishReason,
+    });
   }
-
-  return formatSubtitleAnalysis(subtitleAnalysisSchema.parse(result.output));
 }
 
 export {

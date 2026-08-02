@@ -6,6 +6,8 @@ import useDelay from "@/hooks/useDelay";
 import useRPM from "@/hooks/useRPM";
 import useTranslationConcurrency from "@/hooks/useTranslationConcurrency";
 import usePrompt from "@/hooks/usePrompt";
+import useAdaptivePrompt from "@/hooks/useAdaptivePrompt";
+import useTranslationMode from "@/hooks/useTranslationMode";
 import {
   translationConcurrencyOptions,
   type SubtitleOutputFormat,
@@ -49,6 +51,34 @@ import {
 } from "lucide-react";
 
 type ConnectionStatus = "idle" | "loading" | "success" | "error";
+
+const subtitleOutputFormats: readonly SubtitleOutputFormat[] = [
+  "srt-translation",
+  "srt-bilingual",
+  "srt-original-translation",
+  "ass-bilingual",
+  "ass-original-translation",
+];
+
+function getLegacyOutputFormat(): SubtitleOutputFormat {
+  if (typeof window === "undefined") return "srt-translation";
+
+  try {
+    const stored = window.localStorage.getItem("subtitle_output_format");
+    if (!stored) return "srt-translation";
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(stored);
+    } catch {
+      parsed = stored;
+    }
+    return typeof parsed === "string" && subtitleOutputFormats.includes(parsed as SubtitleOutputFormat)
+      ? (parsed as SubtitleOutputFormat)
+      : "srt-translation";
+  } catch {
+    return "srt-translation";
+  }
+}
 
 function getConnectionErrorKey(error: unknown) {
   const message = error instanceof Error ? error.message : "";
@@ -97,14 +127,22 @@ export default function Settings() {
   const [delay, setDelay] = useDelay();
   const [requestsPerMinute, setRequestsPerMinute] = useRPM();
   const [concurrency, setConcurrency] = useTranslationConcurrency();
-  const [prompt, setPrompt] = usePrompt();
+  const [strictPrompt, setStrictPrompt] = usePrompt();
+  const [adaptivePrompt, setAdaptivePrompt] = useAdaptivePrompt();
+  const [mode, setMode] = useTranslationMode();
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("idle");
   const [connectionMessage, setConnectionMessage] = useState("");
   const connectionRequestRef = useRef(0);
-  const [outputFormat, setOutputFormat] = useLocalStorage<SubtitleOutputFormat>(
-    "subtitle_output_format",
-    "srt-translation"
+  const [strictOutputFormat, setStrictOutputFormat] =
+    useLocalStorage<SubtitleOutputFormat>(
+      "strict_output_format",
+      getLegacyOutputFormat
+    );
+  const [adaptiveOutputFormat, setAdaptiveOutputFormat] =
+    useLocalStorage<SubtitleOutputFormat>(
+      "adaptive_output_format",
+      "srt-translation"
   );
   const [assTranslationFont, setAssTranslationFont] = useLocalStorage(
     "ass_translation_font",
@@ -116,6 +154,15 @@ export default function Settings() {
   );
   const apiKey = keys.find((key) => key.trim().length > 0)?.trim() || "";
   const normalizedApiHost = host.trim();
+  const outputFormat = mode === "adaptive" ? "srt-translation" : strictOutputFormat;
+  const prompt = mode === "adaptive" ? adaptivePrompt : strictPrompt;
+  const setPrompt = mode === "adaptive" ? setAdaptivePrompt : setStrictPrompt;
+
+  useEffect(() => {
+    if (adaptiveOutputFormat !== "srt-translation") {
+      setAdaptiveOutputFormat("srt-translation");
+    }
+  }, [adaptiveOutputFormat, setAdaptiveOutputFormat]);
 
   const changeLanguage = async (nextLanguage: string) => {
     const activatedLocale = await dynamicActivate(nextLanguage);
@@ -297,6 +344,26 @@ export default function Settings() {
             <p className="mt-1 text-sm text-muted-foreground">{t("settings.translation.description")}</p>
           </div>
           <Field>
+            <FieldLabel htmlFor="settings-translation-mode">{t("settings.mode.label")}</FieldLabel>
+            <Select
+              value={mode}
+              onValueChange={(value) => setMode(value as typeof mode)}
+            >
+              <SelectTrigger id="settings-translation-mode" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="strict">{t("settings.mode.strict")}</SelectItem>
+                  <SelectItem value="adaptive">{t("settings.mode.adaptive")}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FieldDescription>
+              {mode === "adaptive"
+                ? t("settings.mode.adaptiveDescription")
+                : t("settings.mode.strictDescription")}
+            </FieldDescription>
+          </Field>
+          <Field>
             <FieldLabel>{t("temperature.title")}</FieldLabel>
             <div className="flex items-center gap-3">
               <input
@@ -363,8 +430,9 @@ export default function Settings() {
             <FieldLabel>{t("tasks.output.label")}</FieldLabel>
             <Select
               value={outputFormat}
+              disabled={mode === "adaptive"}
               onValueChange={(value) =>
-                setOutputFormat(value as SubtitleOutputFormat)
+                setStrictOutputFormat(value as SubtitleOutputFormat)
               }
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -393,7 +461,11 @@ export default function Settings() {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <FieldDescription>{t("tasks.output.description")}</FieldDescription>
+            <FieldDescription>
+              {mode === "adaptive"
+                ? t("tasks.output.adaptiveLocked")
+                : t("tasks.output.description")}
+            </FieldDescription>
           </Field>
           {outputFormat.startsWith("ass-") && (
             <>
@@ -438,10 +510,16 @@ export default function Settings() {
             </>
           )}
           <Field>
-            <FieldLabel htmlFor="settings-prompt">{t("settings.prompt.label")}</FieldLabel>
+            <FieldLabel htmlFor="settings-prompt">
+              {mode === "adaptive"
+                ? t("settings.prompt.adaptiveLabel")
+                : t("settings.prompt.strictLabel")}
+            </FieldLabel>
             <Textarea id="settings-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} className="min-h-52 resize-y" />
             <FieldDescription>
-              {t("settings.prompt.description", {
+              {t(mode === "adaptive"
+                ? "settings.prompt.adaptiveDescription"
+                : "settings.prompt.strictDescription", {
                 lang: "{{lang}}",
                 additional: "{{additional}}",
               })}

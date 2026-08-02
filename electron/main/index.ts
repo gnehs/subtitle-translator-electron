@@ -13,7 +13,6 @@ import {
 import { translationErrorCodes } from "../shared/translation-error-codes";
 import { release } from "node:os";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
 import fs, { type Stats } from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -24,32 +23,41 @@ import { APICallError, NoObjectGeneratedError } from "ai";
 import {
   type BatchProgress,
   type BatchTranslationRequest,
+  type TranslationMode,
 } from "../../src/types/electron-api";
 import {
-  createTranslationCacheDocument,
   parseSubtitle,
   parseTranslationCache,
-  translateSubtitleChunk,
-  saveTranslated,
-  analyzeSubtitlesForContext,
   getSubtitleCues,
 } from "./utils/translate";
-import { createSubtitlePreview } from "./utils/subtitle-preview";
+import {
+  createAdaptiveSubtitlePreview,
+  createSubtitlePreview,
+} from "./utils/subtitle-preview";
+import { formatTranslationBrief } from "./utils/adaptive/brief";
+import {
+  hasMatchingAdaptiveCheckpointSource,
+  parseAdaptiveCheckpoint,
+} from "./utils/adaptive/checkpoint";
+import type { AdaptiveTranslationCheckpointV3 } from "./utils/adaptive/types";
 import { normalizeAssFontName } from "./utils/ass-bilingual";
 import {
   getSubtitleOutputFileSuffix,
   subtitleOutputFormats,
   type SubtitleOutputFormat,
 } from "./utils/subtitle-output";
-import { shouldAnalyzeSubtitles } from "./utils/subtitle-sampling";
 import { fetchAvailableModels } from "./utils/models";
 import { RequestRateLimiter } from "./utils/request-rate-limiter";
 import { isAllowedApiHost } from "./utils/api-host";
-import {
-  isSubtitleCueComplete,
-  splitIntoChunk,
-} from "./utils/subtitle-chunks";
 import { getRetryAfterMsFromHeaders } from "./utils/retry-after";
+import { getAdaptiveInputValidationError } from "./utils/adaptive/input-validation";
+import { processAdaptiveTranslationFile } from "./process-adaptive-translation-file";
+import {
+  processStrictTranslationFile,
+  type StrictTranslationInput,
+} from "./process-strict-translation-file";
+import { createUsageSummary } from "./utils/adaptive/usage";
+import type { StageUsage } from "./utils/adaptive/types";
 import {
   getPathClaimKey,
   hasPathClaimConflict,
@@ -123,7 +131,6 @@ const allowedExternalHosts = new Set([
   "www.buymeacoffee.com",
 ]);
 const MAX_AUTOMATIC_TRANSLATION_ATTEMPTS = 3;
-const MIN_CUES_FOR_CONTEXT_ANALYSIS = 40;
 const DEFAULT_CONTEXT_SIZE = 5;
 const applicationLocaleSchema = z.enum(["en-US", "zh-TW", "zh-CN"]);
 type ApplicationLocale = z.infer<typeof applicationLocaleSchema>;
@@ -151,6 +158,9 @@ const translationParamsSchema = z.object({
   }),
   model: z.string().min(1),
   prompt: z.string(),
+  mode: z
+    .enum(["strict", "adaptive"] as [TranslationMode, TranslationMode])
+    .default("strict"),
   lang: z.string(),
   additional: z.string(),
   temperature: z.number().finite().min(0).max(2),
@@ -200,6 +210,151 @@ function isSupportedInputPath(filePath: string): boolean {
   return supportedInputExtensions.has(
     path.extname(filePath).slice(1).toLowerCase()
   );
+}
+
+function getInputExtension(filePath: string): string {
+  return path.extname(filePath).slice(1).toLowerCase();
+}
+
+function assertAdaptiveTranslationInput(
+  filePath: string,
+  outputFormat: SubtitleOutputFormat
+): void {
+  const extension = getInputExtension(filePath);
+  let checkpointHeader:
+    | { version?: unknown; kind?: unknown; format?: unknown }
+    | undefined;
+  if (extension === "json") {
+    let value: unknown;
+    try {
+      value = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+    } catch {
+      throw new Error(translationErrorCodes.adaptiveInvalidCheckpoint);
+    }
+    if (typeof value === "object" && value !== null) {
+      const record = value as Record<string, unknown>;
+      checkpointHeader = {
+        version: record.version,
+        kind: record.kind,
+        format: record.format,
+      };
+    }
+  }
+
+  const errorCode = getAdaptiveInputValidationError({
+    extension,
+    outputFormat,
+    checkpointHeader,
+  });
+  if (errorCode) throw new Error(errorCode);
+}
+
+function getAdaptiveSourceMetadata(filePath: string): {
+  sourceName: string;
+  sourceExtension: "srt" | "vtt";
+  sourceFingerprint?: TranslationSourceFingerprint;
+} {
+  const extension = getInputExtension(filePath);
+  if (extension === "srt" || extension === "vtt") {
+    const fileInfo = fs.statSync(filePath);
+    return {
+      sourceName: path.basename(filePath),
+      sourceExtension: extension,
+      sourceFingerprint: { size: fileInfo.size, mtimeMs: fileInfo.mtimeMs },
+    };
+  }
+
+  const value = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+  const record = value as Record<string, unknown>;
+  const source = record.source as Record<string, unknown> | undefined;
+  const sourceName =
+    typeof source?.name === "string" && source.name.trim().length > 0
+      ? path.basename(source.name)
+      : path.basename(filePath);
+  const sourceExtension = record.format === "vtt" ? "vtt" : "srt";
+  const fingerprint = source?.fingerprint as
+    | TranslationSourceFingerprint
+    | undefined;
+  return { sourceName, sourceExtension, sourceFingerprint: fingerprint };
+}
+
+interface AdaptivePreviewDocument {
+  checkpoint: AdaptiveTranslationCheckpointV3;
+  source: ParsedSubtitle;
+}
+
+function hasAdaptiveCheckpointHeader(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return record.version === 3 || record.kind === "adaptive";
+}
+
+function parseAdaptiveCheckpointFile(filePath: string): AdaptiveTranslationCheckpointV3 | undefined {
+  let content: string;
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch (error: unknown) {
+    const errorCode =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : undefined;
+    if (errorCode === "ENOENT") return undefined;
+    throw error;
+  }
+
+  let value: unknown;
+  try {
+    value = JSON.parse(content) as unknown;
+  } catch {
+    throw new Error(translationErrorCodes.adaptiveInvalidCheckpoint);
+  }
+  if (!hasAdaptiveCheckpointHeader(value)) return undefined;
+  try {
+    return parseAdaptiveCheckpoint(content);
+  } catch {
+    throw new Error(translationErrorCodes.adaptiveInvalidCheckpoint);
+  }
+}
+
+/**
+ * Locate an Adaptive v3 project either directly or as a source sidecar. A
+ * matching source fingerprint is required before a sidecar can contribute
+ * preview/analysis data; otherwise strict preview must never masquerade as an
+ * Adaptive result.
+ */
+function readAdaptivePreviewDocument(
+  filePath: string
+): AdaptivePreviewDocument | undefined {
+  const extension = getInputExtension(filePath);
+  if (extension === "json") {
+    const checkpoint = parseAdaptiveCheckpointFile(filePath);
+    return checkpoint
+      ? { checkpoint, source: checkpoint.subtitle }
+      : undefined;
+  }
+  if (extension !== "srt" && extension !== "vtt") return undefined;
+
+  const fileInfo = fs.statSync(filePath);
+  const sourceName = path.basename(filePath);
+  const sourceFingerprint = { size: fileInfo.size, mtimeMs: fileInfo.mtimeMs };
+  const checkpointPath = getTranslationCachePath(filePath, sourceName);
+  const checkpoint = parseAdaptiveCheckpointFile(checkpointPath);
+  if (!checkpoint) return undefined;
+  if (
+    !hasMatchingAdaptiveCheckpointSource(
+      checkpoint,
+      sourceName,
+      extension,
+      sourceFingerprint
+    )
+  ) {
+    throw new Error(translationErrorCodes.adaptiveIncompatibleCheckpoint);
+  }
+
+  const source = parseSubtitle(fs.readFileSync(filePath, "utf8"), extension);
+  return { checkpoint, source };
 }
 
 function assertTranslationInputFile(filePath: string): Stats {
@@ -341,16 +496,7 @@ function claimTranslationPaths(
   };
 }
 
-interface TranslationInput {
-  parsed: ParsedSubtitle;
-  sourceName: string;
-  sourceExtension: SubtitleFileExtension;
-  analysis?: string;
-  cacheDocument?: TranslationCacheDocument;
-  sourceFingerprint?: TranslationSourceFingerprint;
-  checkpointPath: string;
-  shouldBackupCheckpoint: boolean;
-}
+type TranslationInput = StrictTranslationInput;
 
 function readMatchingCheckpoint(
   checkpointPath: string,
@@ -453,58 +599,6 @@ function readTranslationInput(
         checkpointPath,
         shouldBackupCheckpoint: fs.existsSync(checkpointPath),
       };
-}
-
-function createCheckpointWriter(
-  checkpointPath: string,
-  createDocument: () => TranslationCacheDocument
-): { write: () => Promise<void>; wait: () => Promise<void> } {
-  let pending = Promise.resolve();
-
-  const write = () => {
-    pending = pending
-      .catch(() => undefined)
-      .then(async () => {
-        const temporaryPath = `${checkpointPath}.${process.pid}.${randomUUID()}.tmp`;
-        const content = `${JSON.stringify(createDocument(), null, 2)}\n`;
-        await fs.promises.writeFile(temporaryPath, content, "utf8");
-        try {
-          await fs.promises.rename(temporaryPath, checkpointPath);
-        } catch {
-          await fs.promises.writeFile(checkpointPath, content, "utf8");
-          await fs.promises.unlink(temporaryPath).catch(() => undefined);
-        }
-      });
-
-    return pending;
-  };
-
-  return {
-    write,
-    wait: () => pending,
-  };
-}
-
-async function backupTranslationCheckpoint(
-  checkpointPath: string
-): Promise<string> {
-  const backupPath = `${checkpointPath}.${Date.now()}.${randomUUID()}.backup.json`;
-  await fs.promises.rename(checkpointPath, backupPath);
-  return backupPath;
-}
-
-async function removeTranslationCheckpoint(checkpointPath: string): Promise<void> {
-  try {
-    await fs.promises.unlink(checkpointPath);
-  } catch (error: unknown) {
-    const errorCode =
-      typeof error === "object" && error !== null && "code" in error
-        ? error.code
-        : undefined;
-    if (errorCode !== "ENOENT") {
-      console.warn("Failed to remove translation checkpoint:", error);
-    }
-  }
 }
 
 function getErrorDetails(error: unknown): {
@@ -957,20 +1051,61 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
     if (!abortSignal) return;
     let outputPath: string | undefined;
     let releasePathClaims: (() => void) | undefined;
+    let usageRecords: StageUsage[] = [];
+    const sendStrictProgress = (progress: BatchProgress): void => {
+      sendProgress(event.sender, {
+        ...progress,
+        mode: "strict",
+        usageSummary: createUsageSummary(usageRecords),
+      });
+    };
     try {
       abortSignal.throwIfAborted();
+
+      if (params.mode === "adaptive") {
+        assertAdaptiveTranslationInput(file.path, params.outputFormat);
+        const adaptiveMetadata = getAdaptiveSourceMetadata(file.path);
+        const outputDirectory = getValidatedOutputDirectory(
+          params.outputDirectory
+        );
+        const adaptiveOutputPath = getTranslatedPath(
+          file.path,
+          "srt-translation",
+          outputDirectory,
+          adaptiveMetadata.sourceName
+        );
+        const adaptiveCheckpointPath =
+          getInputExtension(file.path) === "json"
+            ? file.path
+            : getTranslationCachePath(file.path, adaptiveMetadata.sourceName);
+        outputPath = adaptiveOutputPath;
+        releasePathClaims = claimTranslationPaths(
+          [adaptiveOutputPath, adaptiveCheckpointPath],
+          batchPathClaims
+        );
+
+        await processAdaptiveTranslationFile({
+          file,
+          params,
+          abortSignal,
+          requestRateLimiter,
+          outputPath: adaptiveOutputPath,
+          checkpointPath: adaptiveCheckpointPath,
+          sourceName: adaptiveMetadata.sourceName,
+          sourceExtension: adaptiveMetadata.sourceExtension,
+          sourceFingerprint: adaptiveMetadata.sourceFingerprint,
+          retryRequest: (fn, delay, signal) =>
+            retryTranslate(() => fn(), undefined, delay, signal),
+          sendProgress: (progress) => sendProgress(event.sender, progress),
+        });
+        return;
+      }
+
       const input = readTranslationInput(
         file.path,
         translationConfigFingerprint
       );
-      const parsed = input.parsed;
-      const subtitle = getSubtitleCues(parsed);
-      const totalCues = subtitle.length;
-      let completedCues = subtitle.filter(isSubtitleCueComplete).length;
-
-      // 建立原始索引對照，供後續「上下文視窗」策略使用
-      const indexMap = new Map<SubtitleCue, number>();
-      subtitle.forEach((cue, idx) => indexMap.set(cue, idx));
+      usageRecords = [...(input.cacheDocument?.usage ?? [])];
 
       const outputDirectory = getValidatedOutputDirectory(
         params.outputDirectory
@@ -982,310 +1117,42 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         input.sourceName
       );
       outputPath = translatedOutputPath;
-      let analysisData = input.analysis;
-      analysisCache.delete(file.path);
       const checkpointPath = input.checkpointPath;
+      analysisCache.delete(file.path);
       releasePathClaims = claimTranslationPaths(
         [translatedOutputPath, checkpointPath],
         batchPathClaims
       );
-      if (input.shouldBackupCheckpoint) {
-        abortSignal.throwIfAborted();
-        const backupPath = await backupTranslationCheckpoint(checkpointPath);
-        console.warn(
-          `Preserved an incompatible translation checkpoint at: ${backupPath}`
-        );
-      }
-      const checkpointWriter = createCheckpointWriter(
-        checkpointPath,
-        () =>
-          createTranslationCacheDocument({
-            subtitle: parsed,
-            sourceName: input.sourceName,
-            format: input.sourceExtension,
-            configFingerprint: translationConfigFingerprint,
-            analysis: analysisData,
-            sourceFingerprint: input.sourceFingerprint,
-          })
-      );
-      const persistCheckpoint = async () => {
-        try {
-          await checkpointWriter.write();
-        } catch (error: unknown) {
-          console.warn("Failed to write translation checkpoint:", error);
-        }
-      };
-
-      await persistCheckpoint();
-      abortSignal.throwIfAborted();
-
-      const chunks = splitIntoChunk(subtitle, 20);
-      if (chunks.length === 0) {
-        abortSignal.throwIfAborted();
-        saveTranslated(
-          translatedOutputPath,
-          parsed,
-          params.outputFormat,
-          params.assFonts
-        );
-        await checkpointWriter.wait().catch((error: unknown) => {
-          console.warn("Failed to finish translation checkpoint:", error);
-        });
-        sendProgress(event.sender, {
-          filePath: file.path,
-          progress: 100,
-          status: "done",
-          totalCues,
-          currentCue: totalCues,
-          analysis: analysisData,
-          outputPath: translatedOutputPath,
-          previewCues: createSubtitlePreview(subtitle, subtitle),
-        });
-        await removeTranslationCheckpoint(checkpointPath);
-        return;
-      }
-
-      // Build analysis context (plot summary + glossary) and attach to all requests
-      const allTexts = subtitle
-        .map((cue) => cue.data.text)
-        .filter((t: string) => t && t.length > 0);
-
-      const shouldAnalyze = shouldAnalyzeSubtitles(
-        analysisData,
-        allTexts.length,
-        MIN_CUES_FOR_CONTEXT_ANALYSIS
-      );
-      if (shouldAnalyze) {
-        abortSignal.throwIfAborted();
-        sendProgress(event.sender, {
-          filePath: file.path,
-          progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
-          status: "analyzing",
-          totalCues,
-          currentCue: completedCues,
-          analysis: null,
-          outputPath: translatedOutputPath,
-        });
-      }
-
-      let combinedAdditional = params.additional || "";
-      if (analysisData) {
-        combinedAdditional = `${
-          combinedAdditional ? combinedAdditional + "\n\n" : ""
-        }[Context]\n${analysisData}`;
-        analysisCache.set(file.path, analysisData);
-      } else if (shouldAnalyze) {
-        try {
-          const analysis = await retryTranslate(
-            (texts) =>
-              analyzeSubtitlesForContext(texts, {
-                apiKeys: params.apiKeys || [],
-                apiHost: params.apiHost || "https://api.openai.com/v1",
-                model: params.model || "",
-                lang: params.lang || "",
-                temperature: 0.3,
-                requestRateLimiter,
-                abortSignal,
-              }),
-            allTexts,
-            params.delay,
-            abortSignal
-          );
-          if (analysis) {
-            combinedAdditional = `${
-              combinedAdditional ? combinedAdditional + "\n\n" : ""
-            }[Context]\n${analysis}`;
-
-            analysisData = analysis;
-            analysisCache.set(file.path, analysis);
-            await persistCheckpoint();
-            sendProgress(event.sender, {
-              filePath: file.path,
-              progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
-              status: "analyzing",
-              totalCues,
-              currentCue: completedCues,
-              analysis,
-              outputPath: translatedOutputPath,
-            });
-          }
-        } catch (analysisErr) {
-          abortSignal.throwIfAborted();
-          console.warn(
-            "Context analysis failed, continue without it:",
-            analysisErr
-          );
-        }
-      }
-
-      abortSignal.throwIfAborted();
-      sendProgress(event.sender, {
-        filePath: file.path,
-        progress: totalCues > 0 ? (completedCues / totalCues) * 100 : 0,
-        status: "translating",
-        totalCues,
-        currentCue: completedCues,
-        analysis: analysisData ?? null,
+      await processStrictTranslationFile({
+        file,
+        params,
+        abortSignal,
+        requestRateLimiter,
+        translationConfigFingerprint,
+        input,
         outputPath: translatedOutputPath,
+        usageRecords,
+        analysisCache,
+        retryRequest: (fn, delay, signal) =>
+          retryTranslate(() => fn(), undefined, delay, signal),
+        sendProgress: (progress) => sendProgress(event.sender, progress),
       });
-
-      // Translate
-      const chunkProcessor = async (block: SubtitleCue[]) => {
-        abortSignal.throwIfAborted();
-        // 以原始索引建立「核心段」和「上下文視窗」
-        const contextSize =
-          typeof params.contextSize === "number"
-            ? params.contextSize
-            : DEFAULT_CONTEXT_SIZE;
-
-        const coreIndices = block
-          .map((cue) => indexMap.get(cue))
-          .filter((n): n is number => typeof n === "number")
-          .sort((a: number, b: number) => a - b);
-
-        if (coreIndices.length === 0) return;
-
-        const coreStart = coreIndices[0];
-        const coreEnd = coreIndices[coreIndices.length - 1];
-
-        const contextStart = Math.max(0, coreStart - contextSize);
-        const contextEnd = Math.min(subtitle.length - 1, coreEnd + contextSize);
-
-        const normalizeCueText = (cue: SubtitleCue) =>
-          cue.data.text.replaceAll(/\n/g, " ").trim();
-        const translationChunk = {
-          before: subtitle.slice(contextStart, coreStart).map(normalizeCueText),
-          core: block.map(normalizeCueText),
-          after: subtitle
-            .slice(coreEnd + 1, contextEnd + 1)
-            .map(normalizeCueText),
-        };
-
-        // 每個區塊最多自動嘗試三次；失敗後直接交由使用者手動重試。
-        const translatedWindow = await retryTranslate(
-          async (chunkInput) => {
-            const result = await translateSubtitleChunk(chunkInput, {
-              ...params,
-              apiKeys: params.apiKeys || [],
-              apiHost: params.apiHost || "https://api.openai.com/v1",
-              model: params.model || "",
-              prompt: params.prompt || "",
-              lang: params.lang || "",
-              additional: combinedAdditional || "",
-              temperature:
-                typeof params.temperature === "number"
-                  ? params.temperature
-                  : 1,
-              requestRateLimiter,
-              abortSignal,
-            });
-
-            if (!Array.isArray(result) || result.length !== block.length) {
-              throw new Error(
-                `Translation output validation failed: expected ${block.length} subtitles, got ${Array.isArray(result) ? result.length : "a non-array result"}`
-              );
-            }
-
-            return result;
-          },
-          translationChunk,
-          1000,
-          abortSignal
-        );
-
-        abortSignal.throwIfAborted();
-        // The model receives surrounding context but returns only the core block.
-        let chunkCompleted = 0;
-        for (const [index, cue] of block.entries()) {
-          cue.data.translatedText = translatedWindow[index] ?? "";
-          chunkCompleted++;
-        }
-
-        abortSignal.throwIfAborted();
-        completedCues += chunkCompleted;
-        const progress = totalCues > 0 ? (completedCues / totalCues) * 100 : 100;
-        const currentCue = Math.min(completedCues, totalCues);
-        sendProgress(event.sender, {
-          filePath: file.path,
-          progress,
-          status: "translating",
-          totalCues,
-          currentCue,
-          analysis: analysisData ?? null,
-          outputPath: translatedOutputPath,
-        });
-
-        // 寫入部分成果供即時預覽
-        try {
-          saveTranslated(
-            translatedOutputPath,
-            parsed,
-            params.outputFormat,
-            params.assFonts
-          );
-        } catch (e) {
-          console.warn("Failed to write partial translated file:", e);
-        }
-
-        await persistCheckpoint();
-      };
-
-      const activeChunkProcessors = new Set<Promise<void>>();
-      const trackedChunkProcessor = (block: SubtitleCue[]) => {
-        const processing = chunkProcessor(block).finally(() => {
-          activeChunkProcessors.delete(processing);
-        });
-        activeChunkProcessors.add(processing);
-        return processing;
-      };
-
-      try {
-        for await (const _ of pool(
-          params.concurrency,
-          chunks,
-          trackedChunkProcessor
-        )) {
-          // Process chunks with the configured per-file concurrency.
-        }
-      } catch (error: unknown) {
-        await Promise.allSettled([...activeChunkProcessors]);
-        await checkpointWriter.wait().catch(() => undefined);
-        throw error;
-      }
-
-      // Final write
-      abortSignal.throwIfAborted();
-      saveTranslated(
-        translatedOutputPath,
-        parsed,
-        params.outputFormat,
-        params.assFonts
-      );
-      await checkpointWriter.wait().catch((error: unknown) => {
-        console.warn("Failed to finish translation checkpoint:", error);
-      });
-      sendProgress(event.sender, {
-        filePath: file.path,
-        progress: 100,
-        status: "done",
-        totalCues,
-        currentCue: totalCues,
-        analysis: analysisData ?? null,
-        outputPath: translatedOutputPath,
-        previewCues: createSubtitlePreview(subtitle, subtitle),
-      });
-      await removeTranslationCheckpoint(checkpointPath);
-      console.log(`Saved translated file to: ${translatedOutputPath}`);
     } catch (e: unknown) {
       if (abortSignal.aborted) return;
       console.error(`Batch translation error for ${file.path}:`, e);
-      sendProgress(event.sender, {
+      const errorProgress: BatchProgress = {
         filePath: file.path,
         progress: 0,
         status: "error",
+        mode: params.mode,
         error: getErrorMessage(e),
         outputPath,
-      });
+      };
+      if (params.mode === "adaptive") {
+        sendProgress(event.sender, errorProgress);
+      } else {
+        sendStrictProgress(errorProgress);
+      }
     } finally {
       releasePathClaims?.();
     }
@@ -1305,6 +1172,12 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
 ipcMain.handle("get-analysis", async (event, filePath: unknown) => {
   assertTrustedSender(event);
   const validatedPath = z.string().min(1).parse(filePath);
+  const adaptiveDocument = readAdaptivePreviewDocument(validatedPath);
+  if (adaptiveDocument) {
+    return adaptiveDocument.checkpoint.brief
+      ? formatTranslationBrief(adaptiveDocument.checkpoint.brief)
+      : null;
+  }
   return analysisCache.get(validatedPath) ?? null;
 });
 
@@ -1312,7 +1185,6 @@ ipcMain.handle("get-subtitle-preview", async (event, request: unknown) => {
   assertTrustedSender(event);
   const { filePath: validatedPath, outputPath } =
     subtitlePreviewRequestSchema.parse(request);
-  const input = readTranslationInput(validatedPath);
   const requestedOutputExtension = outputPath
     ? path.extname(outputPath).slice(1).toLowerCase()
     : undefined;
@@ -1322,6 +1194,17 @@ ipcMain.handle("get-subtitle-preview", async (event, request: unknown) => {
   ) {
     throw new Error(translationErrorCodes.unsupportedFileExtension);
   }
+  const adaptiveDocument = readAdaptivePreviewDocument(validatedPath);
+  if (adaptiveDocument) {
+    return {
+      cues: createAdaptiveSubtitlePreview(
+        adaptiveDocument.source,
+        adaptiveDocument.checkpoint.scenes
+      ),
+    };
+  }
+
+  const input = readTranslationInput(validatedPath);
   const parsed = input.parsed;
   const subtitle = getSubtitleCues(parsed);
 

@@ -22,6 +22,12 @@
 - Translation according to the preceding and following sentences
 - Save translation checkpoints as JSON so an interrupted translation can be resumed by dragging the JSON file back into the app
 
+## Translation modes
+
+- **Strict (default):** Keeps each source cue one-to-one and supports the full set of existing subtitle formats and output formats, including SRT, VTT, ASS, and SSA.
+- **Adaptive:** Accepts only `.srt` and `.vtt` input and always outputs `srt-translation`. It can merge or split adjacent cues, apply local repairs, and use a per-scene Strict fallback when repair cannot recover a valid result.
+- Adaptive does not support ASS/SSA or bilingual output. Completed Adaptive jobs keep a `.translation.json` project checkpoint for resume and layout-only rerender.
+
 ## [Download](https://github.com/gnehs/subtitle-translator-electron/releases/latest)
 
 Install with Homebrew:

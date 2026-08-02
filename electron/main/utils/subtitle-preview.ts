@@ -1,7 +1,33 @@
-import type { SubtitleCuePreview } from "../../../src/types/electron-api";
-import type { SubtitleCue } from "./translate";
+import type {
+  AdaptiveSubtitleCuePreview,
+  SubtitleCuePreview,
+} from "../../../src/types/electron-api";
+import type { ParsedSubtitle, SubtitleCue } from "./translate.ts";
+import { renderAdaptiveSrt } from "./adaptive/renderer.ts";
+import type {
+  AdaptiveCheckpointScene,
+  AdaptiveLayoutOptions,
+} from "./adaptive/types";
 
 const savedSubtitleSeparators = ["\r\n", "\n", "\\N", "\\n"] as const;
+
+function isSubtitleCue(value: unknown): value is SubtitleCue {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  const data = record.data;
+  return (
+    record.type === "cue" &&
+    typeof data === "object" &&
+    data !== null &&
+    typeof (data as Record<string, unknown>).text === "string"
+  );
+}
+
+function getSourceCues(source: ParsedSubtitle): SubtitleCue[] {
+  return Array.isArray(source)
+    ? source.filter(isSubtitleCue)
+    : source.events.filter(isSubtitleCue);
+}
 
 function toPlainAssText(value: string): string {
   return value
@@ -67,6 +93,7 @@ export function createSubtitlePreview(
     // alignment also keeps distinct cues that intentionally share timestamps.
     const savedTranslation = translatedCuesArray?.[index];
     return {
+      kind: "strict" as const,
       text: cue.data.text,
       translatedText:
         typeof savedTranslation === "string"
@@ -76,4 +103,38 @@ export function createSubtitlePreview(
       end: cue.data.end,
     };
   });
+}
+
+/**
+ * Materialize Adaptive checkpoint blocks into the discriminated preview shape
+ * consumed by the renderer. Source ranges stay zero-based internally so the
+ * UI can format them as user-facing cue numbers without losing provenance.
+ */
+export function createAdaptiveSubtitlePreview(
+  source: ParsedSubtitle,
+  scenes: readonly AdaptiveCheckpointScene[],
+  layoutOptions: Partial<AdaptiveLayoutOptions> = {},
+): AdaptiveSubtitleCuePreview[] {
+  const rendered = renderAdaptiveSrt(source, scenes, layoutOptions);
+  const sourceCues = getSourceCues(source);
+  const blockOrigins = new Map<string, AdaptiveSubtitleCuePreview["origin"]>();
+  for (const scene of scenes) {
+    for (const block of scene.blocks ?? []) {
+      blockOrigins.set(block.id, block.origin);
+    }
+  }
+
+  return rendered.targetCues.map((cue) => ({
+    kind: "adaptive",
+    targetText: cue.renderedText,
+    sourceStart: cue.sourceStart,
+    sourceEnd: cue.sourceEnd,
+    sourceTexts: cue.sourceCueIds.map(
+      (sourceId) => sourceCues[sourceId]?.data.text ?? "",
+    ),
+    start: cue.startMs,
+    end: cue.endMs,
+    origin: blockOrigins.get(cue.blockId) ?? "adaptive",
+    warnings: cue.warnings,
+  }));
 }

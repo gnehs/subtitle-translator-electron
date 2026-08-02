@@ -12,6 +12,33 @@ export { translationErrorCodes } from "../../electron/shared/translation-error-c
 
 export const translationConcurrencyOptions = [1, 2, 5, 10] as const;
 export type TranslationConcurrency = (typeof translationConcurrencyOptions)[number];
+export const translationModes = ["strict", "adaptive"] as const;
+export type TranslationMode = (typeof translationModes)[number];
+
+export interface AdaptiveLayoutOptions {
+  maxLines: number;
+  maxLineUnitsCjk: number;
+  maxLineUnitsLatin: number;
+  softMaxCpsCjk: number;
+  hardMaxCpsCjk: number;
+  softMaxCpsLatin: number;
+  hardMaxCpsLatin: number;
+  minCueDurationMs: number;
+  boundarySnapToleranceMs: number;
+}
+
+export const defaultAdaptiveLayoutOptions: AdaptiveLayoutOptions = {
+  maxLines: 2,
+  maxLineUnitsCjk: 18,
+  maxLineUnitsLatin: 42,
+  softMaxCpsCjk: 12,
+  hardMaxCpsCjk: 16,
+  softMaxCpsLatin: 17,
+  hardMaxCpsLatin: 22,
+  minCueDurationMs: 500,
+  boundarySnapToleranceMs: 250,
+};
+
 export type SubtitleOutputFormat =
   | "srt-translation"
   | "srt-bilingual"
@@ -23,14 +50,68 @@ export type TranslationStatus =
   | "pending"
   | "analyzing"
   | "translating"
+  | "repairing"
+  | "fallback"
+  | "rendering"
   | "done"
   | "error";
+
+export type ViolationSeverity = "warning" | "error";
+
+export interface AdaptiveSubtitleViolation {
+  code: string;
+  severity: ViolationSeverity;
+  message: string;
+  sceneId?: string;
+  blockId?: string;
+  targetCueId?: string;
+  details?: Record<string, string | number | boolean | null>;
+}
+
+export type TranslationUsageStage =
+  | "brief"
+  | "strict-translate"
+  | "adaptive-translate"
+  | "adaptive-repair"
+  | "strict-fallback";
+
+export interface StageUsage {
+  stage: TranslationUsageStage;
+  model: string;
+  sceneId?: string;
+  requestAttempt: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  reasoningTokens?: number;
+  cachedInputTokens?: number;
+  durationMs: number;
+  finishReason?: string;
+}
+
+export interface StageUsageSummary {
+  requestCount: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+}
+
+export interface TranslationUsageSummary {
+  requestCount: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  reasoningTokens?: number;
+  cachedInputTokens?: number;
+  byStage: Partial<Record<TranslationUsageStage, StageUsageSummary>>;
+}
 
 export interface TranslationParams {
   apiKeys: string[];
   apiHost: string;
   model: string;
   prompt: string;
+  mode: TranslationMode;
   lang: string;
   additional: string;
   temperature: number;
@@ -55,12 +136,15 @@ export interface BatchProgress {
   filePath: string;
   progress: number;
   status: TranslationStatus;
+  mode?: TranslationMode;
   error?: string;
   totalCues?: number;
   currentCue?: number;
   analysis?: string | null;
   outputPath?: string;
   previewCues?: SubtitleCuePreview[];
+  usageSummary?: TranslationUsageSummary;
+  warnings?: AdaptiveSubtitleViolation[];
 }
 
 export interface SubtitlePreviewRequest {
@@ -68,12 +152,34 @@ export interface SubtitlePreviewRequest {
   outputPath?: string;
 }
 
-export interface SubtitleCuePreview {
+export interface StrictSubtitleCuePreview {
+  kind: "strict";
   text: string;
   translatedText?: string;
   start?: number | string;
   end?: number | string;
 }
+
+export type AdaptivePreviewOrigin =
+  | "adaptive"
+  | "repair"
+  | "strict-fallback";
+
+export interface AdaptiveSubtitleCuePreview {
+  kind: "adaptive";
+  targetText: string;
+  sourceStart: number;
+  sourceEnd: number;
+  sourceTexts: string[];
+  start: number;
+  end: number;
+  origin: AdaptivePreviewOrigin;
+  warnings: AdaptiveSubtitleViolation[];
+}
+
+export type SubtitleCuePreview =
+  | StrictSubtitleCuePreview
+  | AdaptiveSubtitleCuePreview;
 
 export interface ElectronAPI {
   getFilePath(file: File): string;

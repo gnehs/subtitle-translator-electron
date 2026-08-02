@@ -54,54 +54,64 @@ msgstr ""
 #~ msgstr "仅储存翻译字幕"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:149
+#: src/i18n-messages.ts:282
+msgid "tasks.details.preview.noWarning"
+msgstr "—"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:177
 msgid "tasks.queue.completed"
 msgstr "{count} 个已完成"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:218
+#: src/i18n-messages.ts:258
 msgid "tasks.details.cues"
 msgstr "{count} 段"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:209
+#: src/i18n-messages.ts:247
 msgid "tasks.output.selectedFiles"
 msgstr "已选取 {count} 个文件"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:114
+#: src/i18n-messages.ts:120
 msgid "settings.concurrency.options.parallel"
 msgstr "{count} 个并行任务"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:178
+#: src/i18n-messages.ts:215
 msgid "tasks.model.helpSuccess"
 msgstr "已载入 {count} 个模型；也可使用自定义模型 ID。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:147
+#: src/i18n-messages.ts:175
 msgid "tasks.queue.active"
 msgstr "{count} 个任务正在处理"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:139
+#: src/i18n-messages.ts:167
 msgid "task.progress.retryWithError"
 msgstr "{error}；请按“重试”再次执行"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:170
+#: src/i18n-messages.ts:207
 msgid "tasks.model.loadError"
 msgstr "{error}；仍可使用自定义模型 ID。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:159
+#: src/i18n-messages.ts:187
 msgid "tasks.aria.progress"
 msgstr "{file} {progress}%"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:113
+#: src/i18n-messages.ts:119
 msgid "settings.concurrency.options.sequential"
 msgstr "1（顺序翻译）"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:144
+msgid "error.adaptiveLockedCueViolation"
+msgstr "锁定的字幕片段被意外合并或拆分。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:97
@@ -114,22 +124,77 @@ msgid "about.title"
 msgstr "关于"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:156
+#: src/i18n-messages.ts:184
 msgid "tasks.table.actions"
 msgstr "操作"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:176
+#: src/i18n-messages.ts:111
+msgid "settings.mode.adaptive"
+msgstr "Adaptive"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:197
+msgid "tasks.mode.adaptive"
+msgstr "Adaptive"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:279
+msgid "tasks.details.preview.origin.adaptive"
+msgstr "Adaptive"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:231
+msgid "tasks.output.adaptiveLocked"
+msgstr "Adaptive 模式固定输出翻译 SRT。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:200
+msgid "tasks.mode.adaptiveFileNotice"
+msgstr "Adaptive 模式不支持 ASS／SSA 文件或旧版 checkpoint。请切回 Strict 以翻译这些文件。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:199
+msgid "tasks.mode.adaptiveOutputNotice"
+msgstr "Adaptive 模式仅支持翻译 SRT 输出，其他格式不可用。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:139
+msgid "error.adaptiveUnsupportedOutputFormat"
+msgstr "Adaptive 模式仅支持翻译 SRT 输出。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:138
+msgid "error.adaptiveUnsupportedInputFormat"
+msgstr "Adaptive 模式仅支持 SRT、VTT 和 Adaptive v3 checkpoint。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:146
+msgid "error.adaptiveRepairFailed"
+msgstr "Adaptive 结构修复失败。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:123
+msgid "settings.prompt.adaptiveLabel"
+msgstr "Adaptive 翻译提示词"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:149
+msgid "error.adaptiveGenerationBudgetExceeded"
+msgstr "Adaptive 翻译已达到生成预算上限。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:213
 msgid "tasks.model.apiKeyRequired"
 msgstr "请先设置 API 密钥，或输入自定义模型 ID。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:239
+#: src/i18n-messages.ts:296
 msgid "toast.apiKeyRequired"
 msgstr "请先在设置中加入 API 密钥"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:177
+#: src/i18n-messages.ts:214
 msgid "tasks.model.helpNoKey"
 msgstr "请先在设置中加入 API 密钥，打开此选单时会自动载入可用模型。"
 
@@ -139,12 +204,12 @@ msgid "navigation.addTask"
 msgstr "新增任务"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:164
+#: src/i18n-messages.ts:192
 msgid "tasks.dialog.title"
 msgstr "新增翻译任务"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:242
+#: src/i18n-messages.ts:299
 msgid "toast.tasksAdded"
 msgstr "已加入 {count} 个任务，开始翻译"
 
@@ -159,12 +224,17 @@ msgid "translate.subtitleFilter.all"
 msgstr "所有"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:213
+#: src/i18n-messages.ts:198
+msgid "tasks.mode.adaptiveDescription"
+msgstr "可合并或拆分相邻片段以改善时间安排；第一版仅输出翻译 SRT。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:251
 msgid "tasks.details.stage.analyze"
 msgstr "分析"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:130
+#: src/i18n-messages.ts:152
 msgid "task.status.analyzing"
 msgstr "分析中"
 
@@ -174,7 +244,7 @@ msgid "translate.analyzing_context"
 msgstr "分析上下文"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:135
+#: src/i18n-messages.ts:160
 msgid "task.progress.analyzing"
 msgstr "分析字幕上下文"
 
@@ -204,32 +274,32 @@ msgid "translate.exceeded"
 msgstr "API 额度已用罄"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:192
+#: src/i18n-messages.ts:229
 msgid "tasks.output.assOriginalTranslation"
 msgstr "ASS・较小原文＋译文"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:191
+#: src/i18n-messages.ts:228
 msgid "tasks.output.assBilingual"
 msgstr "ASS・译文＋较小原文"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:195
+#: src/i18n-messages.ts:233
 msgid "tasks.output.originalFont"
 msgstr "ASS 原文字体"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:194
+#: src/i18n-messages.ts:232
 msgid "tasks.output.translationFont"
 msgstr "ASS 译文字体"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:173
+#: src/i18n-messages.ts:210
 msgid "tasks.model.available"
 msgstr "可用模型"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:179
+#: src/i18n-messages.ts:216
 msgid "tasks.model.helpIdle"
 msgstr "打开此选单时会自动载入可用模型。"
 
@@ -244,22 +314,27 @@ msgid "about.buy_me_a_coffee"
 msgstr "请我喝杯咖啡"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:270
+msgid "tasks.details.usage.cached"
+msgstr "缓存输入 token"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:14
 msgid "cancel"
 msgstr "取消"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:207
+#: src/i18n-messages.ts:245
 msgid "tasks.output.select"
 msgstr "选择"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:144
+#: src/i18n-messages.ts:172
 msgid "tasks.empty.chooseFile"
 msgstr "选择文件"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:167
+#: src/i18n-messages.ts:204
 msgid "tasks.model.choose"
 msgstr "选择或输入模型"
 
@@ -269,12 +344,12 @@ msgid "settings.interface.description"
 msgstr "选择界面语言与工作偏好。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:193
+#: src/i18n-messages.ts:230
 msgid "tasks.output.description"
 msgstr "选择输出文件格式与字幕内容。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:151
+#: src/i18n-messages.ts:179
 msgid "tasks.queue.clearCompleted"
 msgstr "清除已结束"
 
@@ -284,7 +359,7 @@ msgid "translate.clear_completed"
 msgstr "清除已完成"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:117
+#: src/i18n-messages.ts:127
 msgid "settings.reset.description"
 msgstr "清除本机储存的 API、任务与翻译偏好。"
 
@@ -294,7 +369,7 @@ msgid "translate.cleared_files"
 msgstr "已清除 {count} 个已完成档案"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:237
+#: src/i18n-messages.ts:294
 msgid "toast.completedCleared"
 msgstr "已清除 {count} 个已完成任务"
 
@@ -314,7 +389,7 @@ msgid "about.commit_sha"
 msgstr "Commit SHA"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:132
+#: src/i18n-messages.ts:157
 msgid "task.status.done"
 msgstr "已完成"
 
@@ -359,29 +434,34 @@ msgid "translate.context.title"
 msgstr "内容上下文"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:216
+#: src/i18n-messages.ts:256
 msgid "tasks.details.context"
 msgstr "内容上下文"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:185
+#: src/i18n-messages.ts:222
 msgid "tasks.context.label"
 msgstr "上下文行数（前后）"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:137
+#: src/i18n-messages.ts:165
 msgid "task.progress.cue"
 msgstr "第 {current} / {total} 段"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:211
+#: src/i18n-messages.ts:249
 msgid "tasks.details.progress"
 msgstr "目前进度"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:171
+#: src/i18n-messages.ts:208
 msgid "tasks.model.custom"
 msgstr "自定义模型"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:107
+msgid "settings.mode.label"
+msgstr "默认翻译模式"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:20
@@ -404,12 +484,12 @@ msgid "translate.file_description"
 msgstr "拖入字幕档案，或点击此处选择档案。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:181
+#: src/i18n-messages.ts:218
 msgid "tasks.language.placeholder"
 msgstr "例如：简体中文、English、日本语"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:183
+#: src/i18n-messages.ts:220
 msgid "tasks.additional.placeholder"
 msgstr "例如：保留专有名词，语气自然。"
 
@@ -419,7 +499,7 @@ msgid "translate.additional_description"
 msgstr "例如：这是一部星际大战电影。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:186
+#: src/i18n-messages.ts:223
 msgid "tasks.context.description"
 msgstr "每个翻译区块会包含前后各这么多行字幕。系统也会自动分析整份字幕，生成整体剧情摘要和词汇表。"
 
@@ -439,7 +519,7 @@ msgid "translate.target_description"
 msgstr "英文，繁体中文，日本语，等等。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:238
+#: src/i18n-messages.ts:295
 msgid "toast.targetLanguageRequired"
 msgstr "请先填写目标语言"
 
@@ -454,17 +534,17 @@ msgid "enterModelName"
 msgstr "输入模型名称"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:225
+#: src/i18n-messages.ts:265
 msgid "tasks.details.error"
 msgstr "错误详细信息"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:133
+#: src/i18n-messages.ts:158
 msgid "task.status.error"
 msgstr "失败"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:140
+#: src/i18n-messages.ts:168
 msgid "task.progress.retry"
 msgstr "自动重试三次后失败；请按“重试”再次执行"
 
@@ -474,9 +554,19 @@ msgid "translate.failed_to_translate"
 msgstr "无法翻译该行字幕：{text}"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:146
+#: src/i18n-messages.ts:174
 msgid "tasks.empty.checkpoint"
 msgstr "翻译失败时会保留暂存文件，方便拖回继续；成功后会自动删除。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:254
+msgid "tasks.details.stage.fallback"
+msgstr "降级"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:163
+msgid "task.progress.fallback"
+msgstr "降级为 Strict 翻译"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:67
@@ -484,7 +574,7 @@ msgid "translate.file"
 msgstr "档案"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:152
+#: src/i18n-messages.ts:180
 msgid "tasks.table.file"
 msgstr "文件"
 
@@ -509,7 +599,12 @@ msgid "translate.input"
 msgstr "输入"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:201
+#: src/i18n-messages.ts:268
+msgid "tasks.details.usage.input"
+msgstr "输入 token"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:239
 msgid "tasks.output.fontUnavailable"
 msgstr "无法读取已安装字体；仍可直接输入字体名称。"
 
@@ -519,7 +614,12 @@ msgid "settings.interface.title"
 msgstr "界面"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:116
+#: src/i18n-messages.ts:196
+msgid "tasks.mode.strictDescription"
+msgstr "保持每个来源片段一对一并支持所有输出格式。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:126
 msgid "settings.prompt.description"
 msgstr "请保留 {lang} 与 {additional} 变量；新增任务时会自动填入。"
 
@@ -534,22 +634,22 @@ msgid "translate.language"
 msgstr "语言"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:217
+#: src/i18n-messages.ts:257
 msgid "tasks.details.transcript"
 msgstr "即时逐字稿"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:169
+#: src/i18n-messages.ts:206
 msgid "tasks.model.loading"
 msgstr "正在载入 API 可用模型⋯"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:199
+#: src/i18n-messages.ts:237
 msgid "tasks.output.fontLoading"
 msgstr "正在加载已安装字体…"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:220
+#: src/i18n-messages.ts:260
 msgid "tasks.details.previewLoading"
 msgstr "正在加载字幕预览"
 
@@ -564,9 +664,14 @@ msgid "manualInput"
 msgstr "手动输入"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:110
+#: src/i18n-messages.ts:116
 msgid "settings.rpm.description"
 msgstr "同一批翻译每分钟最多发出的 API 请求数；会与请求间隔共同套用。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:112
+msgid "settings.mode.adaptiveDescription"
+msgstr "可合并或拆分相邻片段以获得自然时间安排；仅输出翻译 SRT。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:8
@@ -579,7 +684,7 @@ msgid "modelName"
 msgstr "模型名称"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:125
+#: src/i18n-messages.ts:135
 msgid "error.outputPathConflict"
 msgstr "多个任务会写入同一个输出文件。请选择不同的输出文件夹，或重命名其中一个源文件。"
 
@@ -594,22 +699,22 @@ msgid "translate.no_completed_files"
 msgstr "没有已完成的档案可清除"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:200
+#: src/i18n-messages.ts:238
 msgid "tasks.output.fontEmpty"
 msgstr "找不到匹配字体；可直接输入自定义字体名称。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:174
+#: src/i18n-messages.ts:211
 msgid "tasks.model.noMatch"
 msgstr "找不到模型，可以直接使用自定义模型 ID。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:157
+#: src/i18n-messages.ts:185
 msgid "tasks.model.notSet"
 msgstr "尚未设置模型"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:175
+#: src/i18n-messages.ts:212
 msgid "tasks.model.noneAvailable"
 msgstr "目前没有可用模型。"
 
@@ -619,22 +724,22 @@ msgid "noModelsFound"
 msgstr "找不到模型"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:219
+#: src/i18n-messages.ts:259
 msgid "tasks.details.noCues"
 msgstr "此文件中没有可显示的字幕片段。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:158
+#: src/i18n-messages.ts:186
 msgid "tasks.language.notSet"
 msgstr "尚未设置目标语言"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:142
+#: src/i18n-messages.ts:170
 msgid "tasks.empty.title"
 msgstr "尚无任务"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:123
+#: src/i18n-messages.ts:133
 msgid "error.noValidApiKeys"
 msgstr "未提供有效的 API 密钥。"
 
@@ -649,9 +754,14 @@ msgid "api.key.notify"
 msgstr "注意：费用由各供应商计费，请确认您的账号状态正常并已设置付款方式。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:112
+#: src/i18n-messages.ts:118
 msgid "settings.concurrency.description"
 msgstr "每个文件同时翻译的字幕区块数量。如果模型需要更一致的上下文，可以设为 1 依次翻译。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:110
+msgid "settings.mode.strictDescription"
+msgstr "一对一字幕映射，支持所有现有输出格式。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:95
@@ -674,19 +784,24 @@ msgid "api.presets.openrouter"
 msgstr "OpenRouter"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:202
+#: src/i18n-messages.ts:240
 msgid "tasks.output.translationFontDescription"
 msgstr "选填。输入已安装的字体名称，应用于 ASS 译文。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:203
+#: src/i18n-messages.ts:241
 msgid "tasks.output.originalFontDescription"
 msgstr "选填。ASS 原文会使用此字体，字号为来源样式的 70%。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:215
+#: src/i18n-messages.ts:255
 msgid "tasks.details.stage.organize"
 msgstr "整理"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:276
+msgid "tasks.details.preview.origin"
+msgstr "来源"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:75
@@ -694,22 +809,27 @@ msgid "translate.output"
 msgstr "输出"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:204
+#: src/i18n-messages.ts:242
 msgid "tasks.output.directory"
 msgstr "输出文件夹"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:187
+#: src/i18n-messages.ts:224
 msgid "tasks.output.label"
 msgstr "输出格式"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:108
+#: src/i18n-messages.ts:269
+msgid "tasks.details.usage.output"
+msgstr "输出 token"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:114
 msgid "settings.delay.description"
 msgstr "在每次请求之间暂停，降低供应商限流风险。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:129
+#: src/i18n-messages.ts:151
 msgid "task.status.pending"
 msgstr "等待中"
 
@@ -724,7 +844,7 @@ msgid "translate.context.plot_summary"
 msgstr "剧情摘要"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:212
+#: src/i18n-messages.ts:250
 msgid "tasks.details.stage.prepare"
 msgstr "准备"
 
@@ -734,7 +854,7 @@ msgid "pressEnterToUse"
 msgstr "按 Enter 使用"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:154
+#: src/i18n-messages.ts:182
 msgid "tasks.table.progress"
 msgstr "进度"
 
@@ -749,7 +869,7 @@ msgid "settings.provider"
 msgstr "供应商"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:148
+#: src/i18n-messages.ts:176
 msgid "tasks.queue.ready"
 msgstr "队列已就绪"
 
@@ -759,7 +879,7 @@ msgid "api.presets.title"
 msgstr "快速预设"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:221
+#: src/i18n-messages.ts:261
 msgid "tasks.details.previewLoadingDescription"
 msgstr "正在读取此任务的最新字幕内容。"
 
@@ -769,9 +889,39 @@ msgid "translate.subtitleFilter.not_translated"
 msgstr "未翻译"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:163
+#: src/i18n-messages.ts:191
 msgid "tasks.aria.remove"
 msgstr "移除 {file}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:156
+msgid "task.status.rendering"
+msgstr "渲染中"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:164
+msgid "task.progress.rendering"
+msgstr "正在生成字幕输出"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:253
+msgid "tasks.details.stage.repair"
+msgstr "修复"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:280
+msgid "tasks.details.preview.origin.repaired"
+msgstr "已修复"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:154
+msgid "task.status.repairing"
+msgstr "修复中"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:162
+msgid "task.progress.repairing"
+msgstr "正在修复 Adaptive 翻译结构"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:58
@@ -779,12 +929,17 @@ msgid "about.report_issue"
 msgstr "回报问题"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:107
+#: src/i18n-messages.ts:113
 msgid "settings.delay.label"
 msgstr "请求间隔（秒）"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:109
+#: src/i18n-messages.ts:267
+msgid "tasks.details.usage.requests"
+msgstr "请求次数"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:115
 msgid "settings.rpm.label"
 msgstr "每分钟请求上限（RPM）"
 
@@ -804,17 +959,17 @@ msgid "reset.name"
 msgstr "重设所有设定"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:224
+#: src/i18n-messages.ts:264
 msgid "tasks.details.retry"
 msgstr "重试"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:162
+#: src/i18n-messages.ts:190
 msgid "tasks.aria.retry"
 msgstr "重试 {file} 的翻译"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:205
+#: src/i18n-messages.ts:243
 msgid "tasks.output.directoryFallback"
 msgstr "与来源字幕文件相同的文件夹"
 
@@ -834,12 +989,12 @@ msgid "translate.save"
 msgstr "储存"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:198
+#: src/i18n-messages.ts:236
 msgid "tasks.output.fontSearch"
 msgstr "搜索已安装字体或输入字体名称"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:168
+#: src/i18n-messages.ts:205
 msgid "tasks.model.search"
 msgstr "搜索模型或输入自定义模型 ID"
 
@@ -854,12 +1009,12 @@ msgid "modelDescription"
 msgstr "选择一个模型或输入自订模型名称。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:206
+#: src/i18n-messages.ts:244
 msgid "tasks.output.selecting"
 msgstr "选择中"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:165
+#: src/i18n-messages.ts:193
 msgid "tasks.dialog.description"
 msgstr "设定这批字幕的翻译方式，确认后会加入任务并自动开始翻译。"
 
@@ -869,17 +1024,27 @@ msgid "settings"
 msgstr "设定"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:155
+#: src/i18n-messages.ts:183
 msgid "tasks.table.settings"
 msgstr "设置"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:231
+#: src/i18n-messages.ts:288
 msgid "toast.filesSkipped"
 msgstr "已略过 {count} 个不支持的文件"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:128
+#: src/i18n-messages.ts:273
+msgid "tasks.details.preview.source"
+msgstr "来源"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:278
+msgid "tasks.details.preview.sourceRange"
+msgstr "来源 {range}"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:150
 msgid "task.sourceFolder"
 msgstr "来源文件夹"
 
@@ -889,17 +1054,17 @@ msgid "about.special_thanks"
 msgstr "特别感谢"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:190
+#: src/i18n-messages.ts:227
 msgid "tasks.output.srtOriginalTranslation"
 msgstr "SRT・原文＋译文"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:188
+#: src/i18n-messages.ts:225
 msgid "tasks.output.srtTranslation"
 msgstr "SRT・仅译文"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:189
+#: src/i18n-messages.ts:226
 msgid "tasks.output.srtBilingual"
 msgstr "SRT・译文＋原文"
 
@@ -909,19 +1074,64 @@ msgid "translate.start"
 msgstr "开始翻译"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:153
+#: src/i18n-messages.ts:181
 msgid "tasks.table.status"
 msgstr "状态"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:111
+#: src/i18n-messages.ts:109
+msgid "settings.mode.strict"
+msgstr "Strict"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:195
+msgid "tasks.mode.strict"
+msgstr "Strict"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:155
+msgid "task.status.fallback"
+msgstr "Strict 降级"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:281
+msgid "tasks.details.preview.origin.strictFallback"
+msgstr "Strict 降级"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:147
+msgid "error.adaptiveFallbackFailed"
+msgstr "Adaptive 无法修复后，Strict 降级也失败。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:272
+msgid "tasks.details.warningOrigin"
+msgstr "来源范围 {range} 使用了 Strict 降级。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:108
+msgid "settings.mode.description"
+msgstr "Strict 保持来源片段一对一；Adaptive 可合并或拆分相邻片段，目前仅输出翻译 SRT。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:122
+msgid "settings.prompt.strictLabel"
+msgstr "Strict 翻译提示词"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:117
 msgid "settings.concurrency.label"
 msgstr "字幕区块并发数"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:145
+#: src/i18n-messages.ts:173
 msgid "tasks.empty.formats"
 msgstr "支持格式：ass、ssa、srt、vtt，以及翻译暂存 JSON。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:202
+msgid "tasks.mode.switchToStrict"
+msgstr "切回 Strict 以使用这些文件。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:63
@@ -929,22 +1139,27 @@ msgid "translate.target"
 msgstr "目标语言"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:180
+#: src/i18n-messages.ts:217
 msgid "tasks.language.label"
 msgstr "目标语言"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:210
+#: src/i18n-messages.ts:274
+msgid "tasks.details.preview.targetTime"
+msgstr "目标时间"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:248
 msgid "tasks.details.title"
 msgstr "任务详情"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:236
+#: src/i18n-messages.ts:293
 msgid "toast.taskRemoved"
 msgstr "任务已移除"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:143
+#: src/i18n-messages.ts:171
 msgid "tasks.empty.description"
 msgstr "新增任务后会自动开始"
 
@@ -964,12 +1179,37 @@ msgid "api.connection.testing"
 msgstr "测试中…"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:233
+#: src/i18n-messages.ts:141
+msgid "error.adaptiveIncompatibleCheckpoint"
+msgstr "Adaptive checkpoint 与此来源或设置不兼容。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:140
+msgid "error.adaptiveInvalidCheckpoint"
+msgstr "Adaptive checkpoint 无效。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:143
+msgid "error.adaptivePlaceholderMismatch"
+msgstr "Adaptive 翻译更改了受保护的字幕标记。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:148
+msgid "error.adaptiveIncompleteCoverage"
+msgstr "Adaptive 翻译未覆盖所有可翻译的来源片段。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:142
+msgid "error.adaptiveInvalidPartition"
+msgstr "Adaptive 翻译未正确覆盖字幕片段。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:290
 msgid "toast.outputDirectoryUnavailable"
 msgstr "当前环境无法选择输出文件夹"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:228
+#: src/i18n-messages.ts:285
 msgid "toast.modelListUnavailable"
 msgstr "当前环境无法载入模型清单"
 
@@ -984,7 +1224,7 @@ msgid "delay.description"
 msgstr "在翻译完成后休息多久才开始翻译下一行字幕，调高这个值可以有效避免因密钥使用频率过高导致失败的问题，单位为秒。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:127
+#: src/i18n-messages.ts:137
 msgid "error.incompleteModelOutput"
 msgstr "模型在完成翻译前停止输出。请重试或改用其他模型。"
 
@@ -994,22 +1234,27 @@ msgid "prompt.description"
 msgstr "使用 ChatGPT 时所使用的咒语，你可以在此更改咒语，另外 <code>&#123;&#123;lang&#125;&#125;</code> 用于指定语言，<code>&#123;&#123;additional&#125;&#125;</code> 用于附加备注，上述字段将于翻译时自动带入内容，修改咒语时请务必保留这些字段。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:119
+#: src/i18n-messages.ts:129
 msgid "error.inputPathNotFile"
 msgstr "选择的翻译输入路径不是文件。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:122
+#: src/i18n-messages.ts:145
+msgid "error.adaptiveInsufficientDuration"
+msgstr "翻译字幕的显示时间不足。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:132
 msgid "error.incompatibleCheckpoint"
 msgstr "翻译暂存 JSON 无效或版本不兼容。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:121
+#: src/i18n-messages.ts:131
 msgid "error.invalidCheckpoint"
 msgstr "翻译暂存 JSON 无效。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:184
+#: src/i18n-messages.ts:221
 msgid "tasks.additional.description"
 msgstr "这段提示会套用到本批任务。"
 
@@ -1039,22 +1284,22 @@ msgid "translate.tokens"
 msgstr "词元"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:214
+#: src/i18n-messages.ts:252
 msgid "tasks.details.stage.translate"
 msgstr "翻译"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:131
+#: src/i18n-messages.ts:153
 msgid "task.status.translating"
 msgstr "翻译中"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:150
+#: src/i18n-messages.ts:178
 msgid "tasks.queue.translating"
 msgstr "翻译中"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:136
+#: src/i18n-messages.ts:161
 msgid "task.progress.translating"
 msgstr "翻译字幕内容"
 
@@ -1062,6 +1307,11 @@ msgstr "翻译字幕内容"
 #: src/i18n-messages.ts:78
 msgid "translate.translating"
 msgstr "翻译中..."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:275
+msgid "tasks.details.preview.translation"
+msgstr "翻译"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:105
@@ -1074,104 +1324,119 @@ msgid "translate.translation_completed"
 msgstr "翻译完成"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:227
+#: src/i18n-messages.ts:284
 msgid "toast.translationCompleted"
 msgstr "翻译完成：{file}"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:226
+#: src/i18n-messages.ts:283
 msgid "toast.translationFailed"
 msgstr "翻译失败：{error}"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:141
+#: src/i18n-messages.ts:169
 msgid "task.progress.failedSummary"
 msgstr "翻译失败。请打开详细信息查看错误，或重新尝试。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:138
+#: src/i18n-messages.ts:166
 msgid "task.progress.done"
 msgstr "已输出翻译文件"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:232
+#: src/i18n-messages.ts:289
 msgid "toast.translationInProgress"
 msgstr "翻译进行中，请稍后再新增任务"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:240
+#: src/i18n-messages.ts:297
 msgid "toast.translationJobFailed"
 msgstr "翻译工作失败：{error}"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:166
+#: src/i18n-messages.ts:194
+msgid "tasks.mode.label"
+msgstr "翻译模式"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:203
 msgid "tasks.model.label"
 msgstr "翻译模型"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:182
+#: src/i18n-messages.ts:219
 msgid "tasks.additional.label"
 msgstr "翻译提示"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:115
+#: src/i18n-messages.ts:121
 msgid "settings.prompt.label"
 msgstr "翻译提示词"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:126
+#: src/i18n-messages.ts:136
 msgid "error.repetitiveModelOutput"
 msgstr "模型开始异常重复输出，因此已停止翻译。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:223
+#: src/i18n-messages.ts:263
 msgid "tasks.details.previewRetry"
 msgstr "再试一次"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:234
+#: src/i18n-messages.ts:291
 msgid "toast.outputDirectoryFailed"
 msgstr "无法选择输出文件夹"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:235
+#: src/i18n-messages.ts:292
 msgid "toast.subtitleLoadFailed"
 msgstr "无法载入字幕内容"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:222
+#: src/i18n-messages.ts:262
 msgid "tasks.details.previewError"
 msgstr "无法加载字幕预览"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:229
+#: src/i18n-messages.ts:286
 msgid "toast.modelListFailed"
 msgstr "无法载入模型清单"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:230
+#: src/i18n-messages.ts:287
 msgid "toast.fileReadFailed"
 msgstr "无法读取文件"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:241
+#: src/i18n-messages.ts:298
 msgid "toast.unknownError"
 msgstr "未知错误"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:124
+#: src/i18n-messages.ts:134
 msgid "error.unsupportedFileExtension"
 msgstr "不支持的文件扩展名。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:120
+#: src/i18n-messages.ts:201
+msgid "tasks.mode.unsupportedFiles"
+msgstr "Adaptive 模式不支持"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:130
 msgid "error.unsupportedSubtitleFormat"
 msgstr "不支持的字幕格式。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:118
+#: src/i18n-messages.ts:128
 msgid "error.unsupportedInputFile"
 msgstr "不支持的翻译输入文件。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:266
+msgid "tasks.details.usage"
+msgstr "用量"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:76
@@ -1179,7 +1444,7 @@ msgid "translate.USD"
 msgstr "美金"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:172
+#: src/i18n-messages.ts:209
 msgid "tasks.model.useCustom"
 msgstr "使用“{model}”"
 
@@ -1189,14 +1454,24 @@ msgid "api.connection.invalidHost"
 msgstr "远端 API 主机必须使用 HTTPS；只有 localhost 或环回地址可使用 HTTP。"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:197
+#: src/i18n-messages.ts:235
 msgid "tasks.output.fontUseDefault"
 msgstr "沿用字幕样式字体"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:196
+#: src/i18n-messages.ts:234
 msgid "tasks.output.fontPlaceholder"
 msgstr "沿用字幕样式字体"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:125
+msgid "settings.prompt.adaptiveDescription"
+msgstr "选择 Adaptive 模式时使用。保留 {lang} 和 {additional} 变量；添加任务时会自动填入。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:124
+msgid "settings.prompt.strictDescription"
+msgstr "选择 Strict 模式时使用。保留 {lang} 和 {additional} 变量；添加任务时会自动填入。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:42
@@ -1209,12 +1484,12 @@ msgid "about.version"
 msgstr "版本"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:161
+#: src/i18n-messages.ts:189
 msgid "tasks.actions.viewDetails"
 msgstr "查看详情"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:160
+#: src/i18n-messages.ts:188
 msgid "tasks.aria.viewDetails"
 msgstr "查看 {file} 翻译详情"
 
@@ -1224,12 +1499,22 @@ msgid "update.view"
 msgstr "查看更新"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:134
+#: src/i18n-messages.ts:159
 msgid "task.progress.waiting"
 msgstr "等待开始"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:208
+#: src/i18n-messages.ts:277
+msgid "tasks.details.preview.warning"
+msgstr "警告"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:271
+msgid "tasks.details.warnings"
+msgstr "警告"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:246
 msgid "tasks.output.directoryDescription"
 msgstr "未选择时会输出到来源字幕文件所在文件夹。"
 
