@@ -2,3 +2,11 @@ allowBuilds:
   '@parcel/watcher': true
   electron-winstaller: true
   esbuild: true
+overrides:
+  'brace-expansion@1': 1.1.17
+  'brace-expansion@2': 2.1.3
+  fast-uri: 3.1.4
+  tar: 7.5.21
+minimumReleaseAgeExclude:
+  - '@ai-sdk/gateway@4.0.37'
+  - ai@7.0.48

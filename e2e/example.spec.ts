@@ -1,11 +1,32 @@
-import { test, expect, _electron as electron } from "@playwright/test";
+import {
+  test,
+  expect,
+  _electron as electron,
+  type TestInfo,
+} from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
 
-test("homepage has title and links to intro page", async () => {
-  const app = await electron.launch({ args: [".", "--no-sandbox"] });
+async function launchApp(testInfo: TestInfo) {
+  const app = await electron.launch({
+    args: [
+      ".",
+      "--no-sandbox",
+      `--user-data-dir=${testInfo.outputPath(
+        "electron-user-data",
+        String(process.pid),
+      )}`,
+    ],
+  });
+  const page = await app.firstWindow();
+  await page.getByRole("button", { name: "Settings" }).waitFor();
+
+  return { app, page };
+}
+
+test("homepage has title and links to intro page", async ({}, testInfo) => {
+  const { app, page } = await launchApp(testInfo);
   try {
-    const page = await app.firstWindow();
     expect(await page.title()).toBe("Subtitle translator");
     await page.screenshot({ path: "e2e/screenshots/example.png" });
   } finally {
@@ -13,11 +34,9 @@ test("homepage has title and links to intro page", async () => {
   }
 });
 
-test("about shows project links and build metadata", async () => {
-  const app = await electron.launch({ args: [".", "--no-sandbox"] });
+test("about shows project links and build metadata", async ({}, testInfo) => {
+  const { app, page } = await launchApp(testInfo);
   try {
-    const page = await app.firstWindow();
-
     await page.evaluate(() => {
       window.location.hash = "#/about";
     });
@@ -42,11 +61,9 @@ test("about shows project links and build metadata", async () => {
   }
 });
 
-test("settings shows the API connection test control", async () => {
-  const app = await electron.launch({ args: [".", "--no-sandbox"] });
+test("settings shows the API connection test control", async ({}, testInfo) => {
+  const { app, page } = await launchApp(testInfo);
   try {
-    const page = await app.firstWindow();
-
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByRole("button", { name: "Settings" }).click();
@@ -60,11 +77,9 @@ test("settings shows the API connection test control", async () => {
   }
 });
 
-test("the selected language remains active after reload", async () => {
-  const app = await electron.launch({ args: [".", "--no-sandbox"] });
+test("the selected language remains active after reload", async ({}, testInfo) => {
+  const { app, page } = await launchApp(testInfo);
   try {
-    const page = await app.firstWindow();
-
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByRole("button", { name: "Settings" }).click();
@@ -73,6 +88,7 @@ test("the selected language remains active after reload", async () => {
     await page.getByRole("option", { name: "繁體中文" }).click();
 
     await expect(page.getByRole("heading", { name: "API 連線" })).toBeVisible();
+    await page.getByRole("button", { name: "關閉" }).click();
     await page.reload();
 
     await expect(page.getByRole("button", { name: "新增任務" })).toBeVisible();
@@ -83,10 +99,9 @@ test("the selected language remains active after reload", async () => {
   }
 });
 
-test("coffee banner appears after more than ten successful translations", async () => {
-  const app = await electron.launch({ args: [".", "--no-sandbox"] });
+test("coffee banner appears after more than ten successful translations", async ({}, testInfo) => {
+  const { app, page } = await launchApp(testInfo);
   try {
-    const page = await app.firstWindow();
     await page.evaluate(() => {
       localStorage.clear();
       localStorage.setItem("language", "en-US");
