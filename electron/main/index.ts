@@ -1070,7 +1070,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         );
         const adaptiveOutputPath = getTranslatedPath(
           file.path,
-          "srt-translation",
+          params.outputFormat,
           outputDirectory,
           adaptiveMetadata.sourceName
         );

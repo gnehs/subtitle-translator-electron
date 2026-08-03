@@ -50,7 +50,14 @@ test("rejects ASS/SSA and legacy v1/v2 JSON checkpoints", () => {
   }
 });
 
-test("requires srt-translation output for Adaptive", () => {
+test("accepts translated SRT and bilingual ASS output for Adaptive", () => {
+  assert.equal(
+    getAdaptiveInputValidationError({
+      extension: "srt",
+      outputFormat: "ass-bilingual",
+    }),
+    undefined
+  );
   assert.match(
     getAdaptiveInputValidationError({
       extension: "srt",

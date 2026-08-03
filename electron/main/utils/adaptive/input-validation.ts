@@ -21,7 +21,10 @@ export function getAdaptiveInputValidationError({
   outputFormat,
   checkpointHeader,
 }: AdaptiveInputValidationInput): string | undefined {
-  if (outputFormat !== "srt-translation") {
+  if (
+    outputFormat !== "srt-translation" &&
+    outputFormat !== "ass-bilingual"
+  ) {
     return translationErrorCodes.adaptiveUnsupportedOutputFormat;
   }
 

@@ -144,24 +144,9 @@ msgid "tasks.details.preview.origin.adaptive"
 msgstr "Adaptive"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:231
-msgid "tasks.output.adaptiveLocked"
-msgstr "Adaptive mode always writes translated SRT output."
-
-#. js-lingui-explicit-id
 #: src/i18n-messages.ts:200
 msgid "tasks.mode.adaptiveFileNotice"
 msgstr "Adaptive mode does not support ASS/SSA files or legacy checkpoints. Switch to Strict to translate them."
-
-#. js-lingui-explicit-id
-#: src/i18n-messages.ts:199
-msgid "tasks.mode.adaptiveOutputNotice"
-msgstr "Adaptive mode is limited to translated SRT output. Other formats are unavailable."
-
-#. js-lingui-explicit-id
-#: src/i18n-messages.ts:139
-msgid "error.adaptiveUnsupportedOutputFormat"
-msgstr "Adaptive mode only supports translated SRT output."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:138
@@ -169,9 +154,19 @@ msgid "error.adaptiveUnsupportedInputFormat"
 msgstr "Adaptive mode supports SRT, VTT, and Adaptive v3 checkpoints only."
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:139
+msgid "error.adaptiveUnsupportedOutputFormat"
+msgstr "Adaptive mode supports translated SRT or bilingual ASS output."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:146
 msgid "error.adaptiveRepairFailed"
 msgstr "Adaptive structural repair failed."
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:231
+msgid "tasks.output.adaptiveLocked"
+msgstr "Adaptive supports translated SRT and bilingual ASS output."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:123
@@ -226,7 +221,7 @@ msgstr "All"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:198
 msgid "tasks.mode.adaptiveDescription"
-msgstr "Allow adjacent cues to merge or split; first version exports translated SRT only."
+msgstr "Allow adjacent cues to merge or split for more natural phrasing and reading."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:251
@@ -594,6 +589,11 @@ msgid "about.buy_me_a_coffee_description"
 msgstr "If this project has been helpful to you, please consider buying me a cup of coffee. It will motivate me to continue the development further."
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:199
+msgid "tasks.mode.adaptiveOutputNotice"
+msgstr "In bilingual ASS, original cues keep their source timing while translated cues use Adaptive timing."
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:74
 msgid "translate.input"
 msgstr "input"
@@ -671,7 +671,7 @@ msgstr "Maximum API requests per minute for one batch; combined with the request
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:112
 msgid "settings.mode.adaptiveDescription"
-msgstr "Merge or split adjacent cues for natural timing; translated SRT only."
+msgstr "Merge or split adjacent cues for natural timing; export translated SRT or bilingual ASS."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:8
@@ -1111,7 +1111,7 @@ msgstr "Strict fallback was used for source range {range}."
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:108
 msgid "settings.mode.description"
-msgstr "Strict keeps one source cue per translation. Adaptive can merge or split adjacent cues and currently exports translated SRT only."
+msgstr "Strict keeps one source cue per translation. Adaptive can merge or split adjacent cues and exports translated SRT or bilingual ASS."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:122
@@ -1309,13 +1309,13 @@ msgid "translate.translating"
 msgstr "Translating..."
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:275
-msgid "tasks.details.preview.translation"
+#: src/i18n-messages.ts:105
+msgid "settings.translation.title"
 msgstr "Translation"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:105
-msgid "settings.translation.title"
+#: src/i18n-messages.ts:275
+msgid "tasks.details.preview.translation"
 msgstr "Translation"
 
 #. js-lingui-explicit-id

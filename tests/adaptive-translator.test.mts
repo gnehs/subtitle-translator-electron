@@ -160,6 +160,7 @@ test("failed repair falls back to strict one-to-one blocks", async () => {
   assert.deepEqual(client.calls, ["initial", "repair", "fallback"]);
   assert.equal(result.origin, "strict-fallback");
   assert.deepEqual(result.blocks.map((block) => block.origin), ["strict-fallback", "strict-fallback"]);
+  assert.equal(result.violations.some((item) => item.severity === "error"), false);
   assert.equal(result.usage.requestCount, 3);
 });
 

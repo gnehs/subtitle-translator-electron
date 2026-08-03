@@ -59,6 +59,10 @@ const subtitleOutputFormats: readonly SubtitleOutputFormat[] = [
   "ass-bilingual",
   "ass-original-translation",
 ];
+const adaptiveOutputFormats: readonly SubtitleOutputFormat[] = [
+  "srt-translation",
+  "ass-bilingual",
+];
 
 function getLegacyOutputFormat(): SubtitleOutputFormat {
   if (typeof window === "undefined") return "srt-translation";
@@ -154,12 +158,12 @@ export default function Settings() {
   );
   const apiKey = keys.find((key) => key.trim().length > 0)?.trim() || "";
   const normalizedApiHost = host.trim();
-  const outputFormat = mode === "adaptive" ? "srt-translation" : strictOutputFormat;
+  const outputFormat = mode === "adaptive" ? adaptiveOutputFormat : strictOutputFormat;
   const prompt = mode === "adaptive" ? adaptivePrompt : strictPrompt;
   const setPrompt = mode === "adaptive" ? setAdaptivePrompt : setStrictPrompt;
 
   useEffect(() => {
-    if (adaptiveOutputFormat !== "srt-translation") {
+    if (!adaptiveOutputFormats.includes(adaptiveOutputFormat)) {
       setAdaptiveOutputFormat("srt-translation");
     }
   }, [adaptiveOutputFormat, setAdaptiveOutputFormat]);
@@ -430,10 +434,11 @@ export default function Settings() {
             <FieldLabel>{t("tasks.output.label")}</FieldLabel>
             <Select
               value={outputFormat}
-              disabled={mode === "adaptive"}
-              onValueChange={(value) =>
-                setStrictOutputFormat(value as SubtitleOutputFormat)
-              }
+              onValueChange={(value) => {
+                const nextFormat = value as SubtitleOutputFormat;
+                if (mode === "adaptive") setAdaptiveOutputFormat(nextFormat);
+                else setStrictOutputFormat(nextFormat);
+              }}
             >
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -442,12 +447,16 @@ export default function Settings() {
                   <SelectItem value="srt-translation">
                     {t("tasks.output.srtTranslation")}
                   </SelectItem>
-                  <SelectItem value="srt-bilingual">
-                    {t("tasks.output.srtBilingual")}
-                  </SelectItem>
-                  <SelectItem value="srt-original-translation">
-                    {t("tasks.output.srtOriginalTranslation")}
-                  </SelectItem>
+                  {mode === "strict" && (
+                    <>
+                      <SelectItem value="srt-bilingual">
+                        {t("tasks.output.srtBilingual")}
+                      </SelectItem>
+                      <SelectItem value="srt-original-translation">
+                        {t("tasks.output.srtOriginalTranslation")}
+                      </SelectItem>
+                    </>
+                  )}
                 </SelectGroup>
                 <SelectSeparator />
                 <SelectGroup>
@@ -455,9 +464,11 @@ export default function Settings() {
                   <SelectItem value="ass-bilingual">
                     {t("tasks.output.assBilingual")}
                   </SelectItem>
-                  <SelectItem value="ass-original-translation">
-                    {t("tasks.output.assOriginalTranslation")}
-                  </SelectItem>
+                  {mode === "strict" && (
+                    <SelectItem value="ass-original-translation">
+                      {t("tasks.output.assOriginalTranslation")}
+                    </SelectItem>
+                  )}
                 </SelectGroup>
               </SelectContent>
             </Select>

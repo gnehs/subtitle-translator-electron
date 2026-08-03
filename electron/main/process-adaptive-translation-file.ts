@@ -58,6 +58,7 @@ import {
   renderAdaptiveSrt,
   type RenderAdaptiveSrtResult,
 } from "./utils/adaptive/renderer.ts";
+import { renderAdaptiveAss } from "./utils/adaptive/ass-renderer.ts";
 import {
   defaultAdaptiveLayoutOptions,
   type AdaptiveCheckpointScene,
@@ -358,6 +359,19 @@ async function writeAtomic(filePath: string, content: string): Promise<void> {
   }
 }
 
+function renderAdaptiveOutput(
+  source: ParsedSubtitle,
+  scenes: readonly AdaptiveCheckpointScene[],
+  layoutOptions: Partial<AdaptiveLayoutOptions>,
+  params: AdaptiveParams
+): RenderAdaptiveSrtResult {
+  return params.outputFormat === "ass-bilingual"
+    ? renderAdaptiveAss(source, scenes, layoutOptions, {
+        assFonts: params.assFonts,
+      })
+    : renderAdaptiveSrt(source, scenes, layoutOptions);
+}
+
 function createAdaptivePreview(
   rendered: RenderAdaptiveSrtResult,
   sourceCues: readonly AdaptiveSourceCue[],
@@ -419,7 +433,7 @@ export async function processAdaptiveTranslationFile(
   });
   const layoutFingerprint = createAdaptiveLayoutFingerprint({
     layoutEngineVersion: 1,
-    outputFormat: "srt",
+    outputFormat: params.outputFormat,
     layoutOptions,
     targetLanguage: params.lang,
   });
@@ -458,10 +472,11 @@ export async function processAdaptiveTranslationFile(
       canReuseAdaptiveCheckpoint(checkpoint, resumeOptions)
     ) {
       checkpoint.translation.layoutFingerprint = layoutFingerprint;
-      const rendered = renderAdaptiveSrt(
+      const rendered = renderAdaptiveOutput(
         source,
         checkpoint.scenes,
-        layoutOptions
+        layoutOptions,
+        params
       );
       if (rendered.violations.some((item) => item.severity === "error")) {
         throw new Error(translationErrorCodes.adaptiveIncompleteCoverage);
@@ -660,7 +675,12 @@ export async function processAdaptiveTranslationFile(
         const completedScenes = checkpoint!.scenes.filter(
           (scene) => scene.status === "done"
         );
-        const rendered = renderAdaptiveSrt(source, completedScenes, layoutOptions);
+        const rendered = renderAdaptiveOutput(
+          source,
+          completedScenes,
+          layoutOptions,
+          params
+        );
         const currentWarnings = rendered.violations.filter(
           (item) => item.severity === "warning"
         );
@@ -710,10 +730,11 @@ export async function processAdaptiveTranslationFile(
   throwIfAborted(abortSignal);
   checkpoint.usage = [...usageRecords, ...translateResult.usages.filter((usage) => !usageRecords.includes(usage))];
   checkpoint.usageSummary = toUsageSummary(checkpoint.usage);
-  const finalRender: RenderAdaptiveSrtResult = renderAdaptiveSrt(
+  const finalRender: RenderAdaptiveSrtResult = renderAdaptiveOutput(
     source,
     checkpoint.scenes,
-    layoutOptions
+    layoutOptions,
+    params
   );
   if (finalRender.violations.some((item) => item.severity === "error")) {
     throw new Error(translationErrorCodes.adaptiveIncompleteCoverage);

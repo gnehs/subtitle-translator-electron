@@ -103,6 +103,10 @@ import {
 import { cn } from "@/lib/utils";
 import MarkdownContent from "@/components/MarkdownContent";
 import FontPicker from "@/components/FontPicker";
+import {
+  isAdaptiveCheckpointHeader,
+  type AdaptiveCheckpointHeader,
+} from "@/utils/adaptiveCheckpoint";
 
 type FileProgress = Pick<BatchProgress, "progress" | "status"> &
   Partial<Omit<BatchProgress, "progress" | "status" | "previewCues">> & {
@@ -124,6 +128,10 @@ const subtitleOutputFormats: readonly SubtitleOutputFormat[] = [
   "srt-original-translation",
   "ass-bilingual",
   "ass-original-translation",
+];
+const adaptiveOutputFormats: readonly SubtitleOutputFormat[] = [
+  "srt-translation",
+  "ass-bilingual",
 ];
 const DEFAULT_CONTEXT_SIZE = 5;
 const MAX_CONTEXT_SIZE = 100;
@@ -313,8 +321,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [batchProgress, setBatchProgress] = useState<Record<string, FileProgress>>({});
   const [pendingFiles, setPendingFiles] = useState<SubtitleFile[]>([]);
   const [pendingUnsupportedFiles, setPendingUnsupportedFiles] = useState<string[]>([]);
-  const [pendingCheckpointVersions, setPendingCheckpointVersions] =
-    useState<Record<string, number | undefined>>({});
+  const [pendingCheckpointHeaders, setPendingCheckpointHeaders] =
+    useState<Record<string, AdaptiveCheckpointHeader | undefined>>({});
   const [selectedFile, setSelectedFile] = useState<SubtitleFile | null>(null);
   const [cues, setCues] = useState<SubtitleCuePreview[]>([]);
   const [previewLoadStatus, setPreviewLoadStatus] =
@@ -331,14 +339,15 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [modelSearch, setModelSearch] = useState("");
   const isTranslating = activeTranslationCount > 0;
-  const outputFormat = mode === "adaptive" ? "srt-translation" : strictOutputFormat;
+  const outputFormat = mode === "adaptive" ? adaptiveOutputFormat : strictOutputFormat;
   const prompt = mode === "adaptive" ? adaptivePrompt : strictPrompt;
   const hasAdaptiveUnsupportedPendingFile = pendingFiles.some((file) => {
     const lowerName = file.name.toLowerCase();
     return mode === "adaptive" && (
       lowerName.endsWith(".ass") ||
       lowerName.endsWith(".ssa") ||
-      (lowerName.endsWith(".json") && pendingCheckpointVersions[file.path] !== 3)
+      (lowerName.endsWith(".json") &&
+        !isAdaptiveCheckpointHeader(pendingCheckpointHeaders[file.path]))
     );
   });
   const adaptiveUnsupportedPendingNames = Array.from(
@@ -350,7 +359,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           return mode === "adaptive" &&
             (lowerName.endsWith(".ass") ||
               lowerName.endsWith(".ssa") ||
-              (lowerName.endsWith(".json") && pendingCheckpointVersions[file.path] !== 3));
+              (lowerName.endsWith(".json") &&
+                !isAdaptiveCheckpointHeader(pendingCheckpointHeaders[file.path])));
         })
         .map((file) => file.name),
     ])
@@ -359,7 +369,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     pendingUnsupportedFiles.length > 0 || hasAdaptiveUnsupportedPendingFile;
 
   useEffect(() => {
-    if (adaptiveOutputFormat !== "srt-translation") {
+    if (!adaptiveOutputFormats.includes(adaptiveOutputFormat)) {
       setAdaptiveOutputFormat("srt-translation");
     }
   }, [adaptiveOutputFormat, setAdaptiveOutputFormat]);
@@ -556,7 +566,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const resolveSelectedFiles = async (selectedFiles: File[]) => {
     const accepted: SubtitleFile[] = [];
     const adaptiveUnsupported: string[] = [];
-    const checkpointVersions: Record<string, number | undefined> = {};
+    const checkpointHeaders: Record<string, AdaptiveCheckpointHeader | undefined> = {};
     let rejectedCount = 0;
 
     for (const file of selectedFiles) {
@@ -571,34 +581,18 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         continue;
       }
 
-      let checkpointVersion: number | undefined;
+      let checkpointHeader: AdaptiveCheckpointHeader | undefined;
       if (lowerName.endsWith(".json")) {
         try {
           const text = typeof file.text === "function" ? await file.text() : "";
           const parsed: unknown = JSON.parse(text);
           if (typeof parsed === "object" && parsed !== null) {
-            const candidate = parsed as {
-              version?: unknown;
-              kind?: unknown;
-              format?: unknown;
-            };
-            const validAdaptiveFormat =
-              candidate.format === "srt" || candidate.format === "vtt";
-            if (
-              typeof candidate.version === "number" &&
-              Number.isFinite(candidate.version) &&
-              (mode !== "adaptive" ||
-                (candidate.version === 3 &&
-                  candidate.kind === "adaptive" &&
-                  validAdaptiveFormat))
-            ) {
-              checkpointVersion = candidate.version;
-            }
+            checkpointHeader = parsed as AdaptiveCheckpointHeader;
           }
         } catch {
-          checkpointVersion = undefined;
+          checkpointHeader = undefined;
         }
-        if (mode === "adaptive" && checkpointVersion !== 3) {
+        if (mode === "adaptive" && !isAdaptiveCheckpointHeader(checkpointHeader)) {
           adaptiveUnsupported.push(file.name);
           continue;
         }
@@ -610,7 +604,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
           continue;
         }
         if (lowerName.endsWith(".json")) {
-          checkpointVersions[path] = checkpointVersion;
+          checkpointHeaders[path] = checkpointHeader;
         }
         accepted.push({ path, name: file.name });
       } catch (error: unknown) {
@@ -621,17 +615,17 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     if (rejectedCount > 0) {
       toast.error(t("toast.filesSkipped", { count: rejectedCount }));
     }
-    return { accepted, adaptiveUnsupported, checkpointVersions };
+    return { accepted, adaptiveUnsupported, checkpointHeaders };
   };
 
   const requestAddFiles = async (selectedFiles: File[]) => {
-    const { accepted: nextFiles, adaptiveUnsupported, checkpointVersions } =
+    const { accepted: nextFiles, adaptiveUnsupported, checkpointHeaders } =
       await resolveSelectedFiles(selectedFiles);
     if (nextFiles.length === 0 && adaptiveUnsupported.length === 0) return;
     setTaskModel(model);
     setPendingFiles(nextFiles);
     setPendingUnsupportedFiles(adaptiveUnsupported);
-    setPendingCheckpointVersions(checkpointVersions);
+    setPendingCheckpointHeaders(checkpointHeaders);
     setAddDialogOpen(true);
   };
 
@@ -771,7 +765,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       batchProgress[translatableFiles[0].path]?.mode || mode;
     const batchPrompt = batchMode === "adaptive" ? adaptivePrompt : strictPrompt;
     const batchOutputFormat =
-      batchMode === "adaptive" ? "srt-translation" : strictOutputFormat;
+      batchMode === "adaptive" ? adaptiveOutputFormat : strictOutputFormat;
     for (const file of translatableFiles) {
       finalPreviewCuesRef.current.delete(file.path);
     }
@@ -783,7 +777,10 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       toast.error(t("toast.apiKeyRequired"));
       return;
     }
-    if (batchMode === "adaptive" && batchOutputFormat !== "srt-translation") {
+    if (
+      batchMode === "adaptive" &&
+      !adaptiveOutputFormats.includes(batchOutputFormat)
+    ) {
       toast.error(t("error.adaptiveUnsupportedOutputFormat"));
       return;
     }
@@ -794,7 +791,8 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         return (
           lowerName.endsWith(".ass") ||
           lowerName.endsWith(".ssa") ||
-          (lowerName.endsWith(".json") && pendingCheckpointVersions[file.path] !== 3)
+          (lowerName.endsWith(".json") &&
+            !isAdaptiveCheckpointHeader(pendingCheckpointHeaders[file.path]))
         );
       })
     ) {
@@ -1270,10 +1268,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                 </FieldLabel>
                 <Select
                   value={outputFormat}
-                  disabled={mode === "adaptive"}
-                  onValueChange={(value) =>
-                    setStrictOutputFormat(value as SubtitleOutputFormat)
-                  }
+                  onValueChange={(value) => {
+                    const nextFormat = value as SubtitleOutputFormat;
+                    if (mode === "adaptive") setAdaptiveOutputFormat(nextFormat);
+                    else setStrictOutputFormat(nextFormat);
+                  }}
                 >
                   <SelectTrigger id="task-output-format" className="w-full">
                     <SelectValue />
@@ -1284,12 +1283,16 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                       <SelectItem value="srt-translation">
                         {t("tasks.output.srtTranslation")}
                       </SelectItem>
-                      <SelectItem value="srt-bilingual">
-                        {t("tasks.output.srtBilingual")}
-                      </SelectItem>
-                      <SelectItem value="srt-original-translation">
-                        {t("tasks.output.srtOriginalTranslation")}
-                      </SelectItem>
+                      {mode === "strict" && (
+                        <>
+                          <SelectItem value="srt-bilingual">
+                            {t("tasks.output.srtBilingual")}
+                          </SelectItem>
+                          <SelectItem value="srt-original-translation">
+                            {t("tasks.output.srtOriginalTranslation")}
+                          </SelectItem>
+                        </>
+                      )}
                     </SelectGroup>
                     <SelectSeparator />
                     <SelectGroup>
@@ -1297,9 +1300,11 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
                       <SelectItem value="ass-bilingual">
                         {t("tasks.output.assBilingual")}
                       </SelectItem>
-                      <SelectItem value="ass-original-translation">
-                        {t("tasks.output.assOriginalTranslation")}
-                      </SelectItem>
+                      {mode === "strict" && (
+                        <SelectItem value="ass-original-translation">
+                          {t("tasks.output.assOriginalTranslation")}
+                        </SelectItem>
+                      )}
                     </SelectGroup>
                   </SelectContent>
                 </Select>

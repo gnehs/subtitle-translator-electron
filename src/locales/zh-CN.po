@@ -144,24 +144,9 @@ msgid "tasks.details.preview.origin.adaptive"
 msgstr "Adaptive"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:231
-msgid "tasks.output.adaptiveLocked"
-msgstr "Adaptive 模式固定输出翻译 SRT。"
-
-#. js-lingui-explicit-id
 #: src/i18n-messages.ts:200
 msgid "tasks.mode.adaptiveFileNotice"
 msgstr "Adaptive 模式不支持 ASS／SSA 文件或旧版 checkpoint。请切回 Strict 以翻译这些文件。"
-
-#. js-lingui-explicit-id
-#: src/i18n-messages.ts:199
-msgid "tasks.mode.adaptiveOutputNotice"
-msgstr "Adaptive 模式仅支持翻译 SRT 输出，其他格式不可用。"
-
-#. js-lingui-explicit-id
-#: src/i18n-messages.ts:139
-msgid "error.adaptiveUnsupportedOutputFormat"
-msgstr "Adaptive 模式仅支持翻译 SRT 输出。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:138
@@ -169,9 +154,19 @@ msgid "error.adaptiveUnsupportedInputFormat"
 msgstr "Adaptive 模式仅支持 SRT、VTT 和 Adaptive v3 checkpoint。"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:139
+msgid "error.adaptiveUnsupportedOutputFormat"
+msgstr "智能重分段仅支持纯译文 SRT 或双语 ASS 输出。"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:146
 msgid "error.adaptiveRepairFailed"
 msgstr "Adaptive 结构修复失败。"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:231
+msgid "tasks.output.adaptiveLocked"
+msgstr "智能重分段支持纯译文 SRT 与双语 ASS 输出。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:123
@@ -226,7 +221,7 @@ msgstr "所有"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:198
 msgid "tasks.mode.adaptiveDescription"
-msgstr "可合并或拆分相邻片段以改善时间安排；第一版仅输出翻译 SRT。"
+msgstr "允许合并或拆分相邻字幕，改善语序与阅读体验。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:251
@@ -594,6 +589,11 @@ msgid "about.buy_me_a_coffee_description"
 msgstr "如果这个项目对你有帮助，请考虑请我喝杯咖啡，这将会让我更有动力继续开发下去。"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:199
+msgid "tasks.mode.adaptiveOutputNotice"
+msgstr "双语 ASS 的原文保留原始时间轴，译文使用智能重分段后的时间轴。"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:74
 msgid "translate.input"
 msgstr "输入"
@@ -671,7 +671,7 @@ msgstr "同一批翻译每分钟最多发出的 API 请求数；会与请求间�
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:112
 msgid "settings.mode.adaptiveDescription"
-msgstr "可合并或拆分相邻片段以获得自然时间安排；仅输出翻译 SRT。"
+msgstr "合并或拆分相邻字幕以改善语序与时间安排；可输出纯译文 SRT 或双语 ASS。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:8
@@ -1111,7 +1111,7 @@ msgstr "来源范围 {range} 使用了 Strict 降级。"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:108
 msgid "settings.mode.description"
-msgstr "Strict 保持来源片段一对一；Adaptive 可合并或拆分相邻片段，目前仅输出翻译 SRT。"
+msgstr "保留原始分段会逐段翻译；智慧重分段可合并或拆分相邻字幕，并输出纯译文 SRT 或双语 ASS。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:122
@@ -1309,13 +1309,13 @@ msgid "translate.translating"
 msgstr "翻译中..."
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:275
-msgid "tasks.details.preview.translation"
+#: src/i18n-messages.ts:105
+msgid "settings.translation.title"
 msgstr "翻译"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:105
-msgid "settings.translation.title"
+#: src/i18n-messages.ts:275
+msgid "tasks.details.preview.translation"
 msgstr "翻译"
 
 #. js-lingui-explicit-id

@@ -87,13 +87,18 @@ test("adaptive file processor writes many-to-many SRT and reuses complete v3 wit
     contextSize: 5,
   };
 
-  const run = (modelClient: AdaptiveModelClient, adaptiveLayoutOptions = {}) =>
+  const run = (
+    modelClient: AdaptiveModelClient,
+    adaptiveLayoutOptions = {},
+    outputFormat: "srt-translation" | "ass-bilingual" = "srt-translation",
+    requestedOutputPath = outputPath
+  ) =>
     processAdaptiveTranslationFile({
       file: { path: sourcePath, name: "sample.srt" },
-      params: { ...params, adaptiveLayoutOptions },
+      params: { ...params, outputFormat, adaptiveLayoutOptions },
       abortSignal: new AbortController().signal,
       requestRateLimiter: new RequestRateLimiter({ requestsPerMinute: 10_000 }),
-      outputPath,
+      outputPath: requestedOutputPath,
       checkpointPath,
       sourceName: "sample.srt",
       sourceExtension: "srt",
@@ -130,6 +135,138 @@ test("adaptive file processor writes many-to-many SRT and reuses complete v3 wit
     await run(createFakeClient(reuseCounter), { maxLineUnitsCjk: 16 });
     assert.deepEqual(reuseCounter, { initial: 0, repair: 0, fallback: 0 });
     assert.match(fs.readFileSync(outputPath, "utf8"), /我不知道他是你哥哥。/);
+
+    const assOutputPath = path.join(directory, "sample.bilingual.ass");
+    const assReuseCounter = { initial: 0, repair: 0, fallback: 0 };
+    await run(
+      createFakeClient(assReuseCounter),
+      {},
+      "ass-bilingual",
+      assOutputPath
+    );
+    assert.deepEqual(assReuseCounter, { initial: 0, repair: 0, fallback: 0 });
+    const assOutput = fs.readFileSync(assOutputPath, "utf8");
+    assert.match(assOutput, /Style: ST Original/);
+    assert.match(assOutput, /Style: ST Translation/);
+    assert.equal((assOutput.match(/Dialogue: 0,/g) ?? []).length, 3);
+    assert.equal((assOutput.match(/Dialogue: 1,/g) ?? []).length, 3);
+    assert.match(assOutput, /Dialogue: 0,0:00:01\.00,0:00:01\.90,ST Original/);
+    assert.match(assOutput, /Dialogue: 1,0:00:01\.00,0:00:03\.20,ST Translation/);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("adaptive file processor drops initial structural errors after a successful repair", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-repair-file-"));
+  const sourcePath = path.join(directory, "sample.srt");
+  const outputPath = path.join(directory, "sample.translated.srt");
+  const checkpointPath = path.join(directory, "sample.translation.json");
+  fs.writeFileSync(sourcePath, sourceSrt, "utf8");
+  const stats = fs.statSync(sourcePath);
+  const calls = { initial: 0, repair: 0, fallback: 0 };
+  const params = {
+    apiKeys: ["test-key"],
+    apiHost: "http://127.0.0.1:9999/v1",
+    model: "fake-model",
+    prompt: "Translate naturally into {{lang}}. {{additional}}",
+    mode: "adaptive" as const,
+    lang: "Traditional Chinese",
+    additional: "Use Taiwanese terminology.",
+    temperature: 0.2,
+    outputFormat: "srt-translation" as const,
+    assFonts: { translationFont: "", originalFont: "" },
+    concurrency: 1 as const,
+    delay: 0,
+    requestsPerMinute: 10_000,
+    contextSize: 5,
+  };
+  const modelClient: AdaptiveModelClient = {
+    async translateScene(input: AdaptiveTranslateInput) {
+      calls.initial += 1;
+      assert.equal(input.scene.core.length, 3);
+      return {
+        // Intentionally leaves two source cues uncovered so the repair path is
+        // exercised and its final diagnostics can be checked by the renderer.
+        draft: { blocks: [{ take: 1, targets: ["只有第一段"] }] },
+        usage: {
+          stage: "adaptive-translate",
+          model: "fake-model",
+          sceneId: input.scene.id,
+          requestAttempt: 1,
+          durationMs: 1,
+          finishReason: "stop",
+        },
+        finishReason: "stop",
+      };
+    },
+    async repairScene(input) {
+      calls.repair += 1;
+      assert.ok(
+        input.violations?.some(
+          (item) =>
+            typeof item === "object" &&
+            item !== null &&
+            "severity" in item &&
+            item.severity === "error"
+        )
+      );
+      return {
+        draft: {
+          blocks: [
+            { take: 2, targets: ["我不知道他是你哥哥。"] },
+            { take: 1, targets: ["我本來想告訴你真相。"] },
+          ],
+        },
+        usage: {
+          stage: "adaptive-repair",
+          model: "fake-model",
+          sceneId: input.scene.id,
+          requestAttempt: 1,
+          durationMs: 1,
+          finishReason: "stop",
+        },
+        finishReason: "stop",
+      };
+    },
+    async translateStrictFallback() {
+      calls.fallback += 1;
+      throw new Error("strict fallback should not be called after a successful repair");
+    },
+  };
+
+  try {
+    await processAdaptiveTranslationFile({
+      file: { path: sourcePath, name: "sample.srt" },
+      params,
+      abortSignal: new AbortController().signal,
+      requestRateLimiter: new RequestRateLimiter({ requestsPerMinute: 10_000 }),
+      outputPath,
+      checkpointPath,
+      sourceName: "sample.srt",
+      sourceExtension: "srt",
+      sourceFingerprint: { size: stats.size, mtimeMs: stats.mtimeMs },
+      sendProgress: () => undefined,
+      modelClient,
+    });
+
+    assert.deepEqual(calls, { initial: 1, repair: 1, fallback: 0 });
+    assert.match(fs.readFileSync(outputPath, "utf8"), /我不知道他是你哥哥。/);
+    const checkpoint = JSON.parse(fs.readFileSync(checkpointPath, "utf8")) as {
+      state: string;
+      scenes: Array<{
+        status: string;
+        violations: Array<{ severity: string }>;
+      }>;
+    };
+    assert.equal(checkpoint.state, "complete");
+    assert.ok(
+      checkpoint.scenes.every(
+        (scene) =>
+          scene.status === "done" &&
+          scene.violations.every((item) => item.severity !== "error")
+      )
+    );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

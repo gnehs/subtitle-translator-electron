@@ -131,12 +131,12 @@ msgstr "動作"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:111
 msgid "settings.mode.adaptive"
-msgstr "Adaptive"
+msgstr "智慧重分段"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:197
 msgid "tasks.mode.adaptive"
-msgstr "Adaptive"
+msgstr "智慧重分段"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:279
@@ -144,24 +144,9 @@ msgid "tasks.details.preview.origin.adaptive"
 msgstr "Adaptive"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:231
-msgid "tasks.output.adaptiveLocked"
-msgstr "Adaptive 模式固定輸出翻譯 SRT。"
-
-#. js-lingui-explicit-id
 #: src/i18n-messages.ts:200
 msgid "tasks.mode.adaptiveFileNotice"
 msgstr "Adaptive 模式不支援 ASS／SSA 檔案或舊版 checkpoint。請切回 Strict 以翻譯這些檔案。"
-
-#. js-lingui-explicit-id
-#: src/i18n-messages.ts:199
-msgid "tasks.mode.adaptiveOutputNotice"
-msgstr "Adaptive 模式僅支援翻譯 SRT 輸出，其他格式無法使用。"
-
-#. js-lingui-explicit-id
-#: src/i18n-messages.ts:139
-msgid "error.adaptiveUnsupportedOutputFormat"
-msgstr "Adaptive 模式僅支援翻譯 SRT 輸出。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:138
@@ -169,14 +154,24 @@ msgid "error.adaptiveUnsupportedInputFormat"
 msgstr "Adaptive 模式僅支援 SRT、VTT 與 Adaptive v3 checkpoint。"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:139
+msgid "error.adaptiveUnsupportedOutputFormat"
+msgstr "智慧重分段僅支援純譯文 SRT 或雙語 ASS 輸出。"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:146
 msgid "error.adaptiveRepairFailed"
 msgstr "Adaptive 結構修復失敗。"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:231
+msgid "tasks.output.adaptiveLocked"
+msgstr "智慧重分段支援純譯文 SRT 與雙語 ASS 輸出。"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:123
 msgid "settings.prompt.adaptiveLabel"
-msgstr "Adaptive 翻譯提示詞"
+msgstr "智慧重分段翻譯提示詞"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:149
@@ -226,7 +221,7 @@ msgstr "所有"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:198
 msgid "tasks.mode.adaptiveDescription"
-msgstr "可合併或拆分相鄰片段以改善時間安排；第一版僅輸出翻譯 SRT。"
+msgstr "允許合併或拆分相鄰字幕，改善語序與閱讀體驗。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:251
@@ -594,6 +589,11 @@ msgid "about.buy_me_a_coffee_description"
 msgstr "如果這個專案對你有幫助，請考慮請我喝杯咖啡，這將會讓我更有動力繼續開發下去。"
 
 #. js-lingui-explicit-id
+#: src/i18n-messages.ts:199
+msgid "tasks.mode.adaptiveOutputNotice"
+msgstr "雙語 ASS 的原文保留原始時間軸，譯文使用智慧重分段後的時間軸。"
+
+#. js-lingui-explicit-id
 #: src/i18n-messages.ts:74
 msgid "translate.input"
 msgstr "輸入"
@@ -616,7 +616,7 @@ msgstr "介面"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:196
 msgid "tasks.mode.strictDescription"
-msgstr "維持每個來源片段一對一，支援所有輸出格式。"
+msgstr "維持原始字幕數量與時間軸，逐段翻譯。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:126
@@ -671,7 +671,7 @@ msgstr "同一批翻譯每分鐘最多發出的 API 請求數；會與請求間�
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:112
 msgid "settings.mode.adaptiveDescription"
-msgstr "可合併或拆分相鄰片段以取得自然時間安排；僅輸出翻譯 SRT。"
+msgstr "允許合併或拆分相鄰字幕，改善語序與閱讀體驗。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:8
@@ -761,7 +761,7 @@ msgstr "每個檔案同時翻譯的字幕區塊數。若模型需要更一致的
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:110
 msgid "settings.mode.strictDescription"
-msgstr "一對一字幕對應，支援所有現有輸出格式。"
+msgstr "維持原始字幕數量與時間軸，逐段翻譯。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:95
@@ -1081,12 +1081,12 @@ msgstr "狀態"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:109
 msgid "settings.mode.strict"
-msgstr "Strict"
+msgstr "保留原始分段"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:195
 msgid "tasks.mode.strict"
-msgstr "Strict"
+msgstr "保留原始分段"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:155
@@ -1111,12 +1111,12 @@ msgstr "來源範圍 {range} 使用了 Strict 降級。"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:108
 msgid "settings.mode.description"
-msgstr "Strict 維持來源片段一對一；Adaptive 可合併或拆分相鄰片段，目前僅輸出翻譯 SRT。"
+msgstr "保留原始分段會逐段翻譯；智慧重分段可合併或拆分相鄰字幕，並輸出純譯文 SRT 或雙語 ASS。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:122
 msgid "settings.prompt.strictLabel"
-msgstr "Strict 翻譯提示詞"
+msgstr "保留原始分段翻譯提示詞"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:117
@@ -1309,13 +1309,13 @@ msgid "translate.translating"
 msgstr "翻譯中..."
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:275
-msgid "tasks.details.preview.translation"
+#: src/i18n-messages.ts:105
+msgid "settings.translation.title"
 msgstr "翻譯"
 
 #. js-lingui-explicit-id
-#: src/i18n-messages.ts:105
-msgid "settings.translation.title"
+#: src/i18n-messages.ts:275
+msgid "tasks.details.preview.translation"
 msgstr "翻譯"
 
 #. js-lingui-explicit-id
@@ -1466,12 +1466,12 @@ msgstr "沿用字幕樣式字體"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:125
 msgid "settings.prompt.adaptiveDescription"
-msgstr "選擇 Adaptive 模式時使用。保留 {lang} 與 {additional} 變數；新增任務時會自動填入。"
+msgstr "選擇「智慧重分段」時使用。請保留 {lang} 與 {additional} 變數；新增任務時會自動填入。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:124
 msgid "settings.prompt.strictDescription"
-msgstr "選擇 Strict 模式時使用。保留 {lang} 與 {additional} 變數；新增任務時會自動填入。"
+msgstr "選擇「保留原始分段」時使用。請保留 {lang} 與 {additional} 變數；新增任務時會自動填入。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:42
