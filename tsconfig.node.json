@@ -10,7 +10,7 @@
     "shared/**/*.ts",
     "types/**/*.d.ts",
     "src/types/electron-api.ts",
-    "vite.config.ts",
+    "vite.config.mts",
     "lingui.config.ts",
     "playwright.config.ts",
     "e2e/**/*.ts"

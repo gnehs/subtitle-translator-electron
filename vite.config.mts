@@ -8,7 +8,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { lingui, linguiTransformerBabelPreset } from "@lingui/vite-plugin";
 import electron from "vite-electron-plugin";
 import { customStart, loadViteEnv } from "vite-electron-plugin/plugin";
-import pkg from "./package.json";
+import pkg from "./package.json" with { type: "json" };
 
 const UNKNOWN_COMMIT_SHA = "unknown";
 
@@ -43,7 +43,7 @@ export default defineConfig(({ command }) => {
     },
     resolve: {
       alias: {
-        "@": path.join(__dirname, "src"),
+        "@": path.join(import.meta.dirname, "src"),
       },
     },
     plugins: [
@@ -71,6 +71,19 @@ export default defineConfig(({ command }) => {
             : []),
           // Allow use `import.meta.env.VITE_SOME_KEY` in Electron-Main
           loadViteEnv(),
+          {
+            name: "rewrite-electron-typescript-import-extensions",
+            transform({ code }: { code: string }) {
+              // Electron runs the emitted CommonJS files, so relative `.ts`
+              // specifiers must point at their emitted `.js` counterparts.
+              // Keeping `.ts` in source lets Node's strip-types test runner
+              // execute the same modules without a separate transpiler.
+              return code.replace(
+                /(["'](?:\.\.?\/)[^"']+)\.ts(["'])/g,
+                "$1.js$2"
+              );
+            },
+          },
         ],
       }),
     ],
