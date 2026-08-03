@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { FilePlus2, Settings2 } from "lucide-react";
+import { FilePlus2, Info, Settings2, X } from "lucide-react";
 import Settings from "@/pages/settings";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -47,15 +47,48 @@ function CheckUpdate() {
 
   useEffect(() => {
     if (!version || !newVersion || !isNewerVersion(version, newVersion)) return;
-    toast.info(t("update.available", { version: newVersion }), {
-      action: {
-        label: t("update.view"),
-        onClick: () => {
-          void window.electronAPI.openExternal(
-            "https://github.com/gnehs/subtitle-translator-electron/releases/latest"
-          );
-        },
-      },
+    toast.custom((toastId) => (
+      <div className="relative flex w-full items-start gap-3 rounded-xl border bg-popover p-4 pr-10 text-popover-foreground shadow-lg">
+        <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <Info className="size-3" aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm leading-5 font-medium">{t("update.available")}</p>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">
+            {t("update.description", { version: newVersion })}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              toast.dismiss(toastId);
+              void window.electronAPI.openExternal(
+                "https://github.com/gnehs/subtitle-translator-electron/releases/latest"
+              );
+            }}
+          >
+            {t("update.view")}
+          </Button>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="absolute top-2 right-2"
+          onClick={() => toast.dismiss(toastId)}
+          aria-label={t("translate.close")}
+          title={t("translate.close")}
+        >
+          <X aria-hidden="true" />
+        </Button>
+      </div>
+    ), {
+      toasterId: "updates",
+      position: "top-center",
+      unstyled: true,
+      style: { width: "100%" },
     });
   }, [i18n.locale, newVersion, version]);
 
@@ -106,7 +139,18 @@ export default function DefaultLayout() {
         <Settings />
       </Sheet>
       <CheckUpdate />
-      <Toaster position="bottom-center" richColors />
+      <Toaster
+        id="updates"
+        position="top-center"
+        offset={{ top: "4.5rem" }}
+        style={{ "--width": "30rem" } as CSSProperties}
+        richColors
+      />
+      <Toaster
+        position="bottom-center"
+        offset={{ bottom: "2rem" }}
+        richColors
+      />
     </div>
   );
 }

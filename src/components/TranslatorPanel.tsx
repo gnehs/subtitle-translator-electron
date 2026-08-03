@@ -962,28 +962,35 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       />
 
       {files.length === 0 ? (
-        <Empty className="border-0 px-5 py-10">
-          <EmptyHeader>
-            <EmptyMedia variant="icon" className="size-14 rounded-2xl [&_svg:not([class*='size-'])]:size-7">
-              <FileStack />
-            </EmptyMedia>
-            <EmptyTitle className="text-2xl">{t("tasks.empty.title")}</EmptyTitle>
-            <EmptyDescription className="text-base">{t("tasks.empty.description")}</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button size="lg" onClick={() => fileInputRef.current?.click()}>
-              <FolderOpen data-icon="inline-start" />
-              {t("tasks.empty.chooseFile")}
-            </Button>
-          </EmptyContent>
-          {shouldShowCoffeeBanner && (
-            <BuyMeACoffee dismissible className="w-full max-w-2xl" />
-          )}
-          <p className="mt-auto pt-10 text-center text-xs text-muted-foreground">
-            {t("tasks.empty.formats")}
-            <br />
-            {t("tasks.empty.checkpoint")}
-          </p>
+        <Empty className="min-h-0 justify-start overflow-y-auto border-0 px-5 py-10">
+          <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-4">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="size-14 rounded-2xl [&_svg:not([class*='size-'])]:size-7">
+                <FileStack />
+              </EmptyMedia>
+              <EmptyTitle className="text-2xl">{t("tasks.empty.title")}</EmptyTitle>
+              <EmptyDescription className="text-base">{t("tasks.empty.description")}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button size="lg" onClick={() => fileInputRef.current?.click()}>
+                <FolderOpen data-icon="inline-start" />
+                {t("tasks.empty.chooseFile")}
+              </Button>
+            </EmptyContent>
+          </div>
+          <div className="flex w-full shrink-0 flex-col items-center gap-4">
+            <p className="text-center text-xs text-muted-foreground">
+              {t("tasks.empty.formats")}
+              <br />
+              {t("tasks.empty.checkpoint")}
+            </p>
+            {shouldShowCoffeeBanner && (
+              <BuyMeACoffee
+                dismissible
+                className="m-0 -mb-10 w-full max-w-2xl rounded-t-[28px] rounded-b-none"
+              />
+            )}
+          </div>
         </Empty>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto">

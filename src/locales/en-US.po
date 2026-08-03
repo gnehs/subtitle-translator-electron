@@ -116,7 +116,12 @@ msgstr "A locked subtitle cue was merged or split unexpectedly."
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:97
 msgid "update.available"
-msgstr "A new version is available: {version}"
+msgstr "New version available"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:98
+msgid "update.description"
+msgstr "Version {version} is ready to download. View the release notes and install the latest version."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:52

@@ -116,7 +116,12 @@ msgstr "鎖定的字幕片段被意外合併或拆分。"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:97
 msgid "update.available"
-msgstr "有新的版本可用：{version}"
+msgstr "有新的版本可用"
+
+#. js-lingui-explicit-id
+#: src/i18n-messages.ts:98
+msgid "update.description"
+msgstr "版本 {version} 已可下載。查看更新內容並安裝最新版本。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:52
