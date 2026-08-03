@@ -611,7 +611,7 @@ msgstr "无法读取已安装字体；仍可直接输入字体名称。"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:100
 msgid "settings.interface.title"
-msgstr "界面"
+msgstr "通用"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:196
@@ -656,7 +656,35 @@ msgstr "正在加载字幕预览"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:99
 msgid "settings.description"
-msgstr "管理界面、API 与翻译工具。"
+msgstr "管理 App 与翻译偏好设置。"
+
+#. js-lingui-explicit-id
+msgid "settings.navigation.label"
+msgstr "设置分类"
+
+#. js-lingui-explicit-id
+msgid "settings.output.title"
+msgstr "输出"
+
+#. js-lingui-explicit-id
+msgid "settings.output.description"
+msgstr "选择字幕格式与 ASS 字体。"
+
+#. js-lingui-explicit-id
+msgid "settings.performance.title"
+msgstr "性能"
+
+#. js-lingui-explicit-id
+msgid "settings.performance.description"
+msgstr "控制请求节奏与并行翻译。"
+
+#. js-lingui-explicit-id
+msgid "settings.advanced.title"
+msgstr "高级"
+
+#. js-lingui-explicit-id
+msgid "settings.advanced.description"
+msgstr "将存储在本机的设置恢复为默认值。"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:11

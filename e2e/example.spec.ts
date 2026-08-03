@@ -45,16 +45,16 @@ test("about shows project links and build metadata", async ({}, testInfo) => {
     await expect(page.getByText(/^\d+\.\d+\.\d+$/)).toBeVisible();
     await expect(page.getByRole("link", { name: "GitHub" })).toHaveAttribute(
       "href",
-      "https://github.com/gnehs/subtitle-translator-electron"
+      "https://github.com/gnehs/subtitle-translator-electron",
     );
     await expect(
-      page.getByRole("link", { name: "Buy Me a Coffee" })
+      page.getByRole("link", { name: "Buy Me a Coffee" }),
     ).toHaveAttribute("href", "https://www.buymeacoffee.com/gnehs");
     await expect(
-      page.getByRole("link").filter({ hasText: /^[0-9a-f]{7}$/i })
+      page.getByRole("link").filter({ hasText: /^[0-9a-f]{7}$/i }),
     ).toHaveAttribute(
       "href",
-      /https:\/\/github\.com\/gnehs\/subtitle-translator-electron\/commit\/[0-9a-f]{7}$/i
+      /https:\/\/github\.com\/gnehs\/subtitle-translator-electron\/commit\/[0-9a-f]{7}$/i,
     );
   } finally {
     await app.close();
@@ -68,9 +68,21 @@ test("settings shows the API connection test control", async ({}, testInfo) => {
     await page.reload();
     await page.getByRole("button", { name: "Settings" }).click();
 
-    await expect(page.getByRole("heading", { name: "API connection" })).toBeVisible();
+    const categoryNavigation = page.getByRole("navigation", {
+      name: "Settings categories",
+    });
+    await expect(categoryNavigation).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Test connection" })
+      categoryNavigation.getByRole("button", { name: "General" }),
+    ).toHaveAttribute("aria-current", "page");
+    await categoryNavigation
+      .getByRole("button", { name: "API connection" })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "API connection" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Test connection" }),
     ).toBeDisabled();
   } finally {
     await app.close();
@@ -87,13 +99,16 @@ test("the selected language remains active after reload", async ({}, testInfo) =
     await page.getByRole("combobox").first().click();
     await page.getByRole("option", { name: "繁體中文" }).click();
 
-    await expect(page.getByRole("heading", { name: "API 連線" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "一般" })).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "設定分類" }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "關閉" }).click();
     await page.reload();
 
     await expect(page.getByRole("button", { name: "新增任務" })).toBeVisible();
     await page.getByRole("button", { name: "設定" }).click();
-    await expect(page.getByRole("heading", { name: "API 連線" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "一般" })).toBeVisible();
   } finally {
     await app.close();
   }

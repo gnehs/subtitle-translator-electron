@@ -611,7 +611,7 @@ msgstr "Installed fonts are unavailable. You can still enter a font name."
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:100
 msgid "settings.interface.title"
-msgstr "Interface"
+msgstr "General"
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:196
@@ -656,7 +656,35 @@ msgstr "Loading subtitle preview"
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:99
 msgid "settings.description"
-msgstr "Manage interface, API, and translation tools."
+msgstr "Manage app and translation preferences."
+
+#. js-lingui-explicit-id
+msgid "settings.navigation.label"
+msgstr "Settings categories"
+
+#. js-lingui-explicit-id
+msgid "settings.output.title"
+msgstr "Output"
+
+#. js-lingui-explicit-id
+msgid "settings.output.description"
+msgstr "Choose subtitle formats and ASS fonts."
+
+#. js-lingui-explicit-id
+msgid "settings.performance.title"
+msgstr "Performance"
+
+#. js-lingui-explicit-id
+msgid "settings.performance.description"
+msgstr "Control request pacing and parallel translation."
+
+#. js-lingui-explicit-id
+msgid "settings.advanced.title"
+msgstr "Advanced"
+
+#. js-lingui-explicit-id
+msgid "settings.advanced.description"
+msgstr "Restore locally stored settings to their defaults."
 
 #. js-lingui-explicit-id
 #: src/i18n-messages.ts:11
