@@ -987,7 +987,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             {shouldShowCoffeeBanner && (
               <BuyMeACoffee
                 dismissible
-                className="m-0 -mb-10 w-full max-w-2xl rounded-t-[28px] rounded-b-none"
+                className="m-0 -mb-10 w-full max-w-2xl rounded-t-xl rounded-b-none"
               />
             )}
           </div>

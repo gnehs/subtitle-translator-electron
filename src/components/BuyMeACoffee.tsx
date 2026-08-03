@@ -25,7 +25,7 @@ export default function BuyMeACoffee({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "@container relative overflow-hidden rounded-[28px] border border-[#e3ad00]/40 bg-[linear-gradient(110deg,#ffe33b_0%,#ffd52d_68%,#ffc826_100%)] text-[#181306] shadow-[0_18px_45px_-28px_rgba(116,78,0,0.75)]",
+        "@container relative overflow-hidden rounded-xl border bg-muted text-foreground",
         className
       )}
     >
@@ -34,7 +34,7 @@ export default function BuyMeACoffee({
           <h2 className="font-heading text-base leading-tight font-bold tracking-tight">
             {t("about.buy_me_a_coffee")}
           </h2>
-          <p className="mt-1 text-xs leading-4 text-black/65">
+          <p className="mt-1 text-xs leading-4 text-muted-foreground">
             {t("about.buy_me_a_coffee_description")}
           </p>
         </div>
@@ -42,10 +42,7 @@ export default function BuyMeACoffee({
           href="https://www.buymeacoffee.com/gnehs"
           target="_blank"
           rel="noreferrer"
-          className={cn(
-            buttonVariants({ size: "sm" }),
-            "rounded-full border border-black/5 bg-white pl-3 pr-2 text-[#181306] shadow-sm hover:bg-white/90"
-          )}
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
         >
           {t("about.buy_me_a_coffee")}
           <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
@@ -56,14 +53,14 @@ export default function BuyMeACoffee({
         alt=""
         aria-hidden="true"
         draggable={false}
-        className="pointer-events-none absolute inset-y-0 right-6 z-0 h-full w-[44%] max-w-none object-contain object-right-bottom select-none @lg:w-[42%]"
+        className="pointer-events-none grayscale-50 absolute inset-y-0 right-6 z-0 h-full w-[44%] max-w-none object-contain object-right-bottom select-none @lg:w-[42%]"
       />
       {dismissible && (
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
-          className="absolute top-2 right-2 z-20 rounded-full bg-black/10 text-black/65 hover:bg-black/20 hover:text-black"
+          className="absolute top-2 right-2 z-20 rounded-full"
           onClick={() => setIsVisible(false)}
           aria-label={t("translate.close")}
           title={t("translate.close")}
