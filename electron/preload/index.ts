@@ -3,10 +3,13 @@ import type {
   AvailableModel,
   BatchProgress,
   BatchTranslationRequest,
+  ElectronAPI,
   SubtitlePreviewRequest,
 } from "../../src/types/electron-api";
 
 const electronAPI = {
+  platform: process.platform,
+
   getFilePath(file: File): string {
     return webUtils.getPathForFile(file);
   },
@@ -51,6 +54,6 @@ const electronAPI = {
     ipcRenderer.on("batch-progress", handler);
     return () => ipcRenderer.removeListener("batch-progress", handler);
   },
-};
+} satisfies ElectronAPI;
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

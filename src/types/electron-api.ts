@@ -182,6 +182,7 @@ export type SubtitleCuePreview =
   | AdaptiveSubtitleCuePreview;
 
 export interface ElectronAPI {
+  platform: string;
   getFilePath(file: File): string;
   selectDirectory(defaultPath?: string): Promise<string | null>;
   listModels(request: {
