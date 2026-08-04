@@ -38,6 +38,26 @@ page
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
+## Optional local tracing
+
+The Electron main process can export privacy-safe AI operation traces to a
+developer-owned [Files SDK](https://files-sdk.dev/docs/providers) store. Tracing
+is disabled unless `FILES_SDK_PROVIDER` is configured, and subtitle prompts and
+translated text are excluded from traces.
+
+For local development:
+
+```sh
+npx agentpond@0.11.0 env init local --provider fs --root "$PWD/.agentpond/envs/local/objects"
+npx agentpond@0.11.0 env use local
+eval "$(npx agentpond@0.11.0 env get local)"
+pnpm dev
+```
+
+After translating a subtitle, run `npx agentpond@0.11.0 sync` and
+`npx agentpond@0.11.0 traces list`. Use a private production Files SDK provider
+and supply its credentials through the application environment.
+
 ## Buy me a coffee
 
 <a href="https://www.buymeacoffee.com/gnehs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" style="height: 51px !important;width: 217px !important;" ></a>

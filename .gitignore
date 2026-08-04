@@ -28,3 +28,4 @@ release
 /playwright-report/
 /playwright/.cache/
 .pnpm-store
+.agentpond/

@@ -304,6 +304,11 @@ async function translateSubtitleChunk(
 
     const result = streamText({
       model: ai(model),
+      telemetry: {
+        functionId: "subtitle-translation",
+        recordInputs: false,
+        recordOutputs: false,
+      },
       temperature,
       system: systemPrompt,
       output: translationOutput,
@@ -581,6 +586,11 @@ async function analyzeSubtitlesForContext(
   await requestRateLimiter?.waitForSlot(abortSignal);
   const result = await generateText({
     model: ai(model),
+    telemetry: {
+      functionId: "subtitle-analysis",
+      recordInputs: false,
+      recordOutputs: false,
+    },
     temperature,
     output: Output.json(),
     system: `# System Prompt

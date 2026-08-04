@@ -51,6 +51,10 @@ import {
 } from "./utils/subtitle-chunks";
 import { getRetryAfterMsFromHeaders } from "./utils/retry-after";
 import {
+  shutdownAgentPondTracing,
+  startAgentPondTracing,
+} from "./utils/agentpond-tracing";
+import {
   getPathClaimKey,
   hasPathClaimConflict,
 } from "./utils/path-claims";
@@ -130,6 +134,9 @@ type ApplicationLocale = z.infer<typeof applicationLocaleSchema>;
 let applicationLocale: ApplicationLocale | undefined;
 const activeTranslationPathClaims = new Set<string>();
 const activeTranslationControllers = new Map<string, Set<AbortController>>();
+let agentPondTracingStarted = false;
+let isDrainingForQuit = false;
+const TRACE_SHUTDOWN_TIMEOUT_MS = 5_000;
 
 const subtitleFileSchema = z
   .object({
@@ -805,7 +812,8 @@ function createWindow() {
 }
 
 app.whenReady()
-  .then(() => {
+  .then(async () => {
+    agentPondTracingStarted = await startAgentPondTracing();
     createApplicationMenu();
     createWindow();
   })
@@ -817,6 +825,32 @@ app.on("window-all-closed", () => {
   win = null;
   if (process.platform !== "darwin") app.quit();
 });
+
+app.on("before-quit", (event) => {
+  if (!agentPondTracingStarted || isDrainingForQuit) return;
+
+  event.preventDefault();
+  isDrainingForQuit = true;
+  for (const controllers of activeTranslationControllers.values()) {
+    for (const controller of controllers) controller.abort();
+  }
+  void waitForActiveTranslationsToStop()
+    .then(shutdownAgentPondTracing)
+    .catch((error: unknown) => {
+      console.warn("Failed to shut down AgentPond tracing:", error);
+    })
+    .finally(() => app.quit());
+});
+
+async function waitForActiveTranslationsToStop(): Promise<void> {
+  const deadline = Date.now() + TRACE_SHUTDOWN_TIMEOUT_MS;
+  while (
+    activeTranslationControllers.size > 0 &&
+    Date.now() < deadline
+  ) {
+    await sleep(25);
+  }
+}
 
 app.on("second-instance", () => {
   if (win) {
@@ -924,6 +958,7 @@ ipcMain.on("cancel-translation", (event, filePath: unknown) => {
 });
 
 ipcMain.handle("batch-translate", async (event, request: unknown) => {
+  if (isDrainingForQuit) throw new Error("Application is shutting down");
   assertTrustedSender(event);
   const { files, params } = batchTranslationRequestSchema.parse(request);
   const translationConfigFingerprint = createTranslationConfigFingerprint({

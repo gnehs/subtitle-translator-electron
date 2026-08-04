@@ -50,10 +50,15 @@
     "node": ">=24.17.0"
   },
   "dependencies": {
+    "@agentpond/files-sdk": "0.3.1",
+    "@agentpond/otel": "0.1.7",
     "@ai-sdk/openai-compatible": "^3.0.7",
+    "@ai-sdk/otel": "1.0.22",
+    "@arizeai/openinference-vercel": "3.1.1",
     "@fontsource-variable/geist": "^5.2.9",
     "@lingui/core": "^6.5.0",
     "@lingui/react": "^6.5.0",
+    "@opentelemetry/sdk-trace-node": "2.10.0",
     "@reduxjs/toolkit": "^2.12.0",
     "ai": "^7.0.22",
     "ass-parser": "^0.2.0",
@@ -61,6 +66,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "files-sdk": "2.2.3",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.24.0",
     "next-themes": "^0.4.6",
