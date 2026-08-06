@@ -834,8 +834,10 @@ app.on("before-quit", (event) => {
   for (const controllers of activeTranslationControllers.values()) {
     for (const controller of controllers) controller.abort();
   }
-  void waitForActiveTranslationsToStop()
-    .then(shutdownAgentPondTracing)
+  void Promise.race([
+    waitForActiveTranslationsToStop().then(shutdownAgentPondTracing),
+    sleep(TRACE_SHUTDOWN_TIMEOUT_MS),
+  ])
     .catch((error: unknown) => {
       console.warn("Failed to shut down AgentPond tracing:", error);
     })
