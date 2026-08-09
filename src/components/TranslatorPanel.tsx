@@ -391,10 +391,17 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   const finalPreviewCuesRef = useRef(
     new Map<string, SubtitleCuePreview[]>()
   );
+  const activeJobIdsRef = useRef(new Map<string, string>());
 
   useEffect(() => {
     if (!window.electronAPI?.onBatchProgress) return;
     const unsubscribe = window.electronAPI.onBatchProgress((data) => {
+      if (
+        !data.jobId ||
+        activeJobIdsRef.current.get(data.filePath) !== data.jobId
+      ) {
+        return;
+      }
       const { previewCues, ...progressData } = data;
       setBatchProgress((previous) => ({
         ...previous,
@@ -452,6 +459,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
             file: data.filePath.split(/[\\/]/).at(-1) || data.filePath,
           })
         );
+      }
+      if (data.status === "done" || data.status === "error") {
+        activeJobIdsRef.current.delete(data.filePath);
       }
     });
 
@@ -680,6 +690,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
 
   const openDetails = async (file: SubtitleFile) => {
     const detailRequestId = ++detailRequestIdRef.current;
+    // Invalidate an older file's in-flight preview even when this file can be
+    // rendered immediately from the final-preview cache.
+    previewRequestIdRef.current += 1;
     setSelectedFile(file);
     setSelectedAnalysis(batchProgress[file.path]?.analysis ?? undefined);
     setCues([]);
@@ -726,7 +739,9 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
   };
 
   const removeFile = (filePath: string) => {
-    window.electronAPI.cancelTranslation(filePath);
+    const jobId = activeJobIdsRef.current.get(filePath);
+    if (jobId) window.electronAPI.cancelTranslation(filePath, jobId);
+    activeJobIdsRef.current.delete(filePath);
     finalPreviewCuesRef.current.delete(filePath);
     setFiles(files.filter((file) => file.path !== filePath));
     setBatchProgress((previous) => {
@@ -740,16 +755,21 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
 
   const clearCompletedFiles = () => {
     if (completedCount === 0) return;
+    const shouldCloseSelectedDetails =
+      selectedFile !== null &&
+      batchProgress[selectedFile.path]?.status === "done";
     const remaining = files.filter((file) => batchProgress[file.path]?.status !== "done");
     for (const file of files) {
       if (batchProgress[file.path]?.status === "done") {
         finalPreviewCuesRef.current.delete(file.path);
+        activeJobIdsRef.current.delete(file.path);
       }
     }
     setFiles(remaining);
     setBatchProgress((previous) =>
       Object.fromEntries(Object.entries(previous).filter(([path]) => remaining.some((file) => file.path === path)))
     );
+    if (shouldCloseSelectedDetails) closeDetails();
     toast.success(t("toast.completedCleared", { count: completedCount }));
   };
 
@@ -766,9 +786,6 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
     const batchPrompt = batchMode === "adaptive" ? adaptivePrompt : strictPrompt;
     const batchOutputFormat =
       batchMode === "adaptive" ? adaptiveOutputFormat : strictOutputFormat;
-    for (const file of translatableFiles) {
-      finalPreviewCuesRef.current.delete(file.path);
-    }
     if (!lang.trim()) {
       toast.error(t("toast.targetLanguageRequired"));
       return;
@@ -800,6 +817,21 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
       return;
     }
 
+    const jobId = window.crypto.randomUUID();
+    for (const file of translatableFiles) {
+      finalPreviewCuesRef.current.delete(file.path);
+      activeJobIdsRef.current.set(file.path, jobId);
+    }
+    if (
+      selectedFile &&
+      translatableFiles.some((file) => file.path === selectedFile.path)
+    ) {
+      previewRequestIdRef.current += 1;
+      setCues([]);
+      setPreviewLoadStatus("idle");
+      setPreviewLoadError("");
+    }
+
     setActiveTranslationCount((count) => count + 1);
     setBatchProgress((previous) => ({
       ...previous,
@@ -819,6 +851,7 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
 
     try {
       await window.electronAPI.translateBatch({
+        jobId,
         files: translatableFiles,
         params: {
           apiKeys: keys,
@@ -842,9 +875,28 @@ export default function TranslatorPanel({ addTaskRequest }: TranslatorPanelProps
         },
       });
     } catch (error: unknown) {
+      const errorMessage = getLocalizedError(error, "toast.unknownError", t);
+      setBatchProgress((previous) => {
+        const next = { ...previous };
+        for (const file of translatableFiles) {
+          if (activeJobIdsRef.current.get(file.path) !== jobId) continue;
+          const current = previous[file.path];
+          if (current?.status === "done") continue;
+          next[file.path] = {
+            ...current,
+            progress: current?.progress ?? 0,
+            status: "error",
+            error: errorMessage,
+            mode: current?.mode ?? batchMode,
+            model: current?.model ?? translationModel,
+            targetLanguage: current?.targetLanguage ?? lang,
+          };
+        }
+        return next;
+      });
       toast.error(
         t("toast.translationJobFailed", {
-          error: getLocalizedError(error, "toast.unknownError", t),
+          error: errorMessage,
         })
       );
     } finally {

@@ -3,7 +3,7 @@ import path from "node:path";
 import { parseSync, stringifySync, type NodeList } from "subtitle";
 import assParser from "ass-parser";
 import assStringify from "ass-stringify";
-import { generateText, Output, streamText } from "ai";
+import { generateText, NoObjectGeneratedError, Output, streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { translationErrorCodes } from "../../shared/translation-error-codes.ts";
 import type { RequestRateLimiter } from "./request-rate-limiter.ts";
@@ -636,7 +636,29 @@ async function translateSubtitleChunk(
       after: compactedAfter,
     });
 
-  const output = await runTranslationRequest(initialPrompt);
+  let output: string[];
+  try {
+    output = await runTranslationRequest(initialPrompt);
+  } catch (error) {
+    const repairableOutputError =
+      NoObjectGeneratedError.isInstance(error) ||
+      (error instanceof Error &&
+        error.message.startsWith("Translation output validation failed:"));
+    if (!repairableOutputError) throw error;
+
+    const repairedOutput = await runTranslationRequest(
+      createTranslationRepairPrompt({
+        before: compactedBefore,
+        core: compactedCore,
+        after: compactedAfter,
+        invalidOutput: [],
+        validationError:
+          "The model response was not valid JSON with an elements array.",
+      })
+    );
+    validateTranslationOutputForCore(repairedOutput, compactedCore);
+    return repairedOutput;
+  }
   const validationError = createTranslationOutputValidationError(
     output,
     compactedCore

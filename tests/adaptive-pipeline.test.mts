@@ -128,23 +128,56 @@ test("pipeline abort prevents starting later scenes", async () => {
   assert.equal(calls, 1);
 });
 
-test("pipeline stops scheduling after a scene failure and settles in-flight work", async () => {
+test("pipeline fail-fast cancellation aborts in-flight scenes and preserves the first error", async () => {
   const calls: number[] = [];
-  let inFlightSettled = false;
+  let inFlightSignal: AbortSignal | undefined;
+  let inFlightAborted = false;
+  let sceneOneStarted!: () => void;
+  const sceneOneStartedPromise = new Promise<void>((resolve) => {
+    sceneOneStarted = resolve;
+  });
+  const firstError = new Error("scene failed");
+
   await assert.rejects(
     processAdaptiveScenes({
       scenes: [scene(0), scene(1), scene(2), scene(3)],
       concurrency: 2,
-      translateScene: async (item) => {
+      translateScene: async (item, _index, signal) => {
         calls.push(item.sourceStart);
-        if (item.sourceStart === 0) throw new Error("scene failed");
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        inFlightSettled = true;
+        if (item.sourceStart === 0) {
+          await sceneOneStartedPromise;
+          throw firstError;
+        }
+        if (item.sourceStart === 1) {
+          inFlightSignal = signal;
+          sceneOneStarted();
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) {
+              inFlightAborted = true;
+              resolve();
+              return;
+            }
+            signal.addEventListener(
+              "abort",
+              () => {
+                inFlightAborted = true;
+                resolve();
+              },
+              { once: true }
+            );
+          });
+          throw new Error("in-flight scene aborted");
+        }
         return translated(item);
       },
     }),
-    /scene failed/
+    (error) => {
+      assert.equal(error, firstError);
+      return true;
+    }
   );
-  assert.equal(calls.some((index) => index > 1), false);
-  if (calls.includes(1)) assert.equal(inFlightSettled, true);
+
+  assert.equal(inFlightSignal?.aborted, true);
+  assert.equal(inFlightAborted, true);
+  assert.deepEqual(calls, [0, 1]);
 });

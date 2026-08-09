@@ -5,6 +5,7 @@ import {
   AdaptiveStrictFallbackError,
   createAdaptiveTranslator,
   translateAdaptiveScene,
+  validateAdaptiveDraft,
 } from "../electron/main/utils/adaptive/translator.ts";
 import type {
   AdaptiveCallResult,
@@ -94,6 +95,37 @@ test("valid adaptive draft completes without repair or fallback", async () => {
   assert.equal(result.blocks[0]?.sourceStart, 0);
   assert.equal(result.blocks[0]?.sourceEnd, 1);
   assert.equal(result.usage.requestCount, 1);
+});
+
+test("a validator cannot report invalid without triggering repair", async () => {
+  let repairCalls = 0;
+  const client = fakeClient(
+    {
+      draft: { blocks: [{ take: 2, targets: ["錯誤"] }] },
+      usage: usage("adaptive-translate"),
+    },
+    {
+      draft: { blocks: [{ take: 2, targets: ["修正"] }] },
+      usage: usage("adaptive-repair"),
+    }
+  );
+  const originalRepair = client.repairScene.bind(client);
+  client.repairScene = async (input) => {
+    repairCalls += 1;
+    return originalRepair(input);
+  };
+  const result = await translateAdaptiveScene(sceneFixture(), {
+    client: {
+      ...client,
+    },
+    validateDraft(draft, inputScene) {
+      if (repairCalls === 0) return { valid: false, violations: [] };
+      return validateAdaptiveDraft(draft, inputScene);
+    },
+  });
+
+  assert.equal(repairCalls, 1);
+  assert.equal(result.origin, "repair");
 });
 
 test("partition failure is repaired exactly once", async () => {
@@ -221,9 +253,54 @@ test("strict fallback failure is surfaced after the bounded budget", async () =>
   );
   await assert.rejects(
     translateAdaptiveScene(sceneFixture(), { client }),
-    (error: unknown) => error instanceof AdaptiveStrictFallbackError
+    (error: unknown) =>
+      error instanceof AdaptiveStrictFallbackError &&
+      error.code === translationErrorCodes.adaptiveFallbackFailed,
   );
   assert.deepEqual(client.calls, ["initial", "repair", "fallback"]);
+});
+
+test("strict fallback accepts only an exact elements object from raw model output", async () => {
+  const validClient = fakeClient(
+    { draft: { blocks: [{ take: 3, targets: ["Invalid"] }] } },
+    { draft: { blocks: [{ take: 3, targets: ["Still invalid"] }] } },
+    { draft: { elements: ["First", "Second"] } },
+  );
+  const valid = await translateAdaptiveScene(sceneFixture(), { client: validClient });
+  assert.deepEqual(valid.blocks.map((block) => block.targetTexts[0]), ["First", "Second"]);
+
+  const invalidShapes = [
+    { elements: ["First", "Second"], extra: true },
+    { targets: ["First", "Second"] },
+  ];
+  for (const draft of invalidShapes) {
+    const client = fakeClient(
+      { draft: { blocks: [{ take: 3, targets: ["Invalid"] }] } },
+      { draft: { blocks: [{ take: 3, targets: ["Still invalid"] }] } },
+      { draft },
+    );
+    await assert.rejects(
+      translateAdaptiveScene(sceneFixture(), { client }),
+      (error: unknown) =>
+        error instanceof AdaptiveStrictFallbackError &&
+        error.code === translationErrorCodes.adaptiveFallbackFailed,
+    );
+  }
+});
+
+test("strict fallback rejects raw targets over the 1000-character limit", async () => {
+  const client = fakeClient(
+    { draft: { blocks: [{ take: 3, targets: ["Invalid"] }] } },
+    { draft: { blocks: [{ take: 3, targets: ["Still invalid"] }] } },
+    { draft: { elements: ["a".repeat(1001), "Second"] } },
+  );
+
+  await assert.rejects(
+    translateAdaptiveScene(sceneFixture(), { client }),
+    (error: unknown) =>
+      error instanceof AdaptiveStrictFallbackError &&
+      error.violations.some((item) => item.code === "adaptive.partition.emptyTarget"),
+  );
 });
 
 test("strict fallback rejects merged blocks even for an unlocked scene", async () => {

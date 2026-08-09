@@ -97,3 +97,23 @@ test("restores protected markup placeholders from source text", () => {
   assert.equal(result.targetCues[0]?.renderedText, "<i>哈囉</i>");
   assert.match(result.content, /<i>哈囉<\/i>/);
 });
+
+test("preserves intentional source overlap as a non-fatal warning", () => {
+  const result = renderAdaptiveSrt(
+    [sourceCue("First", 1_000, 2_000), sourceCue("Second", 1_500, 2_500)],
+    [
+      scene(0, 0, [translationBlock("first", 0, 0, [0], ["第一"])]),
+      scene(1, 1, [translationBlock("second", 1, 1, [1], ["第二"])]),
+    ]
+  );
+
+  assert.equal(result.targetCues.length, 2);
+  assert.ok(
+    result.violations.some(
+      (item) =>
+        item.code === "adaptive.renderer.overlap" &&
+        item.severity === "warning"
+    )
+  );
+  assert.equal(result.violations.some((item) => item.severity === "error"), false);
+});

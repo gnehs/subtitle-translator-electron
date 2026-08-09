@@ -336,12 +336,14 @@ function createRetryingClient(
       sceneInput: AdaptiveTranslateInput
     ): Promise<AdaptiveCallResult> {
       onStage("fallback", sceneInput.scene.id);
-      if (!base.translateStrictFallback) {
+      const fallback =
+        base.translateStrictFallback ?? base.strictFallback ?? base.fallbackScene;
+      if (!fallback) {
         return Promise.reject(
           new Error(translationErrorCodes.adaptiveFallbackFailed)
         );
       }
-      return call((value) => base.translateStrictFallback!(value), sceneInput);
+      return call((value) => fallback.call(base, value), sceneInput);
     },
   };
 }
@@ -506,6 +508,17 @@ export async function processAdaptiveTranslationFile(
   }
 
   const sourceCues = buildAdaptiveSourceCues(source);
+  if (
+    sourceCues.some(
+      (cue) =>
+        !cue.flags.empty &&
+        (!Number.isFinite(cue.startMs) ||
+          !Number.isFinite(cue.endMs) ||
+          cue.endMs <= cue.startMs)
+    )
+  ) {
+    throw new Error(translationErrorCodes.adaptiveInsufficientDuration);
+  }
   const completedSourceIndices = checkpoint
     ? new Set(getAdaptiveCompletedCueIndices(checkpoint))
     : new Set<number>();
@@ -546,7 +559,7 @@ export async function processAdaptiveTranslationFile(
   const sendAdaptiveProgress = (
     status: BatchProgress["status"],
     sceneProgress?: AdaptivePipelineProgress,
-    warnings: readonly AdaptiveSubtitleViolation[] = [],
+    warnings?: readonly AdaptiveSubtitleViolation[],
     previewCues?: BatchProgress["previewCues"]
   ) => {
     const covered = countCoveredSourceCues(checkpoint!.scenes);
@@ -559,7 +572,7 @@ export async function processAdaptiveTranslationFile(
       currentCue: covered,
       outputPath,
       usageSummary: toUsageSummary(usageRecords),
-      warnings: [...warnings],
+      ...(warnings ? { warnings: [...warnings] } : {}),
       ...(previewCues ? { previewCues } : {}),
       analysis: checkpoint!.brief
         ? formatTranslationBrief(checkpoint!.brief)
@@ -585,13 +598,20 @@ export async function processAdaptiveTranslationFile(
               additional: params.additional,
               requestRateLimiter: input.requestRateLimiter,
               abortSignal,
+              onUsage: (usage) => {
+                usageRecords.push(usage);
+              },
             });
         checkpoint.brief = briefResult.brief;
-        if (briefResult.usage) usageRecords.push(briefResult.usage);
+        if (input.generateBrief && briefResult.usage) {
+          usageRecords.push(briefResult.usage);
+        }
       } catch (error) {
         throwIfAborted(abortSignal);
         console.warn("Adaptive brief generation failed; continuing without it.");
-        checkpoint.brief = createEmptyTranslationBrief();
+        // Leave the brief absent so a resumed run can retry a transient
+        // analysis failure instead of permanently caching an empty result.
+        delete checkpoint.brief;
       }
     } else {
       checkpoint.brief = createEmptyTranslationBrief();
@@ -618,7 +638,10 @@ export async function processAdaptiveTranslationFile(
     );
     if (checkpointScene) {
       checkpointScene.status = stage;
-      void writer.write(checkpoint!);
+      void writer.write(checkpoint!).catch(() => {
+        // A later awaited write remains authoritative. Prevent this advisory
+        // stage snapshot from becoming an unhandled rejection.
+      });
     }
     sendAdaptiveProgress(stage);
   });
@@ -629,7 +652,7 @@ export async function processAdaptiveTranslationFile(
       scenes: pendingScenes,
       concurrency: params.concurrency,
       abortSignal,
-      translateScene: async (scene) => {
+      translateScene: async (scene, _index, sceneAbortSignal) => {
         const sourceScene = pendingScenes.find((item) => item.id === scene.id);
         if (!sourceScene) {
           throw new Error(translationErrorCodes.adaptiveIncompleteCoverage);
@@ -644,7 +667,7 @@ export async function processAdaptiveTranslationFile(
           prompt: prompts.adaptivePrompt,
           additional: params.additional,
           temperature: params.temperature,
-          abortSignal,
+          abortSignal: sceneAbortSignal,
           onUsage: (usage) => {
             usageRecords.push(usage);
           },
@@ -654,7 +677,12 @@ export async function processAdaptiveTranslationFile(
         const checkpointScene = checkpoint!.scenes.find(
           (item) => item.id === scene.id
         );
-        if (checkpointScene) checkpointScene.status = "translating";
+        if (checkpointScene) {
+          checkpointScene.status = "translating";
+          checkpointScene.blocks = [];
+          checkpointScene.violations = [];
+          delete checkpointScene.errorCode;
+        }
         sendAdaptiveProgress("translating");
       },
       onSceneComplete: async (result, progress) => {

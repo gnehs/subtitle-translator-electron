@@ -13,8 +13,12 @@ import { translationErrorCodes } from "../../../shared/translation-error-codes.t
 import {
   restoreProtectedTokens as restoreProtectedTokenQueue,
 } from "./protected-tokens.ts";
+import { createStrictFallbackOutputSchema } from "./schema.ts";
 import type { ProtectedToken } from "./types.ts";
-import { validateAdaptiveDraft as validateFoundationAdaptiveDraft } from "./validator.ts";
+import {
+  ADAPTIVE_TARGET_TEXT_MAX_LENGTH,
+  validateAdaptiveDraft as validateFoundationAdaptiveDraft,
+} from "./validator.ts";
 
 export type ViolationSeverity = "warning" | "error";
 
@@ -85,7 +89,7 @@ export class AdaptiveGenerationBudgetError extends Error {
 }
 
 export class AdaptiveStrictFallbackError extends Error {
-  readonly code = "adaptive.scene.strictFallbackFailed";
+  readonly code = translationErrorCodes.adaptiveFallbackFailed;
   readonly violations: readonly AdaptiveSubtitleViolation[];
 
   constructor(violations: readonly AdaptiveSubtitleViolation[]) {
@@ -256,8 +260,33 @@ export function validateAdaptiveDraft(
       errors.push(violation("adaptive.partition.invalidTake", `Block ${blockIndex} has an invalid take`, scene, { block: blockIndex }));
       continue;
     }
-    if (!Array.isArray(targets) || targets.length < 1 || targets.length > 3 || targets.some((text) => typeof text !== "string" || cleanTargetText(text).length === 0)) {
+    if (!Array.isArray(targets) || targets.length < 1 || targets.length > 3) {
       errors.push(violation("adaptive.partition.invalidTargets", `Block ${blockIndex} has invalid targets`, scene, { block: blockIndex }));
+      continue;
+    }
+    const invalidTarget = targets.some(
+      (text) => typeof text !== "string" || cleanTargetText(text).length === 0,
+    );
+    if (invalidTarget) {
+      errors.push(violation("adaptive.partition.invalidTargets", `Block ${blockIndex} has invalid targets`, scene, { block: blockIndex }));
+      continue;
+    }
+    const overlongTarget = (targets as string[]).find(
+      (text) => text.trim().length > ADAPTIVE_TARGET_TEXT_MAX_LENGTH,
+    );
+    if (overlongTarget !== undefined) {
+      errors.push(
+        violation(
+          "adaptive.partition.targetTooLong",
+          `Block ${blockIndex} contains a target longer than ${ADAPTIVE_TARGET_TEXT_MAX_LENGTH} characters`,
+          scene,
+          {
+            block: blockIndex,
+            maxLength: ADAPTIVE_TARGET_TEXT_MAX_LENGTH,
+            length: overlongTarget.trim().length,
+          },
+        ),
+      );
       continue;
     }
     if ((scene.lockedOneToOne || scene.core.some((cue) => cue.flags?.lockedOneToOne)) && (take !== 1 || targets.length !== 1)) {
@@ -420,10 +449,11 @@ function structuralViolations(
       // remain repairable because target count can make them impossible.
       item.code !== "adaptive.layout.hardCpsExceeded"
   );
-  if (result.finishReason !== undefined && result.finishReason !== "stop") {
+  const finishReason = result.finishReason ?? result.usage?.finishReason;
+  if (finishReason !== undefined && finishReason !== "stop") {
     violations.push(
       violation("adaptive.model.incomplete", "Model output did not finish normally", scene, {
-        finishReason: result.finishReason,
+        finishReason,
       })
     );
   }
@@ -447,7 +477,24 @@ function runDraftValidator(
   scene: AdaptiveSceneLike
 ): DraftValidationResult {
   try {
-    return validator(draft, scene);
+    const validation = validator(draft, scene);
+    if (
+      !validation.valid &&
+      !validation.violations.some((item) => item.severity === "error")
+    ) {
+      return {
+        ...validation,
+        violations: [
+          ...validation.violations,
+          violation(
+            "adaptive.schema.invalid",
+            "Adaptive draft failed validation",
+            scene
+          ),
+        ],
+      };
+    }
+    return validation;
   } catch {
     // A Zod/parser exception is itself a repairable schema violation. Keep the
     // exception text out of usage/checkpoint data to avoid leaking model output.
@@ -537,20 +584,23 @@ function strictFallbackDraft(
   scene: AdaptiveSceneLike
 ): unknown {
   if (result.translations) {
+    const parsed = createStrictFallbackOutputSchema(scene.core.length).safeParse({
+      elements: result.translations,
+    });
+    if (!parsed.success) {
+      return { blocks: scene.core.map(() => ({ take: 1, targets: [""] })) };
+    }
     return {
-      blocks: result.translations.map((text) => ({ take: 1, targets: [text] })),
+      blocks: parsed.data.elements.map((text) => ({ take: 1, targets: [text] })),
     };
   }
-  const value = resultDraft(result);
-  if (Array.isArray(value)) {
-    return { blocks: value.map((text) => ({ take: 1, targets: [text] })) };
-  }
-  if (isRecord(value) && Array.isArray(value.elements)) {
+  const value = asDraft(resultDraft(result));
+  const parsed = createStrictFallbackOutputSchema(scene.core.length).safeParse(value);
+  if (parsed.success) {
     return {
-      blocks: value.elements.map((text) => ({ take: 1, targets: [text] })),
+      blocks: parsed.data.elements.map((text) => ({ take: 1, targets: [text] })),
     };
   }
-  if (isRecord(value) && Array.isArray(value.blocks)) return value;
   // Keep a useful error path for clients which accidentally return no payload.
   return { blocks: scene.core.map(() => ({ take: 1, targets: [""] })) };
 }
@@ -568,7 +618,9 @@ function strictFallbackContractViolations(
         isRecord(block) &&
         block.take === 1 &&
         Array.isArray(block.targets) &&
-        block.targets.length === 1
+        block.targets.length === 1 &&
+        typeof block.targets[0] === "string" &&
+        block.targets[0].trim().length > 0
     );
   return isOneToOne
     ? []

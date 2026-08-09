@@ -15,6 +15,9 @@ const DRAFT_BLOCK_KEYS = new Set(["take", "targets"]);
 const DRAFT_KEYS = new Set(["blocks"]);
 const PLACEHOLDER_RE = /^__ST_[A-Z]+_\d+__$/;
 
+/** Keep the foundation validator in lockstep with the canonical Zod schema. */
+export const ADAPTIVE_TARGET_TEXT_MAX_LENGTH = 1000;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -263,6 +266,16 @@ export function validateAdaptiveDraftPartition(
             "error",
             "Every target must be a non-empty string.",
             { sceneId, blockId, targetCueId: `${blockId}-target-${targetIndex}` },
+          ),
+        );
+      } else if (target.trim().length > ADAPTIVE_TARGET_TEXT_MAX_LENGTH) {
+        violations.push(
+          violation(
+            "adaptive.partition.targetTooLong",
+            "error",
+            "Every target must not exceed 1000 characters.",
+            { sceneId, blockId, targetCueId: `${blockId}-target-${targetIndex}` },
+            { maxLength: ADAPTIVE_TARGET_TEXT_MAX_LENGTH, length: target.trim().length },
           ),
         );
       }

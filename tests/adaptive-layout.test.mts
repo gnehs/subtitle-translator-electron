@@ -88,7 +88,13 @@ test("merges adjacent targets deterministically when duration is insufficient", 
   );
   assert.equal(result.targetCues.length, 1);
   assert.equal(result.targetTexts[0], "A B C");
-  assert.ok(result.violations.some((item) => item.code === "adaptive.layout.insufficientDuration"));
+  assert.ok(
+    result.violations.some(
+      (item) =>
+        item.code === "adaptive.layout.insufficientDuration" &&
+        item.severity === "warning"
+    )
+  );
   assert.ok(result.targetCues.every((target) => target.startMs < target.endMs));
 });
 

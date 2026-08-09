@@ -115,3 +115,17 @@ test("locked scenes require one block and one target per cue", () => {
   assert.equal(result.valid, false);
   assert.ok(result.violations.some((item) => item.code === "adaptive.partition.lockedOneToOne"));
 });
+
+test("foundation validator rejects targets over the schema length limit", () => {
+  const result = validateAdaptiveDraft(
+    { blocks: [{ take: 1, targets: ["a".repeat(1001)] }] },
+    scene([cue(0, "A")]),
+  );
+
+  assert.equal(result.valid, false);
+  assert.ok(
+    result.violations.some(
+      (item) => item.code === "adaptive.partition.targetTooLong",
+    ),
+  );
+});

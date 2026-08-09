@@ -362,7 +362,7 @@ export function renderAdaptiveSrt(
       violations.push(
         violation(
           "adaptive.renderer.overlap",
-          "error",
+          "warning",
           "Rendered target cues overlap after source-order materialization.",
           { previousEndMs: previous.endMs, startMs: current.startMs },
         ),

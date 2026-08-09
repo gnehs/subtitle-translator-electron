@@ -28,7 +28,8 @@ export interface AdaptivePipelineInput {
   /** A callback makes it possible to inject a checkpoint-aware runtime. */
   translateScene?: (
     scene: AdaptiveSceneLike,
-    index: number
+    index: number,
+    abortSignal: AbortSignal
   ) => Promise<AdaptiveSceneTranslationResult>;
   concurrency?: number;
   abortSignal?: AbortSignal;
@@ -54,6 +55,16 @@ function throwIfAborted(signal?: AbortSignal): void {
       name: "AbortError",
     });
   }
+}
+
+function combineAbortSignals(
+  signals: readonly (AbortSignal | undefined)[]
+): AbortSignal {
+  const present = signals.filter(
+    (signal): signal is AbortSignal => signal !== undefined
+  );
+  if (present.length === 1) return present[0]!;
+  return AbortSignal.any(present);
 }
 
 function validateConcurrency(value: number | undefined): number {
@@ -82,12 +93,20 @@ export async function processAdaptiveScenes(
     seen.add(scene.id);
   }
 
+  const cancellationController = new AbortController();
+  const effectiveAbortSignal = combineAbortSignals([
+    input.abortSignal,
+    input.translatorOptions?.abortSignal,
+    cancellationController.signal,
+  ]);
+
   const results: Array<AdaptiveSceneTranslationResult | undefined> = Array.from(
     { length: scenes.length },
     () => undefined
   );
   let nextIndex = 0;
   let firstFailure: unknown;
+  let failed = false;
   let completedScenes = 0;
   let coveredSourceCueCount = 0;
   const coveredSourceIds = new Set<number>();
@@ -96,25 +115,34 @@ export async function processAdaptiveScenes(
     0
   );
 
+  const failFast = (error: unknown): void => {
+    if (failed) return;
+    failed = true;
+    firstFailure = error;
+    cancellationController.abort(error);
+  };
+
   const runScene = async (scene: AdaptiveSceneLike, index: number) => {
-    throwIfAborted(input.abortSignal);
+    throwIfAborted(effectiveAbortSignal);
     input.onSceneStart?.(scene);
+    throwIfAborted(effectiveAbortSignal);
     const result = input.translateScene
-      ? await input.translateScene(scene, index)
+      ? await input.translateScene(scene, index, effectiveAbortSignal)
       : input.translator
-        ? await input.translator.translateScene(scene)
+        ? await input.translator.translateScene(scene, {
+            abortSignal: effectiveAbortSignal,
+          })
         : input.translatorOptions
           ? await translateAdaptiveScene(scene, {
               ...input.translatorOptions,
-              abortSignal:
-                input.translatorOptions.abortSignal ?? input.abortSignal,
+              abortSignal: effectiveAbortSignal,
             } as AdaptiveTranslatorOptions)
           : (() => {
               throw new Error(
                 "Adaptive pipeline requires translator, translatorOptions, or translateScene"
               );
             })();
-    throwIfAborted(input.abortSignal);
+    throwIfAborted(effectiveAbortSignal);
     results[index] = result;
     completedScenes += 1;
     // Scene core is immutable and source coverage is counted by cue id, not by
@@ -144,14 +172,14 @@ export async function processAdaptiveScenes(
 
   const worker = async () => {
     while (true) {
-      throwIfAborted(input.abortSignal);
-      if (firstFailure !== undefined) return;
-      const index = nextIndex++;
-      if (index >= scenes.length) return;
       try {
+        throwIfAborted(effectiveAbortSignal);
+        if (failed) return;
+        const index = nextIndex++;
+        if (index >= scenes.length) return;
         await runScene(scenes[index]!, index);
       } catch (error) {
-        firstFailure ??= error;
+        failFast(error);
         return;
       }
     }
@@ -163,7 +191,7 @@ export async function processAdaptiveScenes(
       () => worker()
     )
   );
-  if (firstFailure !== undefined) throw firstFailure;
+  if (failed) throw firstFailure;
   const rejectedWorker = workerResults.find(
     (result): result is PromiseRejectedResult => result.status === "rejected"
   );

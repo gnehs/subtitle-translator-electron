@@ -129,6 +129,65 @@ test("rejects malformed v3 and source subtitles that already contain translation
   const parsedWithResult = JSON.parse(serialized) as Record<string, any>;
   parsedWithResult.subtitle[0].data.translatedText = "偷渡結果";
   assert.throws(() => parseAdaptiveCheckpoint(JSON.stringify(parsedWithResult)));
+
+  const incompleteComplete = JSON.parse(serialized) as Record<string, any>;
+  incompleteComplete.scenes[0].status = "pending";
+  assert.throws(() => parseAdaptiveCheckpoint(JSON.stringify(incompleteComplete)));
+});
+
+test("rejects checkpoint scenes with invalid coverage or oversized targets", () => {
+  const duplicateScene = JSON.parse(
+    serializeAdaptiveCheckpoint(createCheckpoint())
+  ) as Record<string, any>;
+  duplicateScene.scenes.push({ ...duplicateScene.scenes[0] });
+  assert.throws(() => parseAdaptiveCheckpoint(JSON.stringify(duplicateScene)));
+
+  const escapedBlock = JSON.parse(
+    serializeAdaptiveCheckpoint(createCheckpoint())
+  ) as Record<string, any>;
+  escapedBlock.scenes[0].blocks[0].sceneId = "another-scene";
+  assert.throws(() => parseAdaptiveCheckpoint(JSON.stringify(escapedBlock)));
+
+  const oversizedTarget = JSON.parse(
+    serializeAdaptiveCheckpoint(createCheckpoint())
+  ) as Record<string, any>;
+  oversizedTarget.scenes[0].blocks[0].targetTexts = ["字".repeat(1001)];
+  assert.throws(() => parseAdaptiveCheckpoint(JSON.stringify(oversizedTarget)));
+});
+
+test("allows checkpoint scene gaps only for empty source cues", () => {
+  const checkpoint = createCheckpoint();
+  checkpoint.subtitle.splice(1, 0, {
+    type: "cue" as const,
+    data: { text: "", start: 2000, end: 2050 },
+  });
+  checkpoint.scenes[0]!.sourceEnd = 0;
+  checkpoint.scenes[0]!.blocks[0]!.sourceEnd = 0;
+  checkpoint.scenes[0]!.blocks[0]!.sourceCueIds = [0];
+  checkpoint.scenes.push({
+    id: "scene-2",
+    sourceStart: 2,
+    sourceEnd: 2,
+    status: "done",
+    blocks: [
+      {
+        id: "block-2",
+        sceneId: "scene-2",
+        sourceStart: 2,
+        sourceEnd: 2,
+        sourceCueIds: [2],
+        targetTexts: ["世界"],
+        origin: "adaptive",
+        semanticFingerprint,
+      },
+    ],
+    violations: [],
+  });
+
+  assert.doesNotThrow(() => parseAdaptiveCheckpoint(serializeAdaptiveCheckpoint(checkpoint)));
+
+  checkpoint.subtitle[1]!.data.text = "must not be skipped";
+  assert.throws(() => serializeAdaptiveCheckpoint(checkpoint));
 });
 
 test("fingerprints ignore operational secrets but track semantic and layout settings", () => {

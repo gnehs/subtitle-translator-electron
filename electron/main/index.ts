@@ -19,7 +19,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import pool from "tiny-async-pool";
 import { z } from "zod";
-import { APICallError, NoObjectGeneratedError } from "ai";
+import { APICallError } from "ai";
 import {
   type BatchProgress,
   type BatchTranslationRequest,
@@ -194,7 +194,17 @@ const translationParamsSchema = z.object({
 });
 
 const batchTranslationRequestSchema = z.object({
-  files: z.array(subtitleFileSchema).min(1).max(100),
+  jobId: z.string().uuid(),
+  files: z
+    .array(subtitleFileSchema)
+    .min(1)
+    .max(100)
+    .refine(
+      (files) =>
+        new Set(files.map((file) => getPathClaimKey(file.path))).size ===
+        files.length,
+      { message: "Duplicate translation input path" }
+    ),
   params: translationParamsSchema,
 });
 
@@ -400,22 +410,27 @@ function assertTrustedSender(event: { senderFrame: WebFrameMain | null }): void 
 
 function registerTranslationController(
   filePath: string,
+  jobId: string,
   controller: AbortController
 ): () => void {
-  const controllers = activeTranslationControllers.get(filePath) || new Set();
+  const key = `${jobId}\0${filePath}`;
+  const controllers = activeTranslationControllers.get(key) || new Set();
   controllers.add(controller);
-  activeTranslationControllers.set(filePath, controllers);
+  activeTranslationControllers.set(key, controllers);
 
   return () => {
     controllers.delete(controller);
     if (controllers.size === 0) {
-      activeTranslationControllers.delete(filePath);
+      activeTranslationControllers.delete(key);
     }
   };
 }
 
-function cancelTranslation(filePath: string): void {
-  for (const controller of activeTranslationControllers.get(filePath) || []) {
+function cancelTranslation(filePath: string, jobId: string): void {
+  const key = `${jobId}\0${filePath}`;
+  const controllers = activeTranslationControllers.get(key);
+  if (!controllers || controllers.size === 0) return;
+  for (const controller of controllers) {
     controller.abort();
   }
 }
@@ -609,7 +624,6 @@ function getRetryAfterMs(error: unknown): number {
 
 function isRetryableTranslationError(error: unknown): boolean {
   if (APICallError.isInstance(error)) return error.isRetryable;
-  if (NoObjectGeneratedError.isInstance(error)) return true;
 
   const { message, status } = getErrorDetails(error);
   if (status === 429 || (typeof status === "number" && status >= 500)) {
@@ -633,7 +647,15 @@ function getErrorMessage(error: unknown): string {
 }
 
 function sendProgress(sender: WebContents, progress: BatchProgress): void {
-  sender.send("batch-progress", progress);
+  if (sender.isDestroyed()) return;
+  try {
+    void Promise.resolve(sender.send("batch-progress", progress)).catch(
+      () => undefined
+    );
+  } catch {
+    // Closing or reloading the renderer must not turn a translation into a
+    // failed job. The checkpoint remains the source of truth for resuming.
+  }
 }
 
 function getApplicationLocale(): ApplicationLocale {
@@ -970,16 +992,18 @@ async function retryTranslate<TInput, TResult>(
   throw new Error("Automatic translation retry loop exited unexpectedly");
 }
 
-ipcMain.on("cancel-translation", (event, filePath: unknown) => {
+ipcMain.on("cancel-translation", (event, request: unknown) => {
   if (!isTrustedSender(event.senderFrame)) return;
-  const parsedFilePath = z.string().min(1).safeParse(filePath);
-  if (!parsedFilePath.success) return;
-  cancelTranslation(parsedFilePath.data);
+  const parsedRequest = z
+    .object({ filePath: z.string().min(1), jobId: z.string().uuid() })
+    .safeParse(request);
+  if (!parsedRequest.success) return;
+  cancelTranslation(parsedRequest.data.filePath, parsedRequest.data.jobId);
 });
 
 ipcMain.handle("batch-translate", async (event, request: unknown) => {
   assertTrustedSender(event);
-  const { files, params } = batchTranslationRequestSchema.parse(request);
+  const { jobId, files, params } = batchTranslationRequestSchema.parse(request);
   const translationConfigFingerprint = createTranslationConfigFingerprint({
     apiHost: params.apiHost,
     model: params.model,
@@ -1000,7 +1024,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
     const controller = new AbortController();
     translationControllersByPath.set(file.path, controller);
     unregisterTranslationControllers.push(
-      registerTranslationController(file.path, controller)
+      registerTranslationController(file.path, jobId, controller)
     );
   }
   // Keep these claims for the whole request so later files cannot silently
@@ -1012,8 +1036,14 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
     let outputPath: string | undefined;
     let releasePathClaims: (() => void) | undefined;
     let usageRecords: StageUsage[] = [];
+    let lastProgress: BatchProgress | undefined;
+    const sendFileProgress = (progress: BatchProgress): void => {
+      const jobProgress = { ...progress, jobId };
+      lastProgress = jobProgress;
+      sendProgress(event.sender, jobProgress);
+    };
     const sendStrictProgress = (progress: BatchProgress): void => {
-      sendProgress(event.sender, {
+      sendFileProgress({
         ...progress,
         mode: "strict",
         usageSummary: createUsageSummary(usageRecords),
@@ -1056,7 +1086,7 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
           sourceFingerprint: adaptiveMetadata.sourceFingerprint,
           retryRequest: (fn, delay, signal) =>
             retryTranslate(() => fn(), undefined, delay, signal),
-          sendProgress: (progress) => sendProgress(event.sender, progress),
+          sendProgress: sendFileProgress,
         });
         return;
       }
@@ -1095,24 +1125,24 @@ ipcMain.handle("batch-translate", async (event, request: unknown) => {
         analysisCache,
         retryRequest: (fn, delay, signal) =>
           retryTranslate(() => fn(), undefined, delay, signal),
-        sendProgress: (progress) => sendProgress(event.sender, progress),
+        sendProgress: sendFileProgress,
       });
     } catch (e: unknown) {
       if (abortSignal.aborted) return;
-      console.error(`Batch translation error for ${file.path}:`, e);
+      const details = getErrorDetails(e);
+      console.error(
+        `Batch translation error for ${file.path}: ${details.code || details.message || details.name || "unknown error"}`
+      );
       const errorProgress: BatchProgress = {
+        ...lastProgress,
         filePath: file.path,
-        progress: 0,
+        progress: lastProgress?.progress ?? 0,
         status: "error",
         mode: params.mode,
         error: getErrorMessage(e),
-        outputPath,
+        outputPath: outputPath ?? lastProgress?.outputPath,
       };
-      if (params.mode === "adaptive") {
-        sendProgress(event.sender, errorProgress);
-      } else {
-        sendStrictProgress(errorProgress);
-      }
+      sendFileProgress(errorProgress);
     } finally {
       releasePathClaims?.();
     }

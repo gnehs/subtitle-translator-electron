@@ -9,6 +9,8 @@ import type {
 } from "./types";
 import type { ParsedSubtitle } from "../translate";
 import type { TranslationSourceFingerprint } from "../translation-checkpoint";
+import { buildAdaptiveSourceCues } from "./source-cues.ts";
+import { ADAPTIVE_TARGET_TEXT_MAX_LENGTH } from "./validator.ts";
 
 /**
  * Version of the semantic settings encoded by this module.  This is kept
@@ -20,6 +22,7 @@ export const ADAPTIVE_CHECKPOINT_VERSION = 3 as const;
 export const ADAPTIVE_CHECKPOINT_KIND = "adaptive" as const;
 
 const HASH_PATTERN = /^[a-f\d]{64}$/i;
+const ADAPTIVE_TARGET_TEXT_MAX_COUNT = 3;
 const SCENE_STATUSES = new Set([
   "pending",
   "translating",
@@ -171,7 +174,7 @@ function isSubtitleCue(value: unknown): boolean {
 
 function isParsedSubtitle(value: unknown): value is ParsedSubtitle {
   if (Array.isArray(value)) {
-    return value.some(isSubtitleCue) && value.every((node) => {
+    return value.every((node) => {
       if (isSubtitleCue(node)) return true;
       return (
         isRecord(node) &&
@@ -207,7 +210,13 @@ function isTranslationBlock(value: unknown): boolean {
     sourceCueIds.every((cueId, index) => cueId === sourceStart + index) &&
     Array.isArray(value.targetTexts) &&
     value.targetTexts.length > 0 &&
-    value.targetTexts.every((text) => typeof text === "string" && text.trim().length > 0) &&
+    value.targetTexts.length <= ADAPTIVE_TARGET_TEXT_MAX_COUNT &&
+    value.targetTexts.every(
+      (text) =>
+        typeof text === "string" &&
+        text.trim().length > 0 &&
+        text.length <= ADAPTIVE_TARGET_TEXT_MAX_LENGTH
+    ) &&
     (value.origin === "adaptive" ||
       value.origin === "repair" ||
       value.origin === "strict-fallback") &&
@@ -234,6 +243,53 @@ function isAdaptiveScene(value: unknown): value is AdaptiveCheckpointScene {
     return false;
   }
   return value.errorCode === undefined || typeof value.errorCode === "string";
+}
+
+function hasValidAdaptiveSceneCoverage(
+  scenes: readonly AdaptiveCheckpointScene[],
+  subtitle: ParsedSubtitle
+): boolean {
+  const sourceCues = buildAdaptiveSourceCues(subtitle);
+  const requiredCueIndices = sourceCues
+    .filter((cue) => !cue.flags.empty)
+    .map((cue) => cue.sourceIndex);
+  if (requiredCueIndices.length === 0) return scenes.length === 0;
+
+  const sceneIds = new Set<string>();
+  const blockIds = new Set<string>();
+  let requiredCursor = 0;
+  for (const scene of scenes) {
+    if (
+      sceneIds.has(scene.id) ||
+      scene.sourceStart !== requiredCueIndices[requiredCursor] ||
+      scene.sourceEnd >= sourceCues.length
+    ) {
+      return false;
+    }
+    sceneIds.add(scene.id);
+    for (let cueIndex = scene.sourceStart; cueIndex <= scene.sourceEnd; cueIndex += 1) {
+      if (requiredCueIndices[requiredCursor] !== cueIndex) return false;
+      requiredCursor += 1;
+    }
+
+    let nextBlockStart = scene.sourceStart;
+    for (const block of scene.blocks) {
+      if (
+        blockIds.has(block.id) ||
+        block.sceneId !== scene.id ||
+        block.sourceStart !== nextBlockStart ||
+        block.sourceEnd > scene.sourceEnd
+      ) {
+        return false;
+      }
+      blockIds.add(block.id);
+      nextBlockStart = block.sourceEnd + 1;
+    }
+    if (scene.status === "done" && nextBlockStart !== scene.sourceEnd + 1) {
+      return false;
+    }
+  }
+  return requiredCursor === requiredCueIndices.length;
 }
 
 function isAdaptiveViolation(value: unknown): boolean {
@@ -351,6 +407,12 @@ export function isAdaptiveTranslationCheckpointV3(
     isValidBrief(value.brief) &&
     Array.isArray(value.scenes) &&
     value.scenes.every(isAdaptiveScene) &&
+    hasValidAdaptiveSceneCoverage(
+      value.scenes as AdaptiveCheckpointScene[],
+      value.subtitle as ParsedSubtitle
+    ) &&
+    (value.state !== "complete" ||
+      value.scenes.every((scene) => scene.status === "done")) &&
     Array.isArray(value.usage) &&
     value.usage.every(isUsage) &&
     isUsageSummary(value.usageSummary)

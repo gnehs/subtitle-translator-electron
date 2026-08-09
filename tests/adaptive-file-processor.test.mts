@@ -271,3 +271,132 @@ test("adaptive file processor drops initial structural errors after a successful
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("adaptive file processor preserves strict fallback compatibility aliases", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-fallback-alias-"));
+  const sourcePath = path.join(directory, "sample.srt");
+  const outputPath = path.join(directory, "sample.translated.srt");
+  const checkpointPath = path.join(directory, "sample.translation.json");
+  fs.writeFileSync(sourcePath, sourceSrt, "utf8");
+  const stats = fs.statSync(sourcePath);
+  const calls: string[] = [];
+  const modelClient: AdaptiveModelClient = {
+    async translateScene() {
+      calls.push("initial");
+      return { draft: { blocks: [] }, finishReason: "stop" };
+    },
+    async repairScene() {
+      calls.push("repair");
+      return { draft: { blocks: [] }, finishReason: "stop" };
+    },
+    async strictFallback() {
+      calls.push("fallback-alias");
+      return {
+        translations: ["我不知道。", "他是你哥哥。", "我想告訴你真相。"],
+        finishReason: "stop",
+      };
+    },
+  };
+
+  try {
+    await processAdaptiveTranslationFile({
+      file: { path: sourcePath, name: "sample.srt" },
+      params: {
+        apiKeys: ["test-key"],
+        apiHost: "http://127.0.0.1:9999/v1",
+        model: "fake-model",
+        prompt: "Translate into {{lang}}. {{additional}}",
+        mode: "adaptive",
+        lang: "Traditional Chinese",
+        additional: "Use Taiwanese terminology.",
+        temperature: 0.2,
+        outputFormat: "srt-translation",
+        assFonts: { translationFont: "", originalFont: "" },
+        concurrency: 1,
+        delay: 0,
+        requestsPerMinute: 10_000,
+        contextSize: 5,
+      },
+      abortSignal: new AbortController().signal,
+      requestRateLimiter: new RequestRateLimiter({ requestsPerMinute: 10_000 }),
+      outputPath,
+      checkpointPath,
+      sourceName: "sample.srt",
+      sourceExtension: "srt",
+      sourceFingerprint: { size: stats.size, mtimeMs: stats.mtimeMs },
+      sendProgress: () => undefined,
+      modelClient,
+    });
+
+    assert.deepEqual(calls, ["initial", "repair", "fallback-alias"]);
+    assert.match(fs.readFileSync(outputPath, "utf8"), /我不知道。/);
+    const checkpoint = JSON.parse(fs.readFileSync(checkpointPath, "utf8")) as {
+      state: string;
+      scenes: Array<{ status: string }>;
+    };
+    assert.equal(checkpoint.state, "complete");
+    assert.ok(checkpoint.scenes.every((scene) => scene.status === "done"));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("adaptive file processor completes an empty subtitle without model calls", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-empty-file-"));
+  const sourcePath = path.join(directory, "empty.srt");
+  const outputPath = path.join(directory, "empty.translated.srt");
+  const checkpointPath = path.join(directory, "empty.translation.json");
+  fs.writeFileSync(sourcePath, "", "utf8");
+  const stats = fs.statSync(sourcePath);
+  let modelCalls = 0;
+  const modelClient: AdaptiveModelClient = {
+    async translateScene() {
+      modelCalls += 1;
+      throw new Error("empty subtitles must not call the model");
+    },
+    async repairScene() {
+      throw new Error("empty subtitles must not call repair");
+    },
+  };
+
+  try {
+    await processAdaptiveTranslationFile({
+      file: { path: sourcePath, name: "empty.srt" },
+      params: {
+        apiKeys: ["test-key"],
+        apiHost: "http://127.0.0.1:9999/v1",
+        model: "fake-model",
+        prompt: "Translate into {{lang}}. {{additional}}",
+        mode: "adaptive",
+        lang: "Traditional Chinese",
+        additional: "",
+        temperature: 0.2,
+        outputFormat: "srt-translation",
+        assFonts: { translationFont: "", originalFont: "" },
+        concurrency: 1,
+        delay: 0,
+        requestsPerMinute: 10_000,
+      },
+      abortSignal: new AbortController().signal,
+      requestRateLimiter: new RequestRateLimiter({ requestsPerMinute: 10_000 }),
+      outputPath,
+      checkpointPath,
+      sourceName: "empty.srt",
+      sourceExtension: "srt",
+      sourceFingerprint: { size: stats.size, mtimeMs: stats.mtimeMs },
+      sendProgress: () => undefined,
+      modelClient,
+    });
+
+    assert.equal(modelCalls, 0);
+    assert.equal(fs.readFileSync(outputPath, "utf8"), "");
+    const checkpoint = JSON.parse(fs.readFileSync(checkpointPath, "utf8")) as {
+      state: string;
+      scenes: unknown[];
+    };
+    assert.equal(checkpoint.state, "complete");
+    assert.deepEqual(checkpoint.scenes, []);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});

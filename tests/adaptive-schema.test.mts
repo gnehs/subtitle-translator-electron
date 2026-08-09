@@ -34,6 +34,21 @@ test("adaptive draft schema rejects unsupported structure", () => {
   );
 });
 
+test("adaptive target schema enforces the 1000-character limit", () => {
+  assert.equal(
+    adaptiveSceneDraftSchema.safeParse({
+      blocks: [{ take: 1, targets: ["a".repeat(1000)] }],
+    }).success,
+    true,
+  );
+  assert.equal(
+    adaptiveSceneDraftSchema.safeParse({
+      blocks: [{ take: 1, targets: ["a".repeat(1001)] }],
+    }).success,
+    false,
+  );
+});
+
 test("strict fallback schema requires one non-empty translation per cue", () => {
   const schema = createStrictFallbackOutputSchema(2);
 

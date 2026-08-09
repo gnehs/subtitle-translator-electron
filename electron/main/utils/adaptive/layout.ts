@@ -532,7 +532,7 @@ export function layoutAdaptiveBlock(
     violations.push(
       violation(
         "adaptive.layout.insufficientDuration",
-        "error",
+        "warning",
         "Source block duration is too short for the target cue count.",
         {
           blockDurationMs: Math.max(0, blockEnd - blockStart),
@@ -577,7 +577,10 @@ export function layoutAdaptiveBlock(
           cps > thresholds.hard
             ? "adaptive.layout.hardCpsExceeded"
             : "adaptive.layout.softCpsExceeded",
-          cps > thresholds.hard ? "error" : "warning",
+          // Reading speed is a presentation-quality signal. The model cannot
+          // extend the immutable source timeline, so treating it as fatal can
+          // make a completed checkpoint permanently impossible to resume.
+          "warning",
           `Target cue CPS is ${cps.toFixed(2)}; soft limit is ${thresholds.soft}.`,
           { cps, softCps: thresholds.soft, hardCps: thresholds.hard, durationMs },
         ),

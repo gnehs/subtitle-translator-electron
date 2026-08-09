@@ -128,11 +128,13 @@ export interface TranslationParams {
 }
 
 export interface BatchTranslationRequest {
+  jobId: string;
   files: SubtitleFile[];
   params: TranslationParams;
 }
 
 export interface BatchProgress {
+  jobId?: string;
   filePath: string;
   progress: number;
   status: TranslationStatus;
@@ -190,7 +192,7 @@ export interface ElectronAPI {
     apiHost: string;
   }): Promise<AvailableModel[]>;
   translateBatch(request: BatchTranslationRequest): Promise<{ success: true }>;
-  cancelTranslation(filePath: string): void;
+  cancelTranslation(filePath: string, jobId: string): void;
   getSubtitlePreview(
     request: SubtitlePreviewRequest
   ): Promise<{ cues: SubtitleCuePreview[] }>;

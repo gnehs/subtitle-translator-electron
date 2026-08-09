@@ -115,10 +115,13 @@ export function createAdaptiveSubtitlePreview(
   scenes: readonly AdaptiveCheckpointScene[],
   layoutOptions: Partial<AdaptiveLayoutOptions> = {},
 ): AdaptiveSubtitleCuePreview[] {
-  const rendered = renderAdaptiveSrt(source, scenes, layoutOptions);
+  // Pending/error scenes may contain stale blocks from an interrupted older
+  // attempt. Only committed scene results are eligible for preview.
+  const completedScenes = scenes.filter((scene) => scene.status === "done");
+  const rendered = renderAdaptiveSrt(source, completedScenes, layoutOptions);
   const sourceCues = getSourceCues(source);
   const blockOrigins = new Map<string, AdaptiveSubtitleCuePreview["origin"]>();
-  for (const scene of scenes) {
+  for (const scene of completedScenes) {
     for (const block of scene.blocks ?? []) {
       blockOrigins.set(block.id, block.origin);
     }
