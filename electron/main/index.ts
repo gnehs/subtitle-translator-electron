@@ -50,6 +50,7 @@ import { fetchAvailableModels } from "./utils/models";
 import { RequestRateLimiter } from "./utils/request-rate-limiter";
 import { isAllowedApiHost } from "./utils/api-host";
 import { getRetryAfterMsFromHeaders } from "./utils/retry-after";
+import { getErrorDetails } from "./utils/error-details";
 import { getAdaptiveInputValidationError } from "./utils/adaptive/input-validation";
 import { processAdaptiveTranslationFile } from "./process-adaptive-translation-file";
 import {
@@ -601,51 +602,6 @@ function readTranslationInput(
       };
 }
 
-function getErrorDetails(error: unknown): {
-  message: string;
-  name?: string;
-  status?: number;
-} {
-  const errorRecord =
-    typeof error === "object" && error !== null
-      ? (error as Record<string, unknown>)
-      : {};
-  const cause =
-    typeof errorRecord.cause === "object" && errorRecord.cause !== null
-      ? (errorRecord.cause as Record<string, unknown>)
-      : {};
-  const messages = [
-    error instanceof Error ? error.message : undefined,
-    typeof error === "string" ? error : undefined,
-    typeof errorRecord.message === "string" ? errorRecord.message : undefined,
-    typeof cause.message === "string" ? cause.message : undefined,
-  ].filter((message): message is string => Boolean(message));
-  const response =
-    typeof errorRecord.response === "object" && errorRecord.response !== null
-      ? (errorRecord.response as Record<string, unknown>)
-      : {};
-
-  return {
-    message: messages.join(" | ") || "Unknown error",
-    name:
-      typeof errorRecord.name === "string"
-        ? errorRecord.name
-        : typeof cause.name === "string"
-          ? cause.name
-          : undefined,
-    status:
-      typeof errorRecord.statusCode === "number"
-        ? errorRecord.statusCode
-        : typeof errorRecord.status === "number"
-        ? errorRecord.status
-        : typeof response.status === "number"
-          ? response.status
-          : typeof cause.status === "number"
-            ? cause.status
-            : undefined,
-  };
-}
-
 function getRetryAfterMs(error: unknown): number {
   if (!APICallError.isInstance(error) || !error.responseHeaders) return 0;
   return getRetryAfterMsFromHeaders(error.responseHeaders);
@@ -669,7 +625,11 @@ function isRetryableTranslationError(error: unknown): boolean {
 }
 
 function getErrorMessage(error: unknown): string {
-  return getErrorDetails(error).message;
+  const details = getErrorDetails(error);
+  return details.code &&
+    (details.code.startsWith("ERR_") || details.code.startsWith("adaptive."))
+    ? details.code
+    : details.message;
 }
 
 function sendProgress(sender: WebContents, progress: BatchProgress): void {

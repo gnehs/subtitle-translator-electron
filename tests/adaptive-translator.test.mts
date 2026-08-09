@@ -225,3 +225,23 @@ test("strict fallback failure is surfaced after the bounded budget", async () =>
   );
   assert.deepEqual(client.calls, ["initial", "repair", "fallback"]);
 });
+
+test("strict fallback rejects merged blocks even for an unlocked scene", async () => {
+  const client = fakeClient(
+    { draft: { blocks: [{ take: 3, targets: ["Invalid"] }] }, usage: usage("adaptive-translate") },
+    { draft: { blocks: [{ take: 3, targets: ["Still invalid"] }] }, usage: usage("adaptive-repair") },
+    {
+      draft: { blocks: [{ take: 2, targets: ["Merged fallback"] }] },
+      usage: usage("strict-fallback"),
+    },
+  );
+
+  await assert.rejects(
+    translateAdaptiveScene(sceneFixture(), { client }),
+    (error: unknown) =>
+      error instanceof AdaptiveStrictFallbackError &&
+      error.violations.some(
+        (item) => item.code === "adaptive.partition.lockedOneToOne"
+      )
+  );
+});

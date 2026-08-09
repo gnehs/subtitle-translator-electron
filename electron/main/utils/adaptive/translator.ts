@@ -555,6 +555,33 @@ function strictFallbackDraft(
   return { blocks: scene.core.map(() => ({ take: 1, targets: [""] })) };
 }
 
+function strictFallbackContractViolations(
+  draftValue: unknown,
+  scene: AdaptiveSceneLike
+): AdaptiveSubtitleViolation[] {
+  const draft = asDraft(draftValue);
+  if (!isRecord(draft) || !Array.isArray(draft.blocks)) return [];
+  const isOneToOne =
+    draft.blocks.length === scene.core.length &&
+    draft.blocks.every(
+      (block) =>
+        isRecord(block) &&
+        block.take === 1 &&
+        Array.isArray(block.targets) &&
+        block.targets.length === 1
+    );
+  return isOneToOne
+    ? []
+    : [
+        violation(
+          "adaptive.partition.lockedOneToOne",
+          "Strict fallback must return exactly one target for each source cue",
+          scene,
+          { expected: scene.core.length, actual: draft.blocks.length }
+        ),
+      ];
+}
+
 /**
  * Execute the bounded adaptive semantic workflow:
  * initial → at most one repair → at most one strict fallback.
@@ -625,6 +652,9 @@ export async function translateAdaptiveScene(
       const fallbackDraft = strictFallbackDraft(fallback, scene);
       const fallbackValidation = runDraftValidator(validator, fallbackDraft, scene);
       const fallbackStructural = structuralViolations(fallback, fallbackValidation, scene);
+      fallbackStructural.push(
+        ...strictFallbackContractViolations(fallbackDraft, scene)
+      );
       // Strict fallback is the final scene result, so prior repair failures
       // must not poison final renderer validation.
       allViolations.length = 0;

@@ -19,6 +19,21 @@ export const adaptiveSceneDraftSchema = z.strictObject({
   blocks: z.array(adaptiveDraftBlockSchema).min(1).max(32),
 });
 
+/**
+ * The strict fallback is the last semantic attempt, so its model contract must
+ * enforce the same cue count that the local validator requires.
+ */
+export function createStrictFallbackOutputSchema(cueCount: number) {
+  if (!Number.isSafeInteger(cueCount) || cueCount < 1) {
+    throw new RangeError("Strict fallback cue count must be a positive integer");
+  }
+  return z.strictObject({
+    elements: z
+      .array(z.string().trim().min(1).max(1000))
+      .length(cueCount),
+  });
+}
+
 export const translationBriefStyleSchema = z.strictObject({
   tone: z.string().trim().max(200),
   register: z.string().trim().max(200),

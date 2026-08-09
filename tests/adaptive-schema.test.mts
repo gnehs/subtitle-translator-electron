@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   adaptiveSceneDraftSchema,
+  createStrictFallbackOutputSchema,
   parseTranslationBrief,
   translationBriefSchema,
 } from "../electron/main/utils/adaptive/schema.ts";
@@ -29,6 +30,20 @@ test("adaptive draft schema rejects unsupported structure", () => {
     adaptiveSceneDraftSchema.safeParse({
       blocks: [{ take: 1, targets: ["text"], extra: true }],
     }).success,
+    false
+  );
+});
+
+test("strict fallback schema requires one non-empty translation per cue", () => {
+  const schema = createStrictFallbackOutputSchema(2);
+
+  assert.deepEqual(schema.parse({ elements: ["第一句", "第二句"] }), {
+    elements: ["第一句", "第二句"],
+  });
+  assert.equal(schema.safeParse({ elements: ["只有一句"] }).success, false);
+  assert.equal(schema.safeParse({ elements: ["第一句", ""] }).success, false);
+  assert.equal(
+    schema.safeParse({ elements: ["第一句", "第二句"], extra: true }).success,
     false
   );
 });
