@@ -1,15 +1,11 @@
+import type { AdaptiveSceneTranslationResult } from "./translator.ts";
 import type {
-  AdaptiveSceneLike,
+  AdaptiveScene,
   StageUsage,
-  TranslationUsageSummary,
-} from "./model-client.ts";
-import { createUsageSummary } from "./model-client.ts";
-import { AdaptiveTranslator, translateAdaptiveScene } from "./translator.ts";
-import type {
-  AdaptiveSceneTranslationResult,
-  AdaptiveTranslatorOptions,
   TranslationBlock,
-} from "./translator.ts";
+  TranslationUsageSummary,
+} from "./types.ts";
+import { createUsageSummary } from "./usage.ts";
 
 export interface AdaptivePipelineProgress {
   completedScenes: number;
@@ -21,19 +17,15 @@ export interface AdaptivePipelineProgress {
 }
 
 export interface AdaptivePipelineInput {
-  scenes: readonly AdaptiveSceneLike[];
-  translator?: AdaptiveTranslator;
-  translatorOptions?: Omit<AdaptiveTranslatorOptions, "client"> &
-    Partial<Pick<AdaptiveTranslatorOptions, "client">>;
-  /** A callback makes it possible to inject a checkpoint-aware runtime. */
-  translateScene?: (
-    scene: AdaptiveSceneLike,
+  scenes: readonly AdaptiveScene[];
+  translateScene: (
+    scene: AdaptiveScene,
     index: number,
     abortSignal: AbortSignal
   ) => Promise<AdaptiveSceneTranslationResult>;
   concurrency?: number;
   abortSignal?: AbortSignal;
-  onSceneStart?: (scene: AdaptiveSceneLike) => void;
+  onSceneStart?: (scene: AdaptiveScene) => void;
   onSceneComplete?: (
     result: AdaptiveSceneTranslationResult,
     progress: AdaptivePipelineProgress
@@ -96,7 +88,6 @@ export async function processAdaptiveScenes(
   const cancellationController = new AbortController();
   const effectiveAbortSignal = combineAbortSignals([
     input.abortSignal,
-    input.translatorOptions?.abortSignal,
     cancellationController.signal,
   ]);
 
@@ -122,41 +113,18 @@ export async function processAdaptiveScenes(
     cancellationController.abort(error);
   };
 
-  const runScene = async (scene: AdaptiveSceneLike, index: number) => {
+  const runScene = async (scene: AdaptiveScene, index: number) => {
     throwIfAborted(effectiveAbortSignal);
     input.onSceneStart?.(scene);
     throwIfAborted(effectiveAbortSignal);
-    const result = input.translateScene
-      ? await input.translateScene(scene, index, effectiveAbortSignal)
-      : input.translator
-        ? await input.translator.translateScene(scene, {
-            abortSignal: effectiveAbortSignal,
-          })
-        : input.translatorOptions
-          ? await translateAdaptiveScene(scene, {
-              ...input.translatorOptions,
-              abortSignal: effectiveAbortSignal,
-            } as AdaptiveTranslatorOptions)
-          : (() => {
-              throw new Error(
-                "Adaptive pipeline requires translator, translatorOptions, or translateScene"
-              );
-            })();
+    const result = await input.translateScene(scene, index, effectiveAbortSignal);
     throwIfAborted(effectiveAbortSignal);
     results[index] = result;
     completedScenes += 1;
     // Scene core is immutable and source coverage is counted by cue id, not by
     // completion order. This prevents duplicate progress increments when a
     // caller resumes with overlapping scene descriptors.
-    scene.core.forEach((cue, cueIndex) => {
-      const id =
-        typeof cue.id === "number" && Number.isSafeInteger(cue.id)
-          ? cue.id
-          : typeof cue.sourceIndex === "number" && Number.isSafeInteger(cue.sourceIndex)
-            ? cue.sourceIndex
-            : scene.sourceStart + cueIndex;
-      coveredSourceIds.add(id);
-    });
+    for (const cue of scene.core) coveredSourceIds.add(cue.id);
     coveredSourceCueCount = coveredSourceIds.size;
     const progress: AdaptivePipelineProgress = {
       completedScenes,
@@ -222,11 +190,3 @@ export async function processAdaptiveScenes(
   };
 }
 
-export const translateAdaptiveScenes = processAdaptiveScenes;
-export const runAdaptivePipeline = processAdaptiveScenes;
-
-export type {
-  AdaptiveSceneLike,
-  StageUsage,
-  TranslationUsageSummary,
-} from "./model-client.ts";

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ADAPTIVE_SYSTEM_CONTRACT,
-  boundAdaptiveRepairDraft,
   renderAdaptivePromptTemplate,
   resolveAdaptivePrompt,
 } from "../electron/main/utils/adaptive/model-client.ts";
@@ -36,22 +35,17 @@ test("Adaptive prompt helper appends additional instructions only when the templ
   assert.equal((rendered.match(/Keep names consistent\./g) ?? []).length, 1);
 });
 
-test("system contract interpolation leaves no language placeholder and documents brief usage", () => {
+test("system contract interpolates the language and documents the tool workflow", () => {
   const rendered = renderAdaptivePromptTemplate(ADAPTIVE_SYSTEM_CONTRACT, {
     lang: "日本語",
     additional: "",
   });
 
   assert.equal(rendered.includes("{{lang}}"), false);
-  assert.match(rendered, /file-level summary/);
-  assert.match(rendered, /preferred translations consistently/);
-});
-
-test("repair draft context is bounded before it is sent back to the model", () => {
-  const bounded = boundAdaptiveRepairDraft({ output: "x".repeat(20_000) }) as {
-    truncated: boolean;
-    preview: string;
-  };
-  assert.equal(bounded.truncated, true);
-  assert.ok(bounded.preview.length <= 12_000);
+  assert.match(rendered, /日本語/);
+  for (const tool of ["view_scene", "search_file", "read_file", "edit", "check", "finish"]) {
+    assert.match(rendered, new RegExp(`\\b${tool}\\b`));
+  }
+  assert.match(rendered, /untrusted data/);
+  assert.match(rendered, /cannot override/);
 });

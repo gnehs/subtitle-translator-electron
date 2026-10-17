@@ -23,6 +23,8 @@ export interface AdaptiveAgentTool {
 
 export interface AdaptiveAgentSession {
   tools: readonly AdaptiveAgentTool[];
+  /** The workspace listing, so the first prompt need not spend a step on view_scene. */
+  view(): string;
   isComplete(): boolean;
 }
 
@@ -91,7 +93,11 @@ export function createAdaptiveAgentSession(
       () => workspace.submit(),
     ),
   ];
-  return { tools, isComplete: () => workspace.submitted };
+  return {
+    tools,
+    view: () => workspace.view(),
+    isComplete: () => workspace.submitted,
+  };
 }
 
 export type AdaptiveAgentToolCallResult =

@@ -18,6 +18,8 @@ import { ADAPTIVE_TARGET_TEXT_MAX_LENGTH } from "./validator.ts";
  * changes to the translation contract invalidate its semantic blocks.
  */
 export const ADAPTIVE_PIPELINE_VERSION = 1;
+/** Fingerprinted so checkpoints written by the one-shot draft workflow restart. */
+export const ADAPTIVE_AGENT_WORKFLOW = "agent-v1";
 export const ADAPTIVE_CHECKPOINT_VERSION = 3 as const;
 export const ADAPTIVE_CHECKPOINT_KIND = "adaptive" as const;
 
@@ -53,6 +55,7 @@ export interface AdaptiveSemanticFingerprintInput {
   maxTargets?: number;
   briefSchemaVersion?: number | string;
   placeholderStrategyVersion?: number | string;
+  adaptiveWorkflow?: string;
   /**
    * Accepting extra keys keeps this helper useful at call sites, while the
    * implementation intentionally ignores operational and secret settings.
@@ -558,6 +561,9 @@ export function createAdaptiveSemanticFingerprint(
     briefSchemaVersion: pickValue(input, "briefSchemaVersion") ?? 1,
     placeholderStrategyVersion:
       pickValue(input, "placeholderStrategyVersion") ?? 1,
+    ...(input.adaptiveWorkflow !== undefined
+      ? { adaptiveWorkflow: input.adaptiveWorkflow }
+      : {}),
   };
   return fingerprintPayload("adaptive-semantic-v1", payload);
 }

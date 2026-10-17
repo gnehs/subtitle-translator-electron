@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { processAdaptiveScenes } from "../electron/main/utils/adaptive/pipeline.ts";
-import type {
-  AdaptiveSceneLike,
-  StageUsage,
-} from "../electron/main/utils/adaptive/model-client.ts";
 import type { AdaptiveSceneTranslationResult } from "../electron/main/utils/adaptive/translator.ts";
+import type {
+  AdaptiveScene,
+  StageUsage,
+} from "../electron/main/utils/adaptive/types.ts";
 
-function scene(index: number): AdaptiveSceneLike {
+function scene(index: number): AdaptiveScene {
   return {
     id: `scene-${index}-${index}`,
     sourceStart: index,
@@ -46,7 +46,7 @@ const fakeUsage: StageUsage = {
   finishReason: "stop",
 };
 
-function translated(sceneInput: AdaptiveSceneLike): AdaptiveSceneTranslationResult {
+function translated(sceneInput: AdaptiveScene): AdaptiveSceneTranslationResult {
   const sourceId = sceneInput.core[0]?.id ?? sceneInput.sourceStart;
   return {
     sceneId: sceneInput.id,
@@ -72,7 +72,6 @@ function translated(sceneInput: AdaptiveSceneLike): AdaptiveSceneTranslationResu
         "adaptive-translate": { requestCount: 1 },
       },
     },
-    budget: { initial: 1, repair: 0, strictFallback: 0 },
   };
 }
 

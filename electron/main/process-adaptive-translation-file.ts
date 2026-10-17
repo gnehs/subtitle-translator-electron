@@ -21,6 +21,7 @@ import {
   createAdaptiveCheckpointWriter,
   createAdaptiveLayoutFingerprint,
   createAdaptiveSemanticFingerprint,
+  ADAPTIVE_AGENT_WORKFLOW,
   getAdaptiveCheckpointResumeMetadata,
   getAdaptiveCompletedCueIndices,
   hasMatchingAdaptiveCheckpointSource,
@@ -42,12 +43,10 @@ import {
   generateTranslationBrief,
   type TranslationBriefResult,
 } from "./utils/adaptive/brief-client.ts";
+import { createAdaptiveFileIndex } from "./utils/adaptive/file-index.ts";
 import {
   createAiSdkAdaptiveModelClient,
-  type AdaptiveCallResult,
   type AdaptiveModelClient,
-  type AdaptiveRepairInput,
-  type AdaptiveTranslateInput,
 } from "./utils/adaptive/model-client.ts";
 import {
   processAdaptiveScenes,
@@ -305,7 +304,7 @@ function getAdaptivePrompts(params: AdaptiveParams): {
 function createRetryingClient(
   base: AdaptiveModelClient,
   input: AdaptiveTranslationFileInput,
-  onStage: (stage: "repairing" | "fallback", sceneId?: string) => void
+  onFallback: (sceneId: string) => void
 ): AdaptiveModelClient {
   const retry = input.retryRequest;
   const delay = input.params.delay;
@@ -325,25 +324,12 @@ function createRetryingClient(
   };
 
   return {
-    translateScene(sceneInput: AdaptiveTranslateInput): Promise<AdaptiveCallResult> {
-      return call((value) => base.translateScene(value), sceneInput);
+    runAgentSession(sessionInput) {
+      return call((value) => base.runAgentSession(value), sessionInput);
     },
-    repairScene(sceneInput: AdaptiveRepairInput): Promise<AdaptiveCallResult> {
-      onStage("repairing", sceneInput.scene.id);
-      return call((value) => base.repairScene(value), sceneInput);
-    },
-    translateStrictFallback(
-      sceneInput: AdaptiveTranslateInput
-    ): Promise<AdaptiveCallResult> {
-      onStage("fallback", sceneInput.scene.id);
-      const fallback =
-        base.translateStrictFallback ?? base.strictFallback ?? base.fallbackScene;
-      if (!fallback) {
-        return Promise.reject(
-          new Error(translationErrorCodes.adaptiveFallbackFailed)
-        );
-      }
-      return call((value) => fallback.call(base, value), sceneInput);
+    translateStrictFallback(sceneInput) {
+      onFallback(sceneInput.scene.id);
+      return call((value) => base.translateStrictFallback(value), sceneInput);
     },
   };
 }
@@ -432,6 +418,7 @@ export async function processAdaptiveTranslationFile(
     maxTargets: 3,
     briefSchemaVersion: 1,
     placeholderStrategyVersion: 1,
+    adaptiveWorkflow: ADAPTIVE_AGENT_WORKFLOW,
   });
   const layoutFingerprint = createAdaptiveLayoutFingerprint({
     layoutEngineVersion: 1,
@@ -632,18 +619,26 @@ export async function processAdaptiveTranslationFile(
     temperature: params.temperature,
     requestRateLimiter: input.requestRateLimiter,
   });
-  const client = createRetryingClient(baseClient, input, (stage, sceneId) => {
+  const client = createRetryingClient(baseClient, input, (sceneId) => {
     const checkpointScene = checkpoint!.scenes.find(
       (scene) => scene.id === sceneId
     );
     if (checkpointScene) {
-      checkpointScene.status = stage;
+      checkpointScene.status = "fallback";
       void writer.write(checkpoint!).catch(() => {
         // A later awaited write remains authoritative. Prevent this advisory
         // stage snapshot from becoming an unhandled rejection.
       });
     }
-    sendAdaptiveProgress(stage);
+    sendAdaptiveProgress("fallback");
+  });
+  const fileIndex = createAdaptiveFileIndex(sourceCues, (cueId) => {
+    for (const scene of checkpoint!.scenes) {
+      if (scene.status !== "done") continue;
+      const block = scene.blocks.find((item) => item.sourceCueIds.includes(cueId));
+      if (block) return block.targetTexts.join(" ");
+    }
+    return undefined;
   });
 
   let translateResult: Awaited<ReturnType<typeof processAdaptiveScenes>>;
@@ -668,6 +663,8 @@ export async function processAdaptiveTranslationFile(
           additional: params.additional,
           temperature: params.temperature,
           abortSignal: sceneAbortSignal,
+          layoutOptions,
+          fileIndex,
           onUsage: (usage) => {
             usageRecords.push(usage);
           },
@@ -727,11 +724,7 @@ export async function processAdaptiveTranslationFile(
   } catch (error) {
     if (!abortSignal.aborted) {
       for (const scene of checkpoint.scenes) {
-        if (
-          scene.status === "translating" ||
-          scene.status === "repairing" ||
-          scene.status === "fallback"
-        ) {
+        if (scene.status === "translating" || scene.status === "fallback") {
           scene.status = "error";
           scene.errorCode =
             error instanceof Error &&

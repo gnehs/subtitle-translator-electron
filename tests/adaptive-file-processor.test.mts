@@ -6,9 +6,10 @@ import test from "node:test";
 
 import { processAdaptiveTranslationFile } from "../electron/main/process-adaptive-translation-file.ts";
 import { RequestRateLimiter } from "../electron/main/utils/request-rate-limiter.ts";
+import { callAdaptiveAgentTool } from "../electron/main/utils/adaptive/agent-tools.ts";
 import type {
+  AdaptiveAgentSessionInput,
   AdaptiveModelClient,
-  AdaptiveTranslateInput,
 } from "../electron/main/utils/adaptive/model-client.ts";
 
 const sourceSrt = `1
@@ -24,39 +25,38 @@ he was your brother.
 I wanted to tell you the truth, but I was afraid you would leave.
 `;
 
-function createFakeClient(counter: { initial: number; repair: number; fallback: number }): AdaptiveModelClient {
+function sessionUsage(input: AdaptiveAgentSessionInput) {
   return {
-    async translateScene(input: AdaptiveTranslateInput) {
-      counter.initial += 1;
+    stage: "adaptive-translate" as const,
+    model: "fake-model",
+    sceneId: input.scene.id,
+    requestAttempt: 1,
+    inputTokens: 12,
+    outputTokens: 8,
+    totalTokens: 20,
+    durationMs: 3,
+    finishReason: "stop",
+  };
+}
+
+function createFakeClient(counter: { agent: number; fallback: number }): AdaptiveModelClient {
+  return {
+    async runAgentSession(input) {
+      counter.agent += 1;
       assert.equal(input.scene.core.length, 3);
-      return {
-        draft: {
-          blocks: [
-            { take: 2, targets: ["我不知道他是你哥哥。"] },
-            { take: 1, targets: ["我本來想告訴你真相，", "但怕你會離開。"] },
-          ],
-        },
-        usage: {
-          stage: "adaptive-translate",
-          model: "fake-model",
-          sceneId: input.scene.id,
-          requestAttempt: 1,
-          inputTokens: 12,
-          outputTokens: 8,
-          totalTokens: 20,
-          durationMs: 3,
-          finishReason: "stop",
-        },
-        finishReason: "stop",
-      };
-    },
-    async repairScene() {
-      counter.repair += 1;
-      throw new Error("repair should not be called for a valid draft");
+      const session = input.openSession();
+      callAdaptiveAgentTool(session, "edit", { from: 0, to: 1, targets: ["我不知道他是你哥哥。"] });
+      callAdaptiveAgentTool(session, "edit", {
+        from: 2,
+        to: 2,
+        targets: ["我本來想告訴你真相，", "但怕你會離開。"],
+      });
+      callAdaptiveAgentTool(session, "finish", {});
+      return { usage: sessionUsage(input), finishReason: "stop" };
     },
     async translateStrictFallback() {
       counter.fallback += 1;
-      throw new Error("fallback should not be called for a valid draft");
+      throw new Error("fallback should not be called for a submitted workspace");
     },
   };
 }
@@ -69,7 +69,7 @@ test("adaptive file processor writes many-to-many SRT and reuses complete v3 wit
   fs.writeFileSync(sourcePath, sourceSrt, "utf8");
   const stats = fs.statSync(sourcePath);
   const progress: Array<{ status: string; previewCues?: unknown[] }> = [];
-  const counter = { initial: 0, repair: 0, fallback: 0 };
+  const counter = { agent: 0, fallback: 0 };
   const params = {
     apiKeys: ["test-key"],
     apiHost: "http://127.0.0.1:9999/v1",
@@ -109,7 +109,7 @@ test("adaptive file processor writes many-to-many SRT and reuses complete v3 wit
 
   try {
     await run(createFakeClient(counter));
-    assert.deepEqual(counter, { initial: 1, repair: 0, fallback: 0 });
+    assert.deepEqual(counter, { agent: 1, fallback: 0 });
     const output = fs.readFileSync(outputPath, "utf8");
     assert.match(output, /我不知道他是你哥哥。/);
     assert.match(output, /我本來想告訴你真相/);
@@ -131,20 +131,20 @@ test("adaptive file processor writes many-to-many SRT and reuses complete v3 wit
     assert.equal((done?.previewCues?.[0] as { kind?: string })?.kind, "adaptive");
 
     fs.writeFileSync(outputPath, "stale", "utf8");
-    const reuseCounter = { initial: 0, repair: 0, fallback: 0 };
+    const reuseCounter = { agent: 0, fallback: 0 };
     await run(createFakeClient(reuseCounter), { maxLineUnitsCjk: 16 });
-    assert.deepEqual(reuseCounter, { initial: 0, repair: 0, fallback: 0 });
+    assert.deepEqual(reuseCounter, { agent: 0, fallback: 0 });
     assert.match(fs.readFileSync(outputPath, "utf8"), /我不知道他是你哥哥。/);
 
     const assOutputPath = path.join(directory, "sample.bilingual.ass");
-    const assReuseCounter = { initial: 0, repair: 0, fallback: 0 };
+    const assReuseCounter = { agent: 0, fallback: 0 };
     await run(
       createFakeClient(assReuseCounter),
       {},
       "ass-bilingual",
       assOutputPath
     );
-    assert.deepEqual(assReuseCounter, { initial: 0, repair: 0, fallback: 0 });
+    assert.deepEqual(assReuseCounter, { agent: 0, fallback: 0 });
     const assOutput = fs.readFileSync(assOutputPath, "utf8");
     assert.match(assOutput, /Style: ST Original/);
     assert.match(assOutput, /Style: ST Translation/);
@@ -157,140 +157,26 @@ test("adaptive file processor writes many-to-many SRT and reuses complete v3 wit
   }
 });
 
-test("adaptive file processor drops initial structural errors after a successful repair", async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-repair-file-"));
-  const sourcePath = path.join(directory, "sample.srt");
-  const outputPath = path.join(directory, "sample.translated.srt");
-  const checkpointPath = path.join(directory, "sample.translation.json");
-  fs.writeFileSync(sourcePath, sourceSrt, "utf8");
-  const stats = fs.statSync(sourcePath);
-  const calls = { initial: 0, repair: 0, fallback: 0 };
-  const params = {
-    apiKeys: ["test-key"],
-    apiHost: "http://127.0.0.1:9999/v1",
-    model: "fake-model",
-    prompt: "Translate naturally into {{lang}}. {{additional}}",
-    mode: "adaptive" as const,
-    lang: "Traditional Chinese",
-    additional: "Use Taiwanese terminology.",
-    temperature: 0.2,
-    outputFormat: "srt-translation" as const,
-    assFonts: { translationFont: "", originalFont: "" },
-    concurrency: 1 as const,
-    delay: 0,
-    requestsPerMinute: 10_000,
-    contextSize: 5,
-  };
-  const modelClient: AdaptiveModelClient = {
-    async translateScene(input: AdaptiveTranslateInput) {
-      calls.initial += 1;
-      assert.equal(input.scene.core.length, 3);
-      return {
-        // Intentionally leaves two source cues uncovered so the repair path is
-        // exercised and its final diagnostics can be checked by the renderer.
-        draft: { blocks: [{ take: 1, targets: ["只有第一段"] }] },
-        usage: {
-          stage: "adaptive-translate",
-          model: "fake-model",
-          sceneId: input.scene.id,
-          requestAttempt: 1,
-          durationMs: 1,
-          finishReason: "stop",
-        },
-        finishReason: "stop",
-      };
-    },
-    async repairScene(input) {
-      calls.repair += 1;
-      assert.ok(
-        input.violations?.some(
-          (item) =>
-            typeof item === "object" &&
-            item !== null &&
-            "severity" in item &&
-            item.severity === "error"
-        )
-      );
-      return {
-        draft: {
-          blocks: [
-            { take: 2, targets: ["我不知道他是你哥哥。"] },
-            { take: 1, targets: ["我本來想告訴你真相。"] },
-          ],
-        },
-        usage: {
-          stage: "adaptive-repair",
-          model: "fake-model",
-          sceneId: input.scene.id,
-          requestAttempt: 1,
-          durationMs: 1,
-          finishReason: "stop",
-        },
-        finishReason: "stop",
-      };
-    },
-    async translateStrictFallback() {
-      calls.fallback += 1;
-      throw new Error("strict fallback should not be called after a successful repair");
-    },
-  };
-
-  try {
-    await processAdaptiveTranslationFile({
-      file: { path: sourcePath, name: "sample.srt" },
-      params,
-      abortSignal: new AbortController().signal,
-      requestRateLimiter: new RequestRateLimiter({ requestsPerMinute: 10_000 }),
-      outputPath,
-      checkpointPath,
-      sourceName: "sample.srt",
-      sourceExtension: "srt",
-      sourceFingerprint: { size: stats.size, mtimeMs: stats.mtimeMs },
-      sendProgress: () => undefined,
-      modelClient,
-    });
-
-    assert.deepEqual(calls, { initial: 1, repair: 1, fallback: 0 });
-    assert.match(fs.readFileSync(outputPath, "utf8"), /我不知道他是你哥哥。/);
-    const checkpoint = JSON.parse(fs.readFileSync(checkpointPath, "utf8")) as {
-      state: string;
-      scenes: Array<{
-        status: string;
-        violations: Array<{ severity: string }>;
-      }>;
-    };
-    assert.equal(checkpoint.state, "complete");
-    assert.ok(
-      checkpoint.scenes.every(
-        (scene) =>
-          scene.status === "done" &&
-          scene.violations.every((item) => item.severity !== "error")
-      )
-    );
-  } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test("adaptive file processor preserves strict fallback compatibility aliases", async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-fallback-alias-"));
+test("adaptive file processor falls back to strict one-to-one when the agent does not finish", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "adaptive-fallback-file-"));
   const sourcePath = path.join(directory, "sample.srt");
   const outputPath = path.join(directory, "sample.translated.srt");
   const checkpointPath = path.join(directory, "sample.translation.json");
   fs.writeFileSync(sourcePath, sourceSrt, "utf8");
   const stats = fs.statSync(sourcePath);
   const calls: string[] = [];
+  const statuses: string[] = [];
   const modelClient: AdaptiveModelClient = {
-    async translateScene() {
-      calls.push("initial");
-      return { draft: { blocks: [] }, finishReason: "stop" };
+    async runAgentSession(input) {
+      calls.push("agent");
+      const session = input.openSession();
+      // Leaves two cues uncovered and never finishes, so the file must still
+      // complete through the strict fallback.
+      callAdaptiveAgentTool(session, "edit", { from: 0, to: 0, targets: ["只有第一段"] });
+      return { usage: sessionUsage(input), finishReason: "length" };
     },
-    async repairScene() {
-      calls.push("repair");
-      return { draft: { blocks: [] }, finishReason: "stop" };
-    },
-    async strictFallback() {
-      calls.push("fallback-alias");
+    async translateStrictFallback() {
+      calls.push("fallback");
       return {
         translations: ["我不知道。", "他是你哥哥。", "我想告訴你真相。"],
         finishReason: "stop",
@@ -324,18 +210,30 @@ test("adaptive file processor preserves strict fallback compatibility aliases", 
       sourceName: "sample.srt",
       sourceExtension: "srt",
       sourceFingerprint: { size: stats.size, mtimeMs: stats.mtimeMs },
-      sendProgress: () => undefined,
+      sendProgress: (event) => statuses.push(event.status),
       modelClient,
     });
 
-    assert.deepEqual(calls, ["initial", "repair", "fallback-alias"]);
+    assert.deepEqual(calls, ["agent", "fallback"]);
+    assert.ok(statuses.includes("fallback"));
     assert.match(fs.readFileSync(outputPath, "utf8"), /我不知道。/);
     const checkpoint = JSON.parse(fs.readFileSync(checkpointPath, "utf8")) as {
       state: string;
-      scenes: Array<{ status: string }>;
+      scenes: Array<{
+        status: string;
+        blocks: Array<{ origin: string }>;
+        violations: Array<{ severity: string }>;
+      }>;
     };
     assert.equal(checkpoint.state, "complete");
-    assert.ok(checkpoint.scenes.every((scene) => scene.status === "done"));
+    assert.ok(
+      checkpoint.scenes.every(
+        (scene) =>
+          scene.status === "done" &&
+          scene.blocks.every((block) => block.origin === "strict-fallback") &&
+          scene.violations.every((item) => item.severity !== "error")
+      )
+    );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }
@@ -350,12 +248,13 @@ test("adaptive file processor completes an empty subtitle without model calls", 
   const stats = fs.statSync(sourcePath);
   let modelCalls = 0;
   const modelClient: AdaptiveModelClient = {
-    async translateScene() {
+    async runAgentSession() {
       modelCalls += 1;
       throw new Error("empty subtitles must not call the model");
     },
-    async repairScene() {
-      throw new Error("empty subtitles must not call repair");
+    async translateStrictFallback() {
+      modelCalls += 1;
+      throw new Error("empty subtitles must not call the fallback");
     },
   };
 
