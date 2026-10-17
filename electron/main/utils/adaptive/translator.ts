@@ -117,7 +117,7 @@ function usageFor(
   scene: AdaptiveScene
 ): StageUsage {
   return result.usage
-    ? { ...result.usage, stage: result.usage.stage ?? stage, sceneId: result.usage.sceneId ?? scene.id }
+    ? { ...result.usage, sceneId: result.usage.sceneId ?? scene.id }
     : {
         stage,
         model: "unknown",

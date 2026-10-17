@@ -298,13 +298,14 @@ export type AdaptiveLanguageModel = Parameters<typeof streamText>[0]["model"];
 export function createAiSdkAdaptiveModelClient(
   options: AiSdkAdaptiveModelClientOptions & { languageModel?: AdaptiveLanguageModel }
 ): AdaptiveModelClient {
-  const ai = options.languageModel ? undefined : createAi(options);
+  const injectedModel = options.languageModel;
+  const resolveModel: (requestModel: string) => AdaptiveLanguageModel = injectedModel
+    ? () => injectedModel
+    : createAi(options);
   const now = options.now ?? Date.now;
   const modelName = options.model;
   const targetLanguage = options.targetLanguage ?? "";
   const temperature = options.temperature ?? 0.3;
-  const resolveModel = (requestModel: string): AdaptiveLanguageModel =>
-    options.languageModel ?? ai!(requestModel);
 
   const runGuardedStream = async <Result extends StreamOutcome>(
     stage: TranslationUsageStage,

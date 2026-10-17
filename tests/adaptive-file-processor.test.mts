@@ -170,8 +170,6 @@ test("adaptive file processor falls back to strict one-to-one when the agent doe
     async runAgentSession(input) {
       calls.push("agent");
       const session = input.openSession();
-      // Leaves two cues uncovered and never finishes, so the file must still
-      // complete through the strict fallback.
       callAdaptiveAgentTool(session, "edit", { from: 0, to: 0, targets: ["只有第一段"] });
       return { usage: sessionUsage(input), finishReason: "length" };
     },
