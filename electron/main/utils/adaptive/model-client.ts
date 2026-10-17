@@ -56,7 +56,6 @@ export type AdaptiveTranslateInput = AdaptiveSceneRequest;
 export interface AdaptiveCallResult {
   /** Parsed JSON when available. It is intentionally unknown until local validation. */
   draft?: unknown;
-  /** Strict-fallback strings, one per core cue, when the output parsed. */
   translations?: readonly string[];
   usage?: StageUsage;
   finishReason?: string;
@@ -180,7 +179,6 @@ function toModelCue(cue: AdaptiveSourceCue, index: number): {
   };
 }
 
-/** Context shared by both prompts: language, brief and the surrounding cues. */
 export function buildAdaptiveSceneContext(
   input: AdaptiveSceneRequest
 ): Record<string, unknown> {

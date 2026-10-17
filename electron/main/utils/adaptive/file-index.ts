@@ -4,7 +4,6 @@ export const ADAPTIVE_FILE_READ_MAX_CUES = 40;
 export const ADAPTIVE_FILE_SEARCH_MAX_HITS = 20;
 
 export interface FileCueView {
-  /** Global cue index across the whole file. */
   index: number;
   text: string;
   translation?: string;
@@ -16,7 +15,6 @@ export interface FileReadResult {
   truncated: boolean;
 }
 
-/** Read-only view over the whole file so a scene agent can look beyond its window. */
 export interface AdaptiveFileIndex {
   readonly cueCount: number;
   search(query: string, limit?: number): FileCueView[];

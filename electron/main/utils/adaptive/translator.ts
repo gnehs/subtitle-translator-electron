@@ -22,7 +22,6 @@ import { createUsageSummary } from "./usage.ts";
 import { validateAdaptiveDraft } from "./validator.ts";
 import { createSceneWorkspace, type SceneWorkspace } from "./workspace.ts";
 
-/** Model turns one scene agent may take before the strict fallback runs. */
 export const ADAPTIVE_AGENT_MAX_STEPS = 16;
 
 export class AdaptiveStrictFallbackError extends Error {
@@ -56,7 +55,6 @@ export interface AdaptiveTranslatorOptions {
   abortSignal?: AbortSignal;
   maxSteps?: number;
   layoutOptions?: Partial<AdaptiveLayoutOptions>;
-  /** Whole-file view for search_file and read_file; defaults to the scene window. */
   fileIndex?: AdaptiveFileIndex;
   onUsage?: (usage: StageUsage) => void;
 }

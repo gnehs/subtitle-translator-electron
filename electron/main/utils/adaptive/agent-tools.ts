@@ -23,7 +23,6 @@ export interface AdaptiveAgentTool {
 
 export interface AdaptiveAgentSession {
   tools: readonly AdaptiveAgentTool[];
-  /** The workspace listing, so the first prompt need not spend a step on view_scene. */
   view(): string;
   isComplete(): boolean;
 }
@@ -104,7 +103,6 @@ export type AdaptiveAgentToolCallResult =
   | { ok: true; output: unknown }
   | { ok: false; error: string };
 
-/** Parse at the tool boundary and execute; the AI SDK adapter does the same. */
 export function callAdaptiveAgentTool(
   session: AdaptiveAgentSession,
   name: string,
